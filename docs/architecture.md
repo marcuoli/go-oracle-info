@@ -1,0 +1,14 @@
+# Ownership and contracts
+
+- identity selects release-appropriate database/version/platform facts and preserves SQL NULL and source provenance.
+- memory owns scoped configured-parameter SQL, exact result decoding, the permitted ADB retry and RAC member resolution/aggregation.
+- The existing session module owns physical query and cursor lifecycle. Callers supply an already admitted reader and execution references; no driver dependency is introduced here.
+- Applications retain endpoint/container authorization, deadlines, recovery, progress, completion policy, scoring and presentation.
+
+Configured SGA is the instance maximum for non-CDB/root, or a positive PDB target with explicitly admitted instance inheritance. Configured PGA is its aggregate target, including a valid zero. Neither is observed memory consumption. RAC totals require complete member evidence and sum raw bytes before rounding.
+
+An ADB effective query is eligible only for a known Oracle 18+ connected PDB after a primary SQL NULL or no-row outcome. Primary execution/decoding errors are retained and never trigger that retry. Effective SQL verifies the current container, one source row, a non-session-modifiable parameter and an established cloud-service value.
+
+All fields retain source identities and availability. Invalid metrics do not erase independent valid metrics. Any row/result limit belongs to the supplied query transport and must surface as an error, not a retained prefix.
+
+Scalar observations distinguish the actual execution container (`CurrentContainerID`) from the admitted logical target (`TargetContainerID`). A root-discovered PDB read uses root execution identity and its bound PDB target; it does not imply that the session changed containers. Root-view visibility and complete PDB parameter coverage remain caller admission requirements. The new module's fixtures do not establish native coverage for those views.

@@ -1,0 +1,276 @@
+package memory
+
+import (
+	"errors"
+	"fmt"
+	"math/big"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/marcuoli/go-oracle-session/session"
+)
+
+// MemberValue retains an effective member setting in raw bytes before rounding.
+type MemberValue struct {
+	InstanceID        int
+	SourceContainerID int
+	Parameter         string
+	ValueBytes        string
+	Origin            Origin
+}
+
+// Total retains independently valid member evidence even when no total is safe.
+type Total struct {
+	State    State
+	ValueGiB string
+	Values   []MemberValue
+}
+
+// RACObservation separates proven member totals from connected-instance values.
+type RACObservation struct {
+	Members []int
+	SGA     Total
+	PGA     Total
+}
+
+// RACStatement enumerates member rows before parameter selection. PDB membership
+// covers only instances where that PDB is open. Callers must exclude managed ADB
+// backing-cluster scope using their admitted capabilities before requesting RAC.
+func RACStatement(o Options) (string, error) {
+	if err := validateOptions(o); err != nil {
+		return "", err
+	}
+	if o.PDB.EffectiveADB {
+		return "", ErrUnsupportedScope
+	}
+	source := "0"
+	target := "0"
+	table := "GV$INSTANCE"
+	condition := ""
+	names := "'sga_max_size','pga_aggregate_target'"
+	where := ""
+	if o.OracleMajor >= 12 {
+		source = "NVL(P.CON_ID,0)"
+		target = "TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID'))"
+		condition = " AND P.CON_ID IN (0,1)"
+	}
+	if o.Scope == ConnectedPDB || o.Scope == DiscoveredPDB {
+		table = "GV$PDBS"
+		names = "'sga_target','sga_max_size','pga_aggregate_target'"
+		if o.Scope == DiscoveredPDB {
+			target = ":target_container_id"
+		}
+		condition = " AND P.CON_ID IN (" + target + ")"
+		if o.PDB.AllowInherited {
+			condition = " AND P.CON_ID IN (" + target + ",0,1)"
+		}
+		where = " WHERE I.CON_ID=" + target + " AND I.OPEN_MODE IN ('READ WRITE','READ ONLY')"
+	}
+	return "SELECT P.NAME AS PARAMETER_NAME, P.VALUE AS PARAMETER_VALUE, " +
+		numeric("I.INST_ID") + " AS INSTANCE_ID, " + numeric(source) + " AS SOURCE_CONTAINER_ID, " + numeric(target) + " AS TARGET_CONTAINER_ID\n" +
+		"FROM " + table + " I LEFT JOIN GV$SYSTEM_PARAMETER P ON P.INST_ID=I.INST_ID AND P.NAME IN (" + names + ")" + condition + where, nil
+}
+
+type parameterRow struct {
+	name             string
+	value            session.Value
+	instance, source int
+}
+
+func schema(result session.Result, names []string) (map[string]int, error) {
+	if len(result.Columns) != len(names) {
+		return nil, ErrInvalidEvidence
+	}
+	index := make(map[string]int, len(names))
+	for i, name := range result.Columns {
+		name = strings.ToLower(name)
+		if _, ok := index[name]; name == "" || ok {
+			return nil, ErrInvalidEvidence
+		}
+		index[name] = i
+	}
+	for _, name := range names {
+		if _, ok := index[name]; !ok {
+			return nil, ErrInvalidEvidence
+		}
+	}
+	for _, row := range result.Rows {
+		if len(row) != len(names) {
+			return nil, ErrInvalidEvidence
+		}
+	}
+	return index, nil
+}
+
+// DecodeRAC validates membership and resolves each metric per member. A missing,
+// NULL, duplicate or invalid selected member prevents only that metric's total;
+// valid member evidence and the other independently validated total remain.
+func DecodeRAC(result session.Result, o Options) (RACObservation, error) {
+	report := RACObservation{SGA: Total{State: Unavailable}, PGA: Total{State: Unavailable}}
+	if err := validateOptions(o); err != nil {
+		return report, err
+	}
+	if o.PDB.EffectiveADB {
+		return report, ErrUnsupportedScope
+	}
+	names := []string{"parameter_name", "parameter_value", "instance_id", "source_container_id", "target_container_id"}
+	index, err := schema(result, names)
+	if err != nil {
+		return report, err
+	}
+	if len(result.Rows) > 4096 {
+		return report, fmt.Errorf("%w: RAC source exceeds 4096 rows; no prefix admitted", ErrInvalidEvidence)
+	}
+	rows := make([]parameterRow, 0, len(result.Rows))
+	members := map[int]bool{}
+	container := -1
+	for _, row := range result.Rows {
+		instance, ok := integerCell(row[index["instance_id"]])
+		if !ok || instance <= 0 {
+			return report, ErrInvalidEvidence
+		}
+		target, ok := integerCell(row[index["target_container_id"]])
+		if !ok {
+			return report, ErrInvalidEvidence
+		}
+		if (o.Scope == NonCDB && target != 0) || (o.Scope == CDBRoot && target != 1) || ((o.Scope == ConnectedPDB || o.Scope == DiscoveredPDB) && target <= 2) {
+			return report, ErrInvalidEvidence
+		}
+		if o.TargetContainerID != 0 && target != o.TargetContainerID {
+			return report, ErrInvalidEvidence
+		}
+		if container >= 0 && container != target {
+			return report, ErrInvalidEvidence
+		}
+		container = target
+		source, ok := integerCell(row[index["source_container_id"]])
+		if !ok || (source != 0 && source != 1 && source != target) {
+			return report, ErrInvalidEvidence
+		}
+		if o.Scope == NonCDB && source != 0 {
+			return report, ErrInvalidEvidence
+		}
+		members[instance] = true
+		name := row[index["parameter_name"]]
+		if name.Null {
+			if !row[index["parameter_value"]].Null {
+				return report, ErrInvalidEvidence
+			}
+			continue
+		}
+		if name.Text != "sga_target" && name.Text != "sga_max_size" && name.Text != "pga_aggregate_target" {
+			return report, ErrInvalidEvidence
+		}
+		if target > 2 && !o.PDB.AllowInherited && source != target {
+			return report, ErrInvalidEvidence
+		}
+		rows = append(rows, parameterRow{name: name.Text, value: row[index["parameter_value"]], instance: instance, source: source})
+	}
+	for member := range members {
+		report.Members = append(report.Members, member)
+	}
+	slices.Sort(report.Members)
+	if len(report.Members) == 0 {
+		report.SGA.State, report.PGA.State = NoRows, NoRows
+		return report, nil
+	}
+	var failures []error
+	for _, metric := range []struct {
+		parameter Parameter
+		total     *Total
+	}{{SGA, &report.SGA}, {PGA, &report.PGA}} {
+		metric.total.State = Available
+		sum := new(big.Int)
+		for _, instance := range report.Members {
+			value, err := effectiveMember(rows, instance, container, metric.parameter, o.PDB.AllowInherited)
+			if err != nil {
+				metric.total.State = Unavailable
+				failures = append(failures, fmt.Errorf("configured %s instance %d: %w", metric.parameter, instance, err))
+				continue
+			}
+			metric.total.Values = append(metric.total.Values, value)
+			number, _ := new(big.Int).SetString(value.ValueBytes, 10)
+			sum.Add(sum, number)
+		}
+		if metric.total.State == Available {
+			metric.total.ValueGiB = formatGiB(sum)
+		}
+	}
+	return report, errors.Join(failures...)
+}
+
+func effectiveMember(rows []parameterRow, instance, container int, parameter Parameter, allowInherited bool) (MemberValue, error) {
+	levels := []int{0, 1}
+	if container > 2 {
+		levels = []int{container}
+		if allowInherited {
+			levels = append(levels, 0, 1)
+		}
+	}
+	name := "pga_aggregate_target"
+	if parameter == SGA {
+		name = "sga_max_size"
+	}
+	for _, level := range levels {
+		selected := name
+		if container > 2 && level == container && parameter == SGA {
+			selected = "sga_target"
+		}
+		var matches []parameterRow
+		for _, row := range rows {
+			if row.instance == instance && row.source == level && row.name == selected {
+				matches = append(matches, row)
+			}
+		}
+		if len(matches) == 0 {
+			continue
+		}
+		if len(matches) != 1 {
+			return MemberValue{}, fmt.Errorf("%w: duplicate effective rows", ErrInvalidEvidence)
+		}
+		cell := matches[0].value
+		if cell.Null {
+			return MemberValue{}, fmt.Errorf("%w: NULL effective parameter", ErrInvalidEvidence)
+		}
+		if len(cell.Text) > 128 || cell.Text == "" || strings.IndexFunc(cell.Text, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+			return MemberValue{}, fmt.Errorf("%w: invalid byte value", ErrInvalidEvidence)
+		}
+		number, ok := new(big.Int).SetString(cell.Text, 10)
+		if !ok {
+			return MemberValue{}, ErrInvalidEvidence
+		}
+		if selected == "sga_target" && number.Sign() == 0 {
+			continue
+		}
+		origin := InstanceParameter
+		if container > 2 {
+			origin = ContainerParameter
+			if level != container {
+				origin = InheritedInstance
+			}
+		}
+		return MemberValue{InstanceID: instance, SourceContainerID: level, Parameter: selected, ValueBytes: strings.Clone(cell.Text), Origin: origin}, nil
+	}
+	return MemberValue{}, fmt.Errorf("%w: missing effective parameter", ErrInvalidEvidence)
+}
+
+func formatGiB(bytes *big.Int) string {
+	// Round only once after exact byte aggregation. No binary float can discard a
+	// member's low bits or round each small member to zero before summation.
+	scaled := new(big.Int).Mul(bytes, big.NewInt(1000))
+	divisor := big.NewInt(1 << 30)
+	quotient, remainder := new(big.Int), new(big.Int)
+	quotient.QuoRem(scaled, divisor, remainder)
+	if new(big.Int).Lsh(remainder, 1).Cmp(divisor) >= 0 {
+		quotient.Add(quotient, big.NewInt(1))
+	}
+	whole, fraction := new(big.Int), new(big.Int)
+	whole.QuoRem(quotient, big.NewInt(1000), fraction)
+	if fraction.Sign() == 0 {
+		return whole.String()
+	}
+	text := strconv.FormatInt(fraction.Int64(), 10)
+	text = strings.Repeat("0", 3-len(text)) + text
+	return whole.String() + "." + strings.TrimRight(text, "0")
+}

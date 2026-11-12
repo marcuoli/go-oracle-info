@@ -1,0 +1,4 @@
+github.com/marcuoli/go-oracle-session v0.2.1 h1:rqFCsoVknsdIETAoh07ypSz/3suIHr3yO/h8sYWqiMM=
+github.com/marcuoli/go-oracle-session v0.2.1/go.mod h1:cBH+ZnrOzdo+zO+OXQrXQFjYfW/lZLZTI3c27RC2yt0=
+github.com/marcuoli/go-sqltemplate v0.1.1 h1:MtiN+DO1Y8DHzQTbSNwM3PssJd9ilc6MpZrxeASnS/I=
+github.com/marcuoli/go-sqltemplate v0.1.1/go.mod h1:h6PwhHMovPqYCWlSKQl4enk4/fUKZ0fsMicbPbP5zEo=
