@@ -1,6 +1,6 @@
 # Code management
 
-The private Gitea repository owns source history; the module path is the intended public distribution coordinate. Bootstrap history contains one empty root commit; implementation is reviewed on its issue branch.
+The private Gitea repository owns source history; the module path is the public distribution coordinate. Bootstrap history contains one empty root commit; implementation is reviewed on its issue branch.
 
 Use `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `security` or `chore` issue titles, exactly one matching type label and accurate area labels. Maintain `## Validation and acceptance` with evidence-backed checkboxes. A feature is not complete merely because a subset of tests passed. Preserve unmet acceptance and the exact remaining next action.
 

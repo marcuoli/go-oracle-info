@@ -1,6 +1,6 @@
 # go-oracle-info
 
-Reusable read-only Oracle identity/platform and configured-memory facts.
+Reusable read-only Oracle identity/platform, configured-memory and engineered-system facts.
 
 Public packages select reviewed SQL and validate exact results from a caller-owned reader. The module opens no connections, changes no container or endpoint, and selects no credentials, driver, retry policy, scoring or report layout. It reuses the driver-neutral query/value contract in go-oracle-session.
 
@@ -28,4 +28,39 @@ value, err := memory.Collect(ctx, reader, memory.Request{
 
 Inspect both `err` and `value.State`. A failed effective query can return the valid primary observation alongside an error. The library does not acquire a different scope to make a query succeed. `identity` exposes statement selection and decoding separately so an application keeps its bootstrap/admission sequence.
 
-Validation uses Go 1.27.4 on Windows/amd64 with released module versions. The module's language minimum remains Go 1.27.3. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. This private source implementation has no public module release yet.
+Validation uses Go 1.27.4 on Windows/amd64 with released module versions. The module's language minimum remains Go 1.27.3. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. Public module releases use github.com/marcuoli/go-oracle-info; the private Gitea repository remains the source authority.
+
+## Engineered-system facts
+
+`engineeredsystem/catalog` selects reviewed cell/schema/configuration/alert
+statements from actual dictionary types. `Command.Original` is the canonical
+source body; `Text` is the fixed-allowlist rendering. Applications supply their
+own SQL reference namespace/sites, Oracle-version/scope admission and complete
+query transport. Selectors open no connection and borrow no AWR schema.
+
+`engineeredsystem.DecodeCells`, `DecodeAlerts` and `DecodeConfiguration` consume
+`go-oracle-session/session.Result`; `catalog.DecodeSchema` consumes its metadata
+projection. The decoders return independent facts and exact source-row counts.
+They preserve SQL NULL, exact numeric text, repeated/conflicting observations,
+raw rejected XML bytes and source/time provenance. The caller retains both the
+returned facts and error, attaches actual source-execution coverage, then uses
+`Report.Validate`. XML property counts are not source-row counts. Never pass a
+failed cursor's prefix as a complete Result.
+
+```go
+facts, counts, err := engineeredsystem.DecodeConfiguration(
+    completeResult, engineeredsystem.Config, observedAt, observedCells,
+)
+// Retain facts.Payloads and accepted facts.Properties even when err is non-nil.
+// counts.Read, counts.Retained and counts.Rejected describe source rows.
+```
+
+There is no system-family inference, capacity summation, health scoring,
+connection/container change, application recovery or presentation. DATE alert
+labels preserve Gregorian civil time and era without a fabricated timezone.
+Private operator-output replay uses `ORACLE_INFO_ENGINEERED_DISPLAY_REPLAY` with
+the integration build tag; this is development verification, not an XML import
+feature. Display-derived Oracle 12.2 shapes and synthetic tests do not establish
+original CLOB bytes, native Go-driver reads, grants or live collector scopes.
+Consumers pin immutable public module versions; development workspace tests
+remain separate from normal GOWORK=off dependency adoption.
