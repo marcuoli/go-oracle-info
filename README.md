@@ -64,3 +64,14 @@ feature. Display-derived Oracle 12.2 shapes and synthetic tests do not establish
 original CLOB bytes, native Go-driver reads, grants or live collector scopes.
 Consumers pin immutable public module versions; development workspace tests
 remain separate from normal GOWORK=off dependency adoption.
+
+## Database and operational selectors
+
+Read-only selectors now cover environment/NLS/parameters, service names,
+object inventories and exact table counts, ADR errors, RMAN jobs, Data Guard,
+scheduler jobs and point-in-time blocker/resource observations. Caller-owned
+scope, references, bounds and complete-result readers stay outside these
+packages; selectors do not return health or acceptance findings. See
+docs/selector-contracts.md for aliases, binds, scope and NULL/completeness rules.
+
+Run the connection-free example with go run ./examples/queries.
