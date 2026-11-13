@@ -13,3 +13,10 @@ An ADB effective query is eligible only for a known Oracle 18+ connected PDB aft
 All fields retain source identities and availability. Invalid metrics do not erase independent valid metrics. Any row/result limit belongs to the supplied query transport and must surface as an error, not a retained prefix.
 
 Scalar observations distinguish the actual execution container (`CurrentContainerID`) from the admitted logical target (`TargetContainerID`). A root-discovered PDB read uses root execution identity and its bound PDB target; it does not imply that the session changed containers. Root-view visibility and complete PDB parameter coverage remain caller admission requirements. The new module's fixtures do not establish native coverage for those views.
+
+Reusable Oracle statement selection lives in the responsibility packages
+documented in selector-contracts.md. No extra executor or collection engine is
+introduced. Exact owner filters remain binds, dictionary identifiers are quoted,
+and static bounded selectors validate their integer limits. A caller's successful
+execution/admission determines evidence availability; query selection alone
+cannot establish complete source coverage, acceptance or native compatibility.
