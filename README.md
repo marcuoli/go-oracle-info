@@ -75,3 +75,10 @@ packages; selectors do not return health or acceptance findings. See
 docs/selector-contracts.md for aliases, binds, scope and NULL/completeness rules.
 
 Run the connection-free example with go run ./examples/queries.
+
+For independent scalar identity reads, `identity.NameStatement()` and
+`identity.RoleStatement()` preserve the established single-column projections.
+Pass complete `session.Result` values to `identity.DecodeName` or
+`identity.DecodeRole`. Each validates its column and scalar shape, returning
+`identity.Text` with `Available`, `Null` or `NoRows` state; source text is never
+trimmed or inferred. Existing combined database and instance APIs remain available.

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.0 (2026-11-13)
+
+- Add independent scalar database-name and role selectors and decoders, preserving exact SQL/text, typed NULL/no-row states and existing identity APIs.
+
 ## v0.2.0 (2026-11-13)
 
 - Add read-only database/environment, service/object/count, ADR, RMAN, Data Guard, scheduler and resource/blocker selectors, plus bounded connected-cell selection, preserving existing typed APIs and caller-owned execution policy.
