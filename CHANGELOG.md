@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0 (2026-11-14)
+
+- Add observed edition and complete version-banner decoding plus current-container dictionary-component selectors/decoders, preserving exact nullable values, raw modification labels and legacy/full-column provenance.
+
 ## v0.5.0 (2026-11-13)
 
 - Add bound ordinary-table optimizer statistics selectors with NULL-preserving NUM_ROWS and Gregorian database-local LAST_ANALYZED text.
