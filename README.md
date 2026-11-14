@@ -102,3 +102,5 @@ legacy versus full-column evidence without guessing editions, release updates or
 timezones. See [edition/version/registry contracts](docs/edition-version-registry.md).
 
 For bounded oldest table/partition/subpartition optimizer facts, see [statistics selection and admission](docs/oldest-statistics.md). The API preserves parent identities and nullable statistics scope; legacy sources require reliable caller-owned schema admission.
+
+Use the independent [connected identity property readers](docs/identity-properties.md) when the shared library should own version/architecture/edition source selection. Each property retains source, precision, safe failures and compatibility provenance on an already-admitted reader.
