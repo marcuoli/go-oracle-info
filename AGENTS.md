@@ -24,7 +24,9 @@ use admitted session.Statement/complete session.Result readers and caller refs;
 share domain selection/schema/provenance with borrowed rows/JSON. Validate all
 rows before returning a result, including post-query cancellation. Preserve raw
 NULL/default flags, absent optional columns and unavailable/missing-name states.
-Hidden facts use the reviewed visible underscore source; no all-default X$ scan.
+Hidden fact APIs retain their reviewed visible underscore source. The explicit
+HiddenCatalog API additionally admits the user-requested fixed-table catalog,
+including defaults; it is opt-in and never an automatic fallback or report union.
 Password-file APIs expose metadata only, with documented version/capability
 selection; never inspect users/verifiers/file contents or flush metadata caches.
 Applications retain non-default/explicit-name report unions and peer selection.

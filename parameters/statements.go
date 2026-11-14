@@ -38,17 +38,18 @@ var (
 	ErrUnsupportedVersion = errors.New("unsupported Oracle parameter source version")
 )
 
-// Provenance describes only the selected dynamic-view observations. It is not
+// Provenance describes selected dynamic-view or explicit fixed-table facts. It is not
 // evidence of complete physical SPFILE contents, RAC membership or inheritance.
 type Provenance struct {
-	Source      string   `json:"source"`
-	OracleMajor int      `json:"oracle_major"`
-	Scope       string   `json:"scope"`
-	Names       []string `json:"names,omitempty"`
-	Instances   []int64  `json:"instances,omitempty"`
-	SIDs        []string `json:"sids,omitempty"`
-	SIDPolicy   string   `json:"sid_policy,omitempty"`
-	NameClass   string   `json:"name_class,omitempty"`
+	Source       string   `json:"source"`
+	OracleMajor  int      `json:"oracle_major"`
+	Scope        string   `json:"scope"`
+	Names        []string `json:"names,omitempty"`
+	Instances    []int64  `json:"instances,omitempty"`
+	SIDs         []string `json:"sids,omitempty"`
+	SIDPolicy    string   `json:"sid_policy,omitempty"`
+	NameClass    string   `json:"name_class,omitempty"`
+	NameContains string   `json:"name_contains,omitempty"`
 }
 
 // EffectiveStatement selects instance-effective SYSTEM_PARAMETER2 values, not

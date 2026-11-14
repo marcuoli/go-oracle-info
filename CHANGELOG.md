@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
+- Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
+
 ## v0.13.0 (2026-11-14)
 
 - Add scalar-row instance-wide GV$SYSTEM_PARAMETER selectors, complete typed readers, borrowed native rows/JSON and facade methods without changing published SYSTEM_PARAMETER2 list APIs.

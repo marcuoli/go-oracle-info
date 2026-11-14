@@ -160,3 +160,9 @@ Oracle references and bounded source contracts are in
 [password-file metadata](password-file.md).
 
 For scalar-row instance parameters, use parameters.ReadSystem and parameters.ModifiedSystem. Enumerate qualified IDs with instances.Read before bounded per-member collection; see [system parameter contracts](system-parameters.md). These APIs preserve raw modification flags and never infer persistence or certify physical RAC membership.
+
+## Explicit internal hidden-parameter catalog
+
+For distinct session/instance values and decoded modifiability from fixed tables,
+use the [hidden catalog APIs](hidden-parameter-catalog.md). These are separate
+from visible underscore facts and reuse the same shared rows/JSON ownership.
