@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -71,8 +72,13 @@ func run(ctx context.Context, reader identity.Reader) error {
 	if edition.State != identity.Available || edition.Precision != identity.ObservedEditionCode || edition.Fallback {
 		return errors.New("example requires an observed edition code")
 	}
-	fmt.Printf("fixture: %s / %s (%s) / %s\n", architecture.Value, version.Value, version.Precision, edition.Value)
-	return nil
+	return json.NewEncoder(os.Stdout).Encode(struct {
+		Fixture      bool                      `json:"fixture"`
+		Architecture identity.Architecture     `json:"architecture"`
+		Version      string                    `json:"version"`
+		Precision    identity.VersionPrecision `json:"precision"`
+		Edition      identity.EditionType      `json:"edition"`
+	}{true, architecture.Value, version.Value, version.Precision, edition.Value})
 }
 
 func main() {

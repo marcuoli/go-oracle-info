@@ -104,3 +104,5 @@ timezones. See [edition/version/registry contracts](docs/edition-version-registr
 For bounded oldest table/partition/subpartition optimizer facts, see [statistics selection and admission](docs/oldest-statistics.md). The API preserves parent identities and nullable statistics scope; legacy sources require reliable caller-owned schema admission.
 
 Use the independent [connected identity property readers](docs/identity-properties.md) when the shared library should own version/architecture/edition source selection. Each property retains source, precision, safe failures and compatibility provenance on an already-admitted reader.
+
+For the simplest caller API, use [the non-owning fact client and parameter datasets](docs/parameter-datasets.md): oracleinfo.New(existingConn), scalar properties, native InitParameters/SPFileParameters and bounded JSON companions. SQL/version selection stays internal, the native handle lifetime stays with its owner, and result serialization uses JSON rather than CSV/plaintext.
