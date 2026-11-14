@@ -18,3 +18,13 @@ NEVER serialize query result data as CSV or plaintext; only genuine DBMS_OUTPUT 
 Keep effective instance settings, session settings and stored SPFILE definitions distinct. SPFILE reporting INST_ID is not SID applicability; preserve wildcard/defaults, overrides and dormant SID clauses without inferring effective precedence or complete file/RAC/container coverage. Test-only database/sql fixture drivers are unit scaffolding, never production cursor fabrication or native Oracle qualification.
 
 Generic query execution, native row consumption and JSON datasets belong exclusively in go-oracle-session/rowset. Domain facts delegate there; do not implement or preserve an info/rowset compatibility package. Keep Oracle SQL/filter/schema/provenance here. Borrowed caller-native rows do not expose an owned Session.Stream lease or private cursor.
+
+Follow docs/developer-guide.md for punctual fact additions. Owned buffered paths
+use admitted session.Statement/complete session.Result readers and caller refs;
+share domain selection/schema/provenance with borrowed rows/JSON. Validate all
+rows before returning a result, including post-query cancellation. Preserve raw
+NULL/default flags, absent optional columns and unavailable/missing-name states.
+Hidden facts use the reviewed visible underscore source; no all-default X$ scan.
+Password-file APIs expose metadata only, with documented version/capability
+selection; never inspect users/verifiers/file contents or flush metadata caches.
+Applications retain non-default/explicit-name report unions and peer selection.

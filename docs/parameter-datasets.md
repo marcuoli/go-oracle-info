@@ -190,3 +190,36 @@ Checked2026-11-14:
   https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SPPARAMETER.html
 - SPFILE wildcard/override context (no merge performed here):
   https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and-configuring-an-oracle-database.html
+
+## Visible hidden parameters and buffered readers
+
+`HiddenStatement`, `HiddenRows` and `HiddenJSON` restrict the same effective
+projection to literal leading-underscore names. The root facade exposes
+`HiddenParameters` and `HiddenParametersJSON`. `Provenance.NameClass` records
+`leading_underscore_only`. This is a visible/configured view subset, including
+raw/default-state facts, not a complete unset internal catalog. No X$ table,
+setting change or fallback is used. Explicit names intersect that prefix and
+cannot admit ordinary names. A missing name remains absent/unavailable.
+
+The application selects non-default plus explicit rows, retaining a peer default
+when needed for comparison. This policy does not enter the SQL or decoder. Align
+actual instance/container/name/ordinal identity; do not collapse list rows or
+infer RAC completeness. Existing effective and stored methods are unchanged.
+
+For an existing complete buffered reader, `ReadEffective`, `ReadHidden` and
+`ReadSPFile` take a known source version, filter and valid caller reference.
+Matching `Decode...` functions validate complete `session.Result` metadata,
+exact integer fields and all rows before publishing typed records. Raw fields
+are `session.Value`; optional 11g-absent columns use nil pointers, distinct from
+projected SQL NULL. A failed read or malformed late row returns no successful
+prefix. Reader ownership, finite budgets, terminal errors and transport recovery
+remain with the caller. See the [developer guide](developer-guide.md).
+
+Oracle-published hidden-name guidance checked 2026-11-14:
+
+- [Oracle 11.2 Upgrade Guide, Upgrading to the New Release](https://docs.oracle.com/cd/E18283_01/server.112/e17222/upgrade.htm): leading-underscore selection of existing hidden parameters under admitted SYSDBA.
+- [Oracle 12.1 Upgrade Guide, Preparing to Upgrade Oracle Database](https://docs.oracle.com/database/121/UPGRD/preup.htm): the same public-view selection for currently set parameters. The former E16655 URL redirects here.
+
+The instance-effective source remains the documented `GV$SYSTEM_PARAMETER2`
+contract above; the upgrade examples do not establish all hidden defaults,
+current-session equivalence or native cross-instance/container acceptance.

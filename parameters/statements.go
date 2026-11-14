@@ -48,6 +48,7 @@ type Provenance struct {
 	Instances   []int64  `json:"instances,omitempty"`
 	SIDs        []string `json:"sids,omitempty"`
 	SIDPolicy   string   `json:"sid_policy,omitempty"`
+	NameClass   string   `json:"name_class,omitempty"`
 }
 
 // EffectiveStatement selects instance-effective SYSTEM_PARAMETER2 values, not
@@ -55,6 +56,14 @@ type Provenance struct {
 // to whole-database rows(0) plus the current session container, never other PDBs.
 func EffectiveStatement(major int, filter Filter) (string, []any, error) {
 	plan, err := effectivePlan(major, filter)
+	return plan.sql, plan.args, err
+}
+
+// HiddenStatement selects only leading-underscore names visible in the same
+// instance-effective source and shape as EffectiveStatement. It is not the
+// complete internal/default parameter catalog. Report selection stays with callers.
+func HiddenStatement(major int, filter Filter) (string, []any, error) {
+	plan, err := hiddenPlan(major, filter)
 	return plan.sql, plan.args, err
 }
 
@@ -100,6 +109,14 @@ func effectivePlan(major int, filter Filter) (selection, error) {
 	return build(major, provenance, columns, nil), nil
 }
 
+func hiddenPlan(major int, filter Filter) (selection, error) {
+	plan, err := effectivePlan(major, filter)
+	if err != nil {
+		return selection{}, err
+	}
+	plan.provenance.NameClass = "leading_underscore_only"
+	return build(major, plan.provenance, plan.schema, nil), nil
+}
 func spfilePlan(major int, filter SPFileFilter) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
@@ -170,6 +187,10 @@ func build(major int, provenance Provenance, columns []rowset.Column, sids []str
 		aliases[i] = "p." + column.Name + " AS " + column.Name
 	}
 	clauses := []string{}
+	// Prefix admission must not inherit a caller's linguistic collation.
+	if provenance.NameClass == "leading_underscore_only" {
+		clauses = append(clauses, `NLSSORT(SUBSTR(p.NAME,1,1), 'NLS_SORT=BINARY') = NLSSORT('_', 'NLS_SORT=BINARY')`)
+	}
 	args := make([]any, 0, len(provenance.Names)+len(provenance.Instances)+len(sids))
 	if major >= 12 {
 		clauses = append(clauses, "p.CON_ID IN (0,TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID')))")

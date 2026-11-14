@@ -22,3 +22,12 @@ execution/admission determines evidence availability; query selection alone
 cannot establish complete source coverage, acceptance or native compatibility.
 
 The root oracleinfo.Client is a thin, non-owning facade over a caller-admitted native QueryContext handle. parameters owns effective-instance versus stored-SPFILE SQL, filters, schema and provenance. Generic query delegation, native cursor consumption and ordered bounded standard JSON live only in go-oracle-session/rowset; fact readers call that package directly. No rowset implementation or compatibility package remains in this module. Borrowed native handles and owned Session.Stream leases are separate contracts; no private cursor escapes its lease. Existing Oracle selector/decoder APIs remain available. Resultsets must never be serialized as CSV/plaintext except genuine DBMS_OUTPUT; typed scalar/string values and SQL source are separate from formatted resultsets.
+
+Buffered `parameters.Reader` and `passwordfile.Reader` are structural admitted
+`session.Statement`/complete-`session.Result` contracts, consistent with existing
+identity/memory readers. Domain decoders validate every row before publishing
+facts; they do not create a cursor or generic executor. Hidden facts reuse the
+visible instance-effective source and retain nullable/default-state provenance.
+Password-file facts are cached view metadata, with documented 12.2 availability
+and 21c optional-column selection; they never inspect credentials/files or refresh
+settings. Application-owned report unions do not alter raw source evidence.

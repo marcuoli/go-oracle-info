@@ -108,3 +108,17 @@ For bounded oldest table/partition/subpartition optimizer facts, see [statistics
 Use the independent [connected identity property readers](docs/identity-properties.md) when the shared library should own version/architecture/edition source selection. Each property retains source, precision, safe failures and compatibility provenance on an already-admitted reader.
 
 For the simplest caller API, use [the non-owning fact client and parameter datasets](docs/parameter-datasets.md): oracleinfo.New(existingConn), scalar properties, native InitParameters/SPFileParameters and bounded JSON companions. SQL/version selection stays internal, the native handle lifetime stays with its owner, and result serialization uses JSON rather than CSV/plaintext.
+
+## Punctual facts and developer integration
+
+Use the [application developer guide](docs/developer-guide.md) to choose the
+owned buffered reader or borrowed native facade, preserve source/NULL/completeness
+and request additional methods. `parameters` now provides typed effective,
+visible-hidden and stored-SPFILE reads alongside native rows/JSON.
+`passwordfile` provides metadata-only statement/decoder/reader/native JSON APIs
+from the documented 12.2 view, with the optional Exascale column selected by
+`DefaultOptions` from Oracle 21c. Sources, version/capability rules and limits are
+in [parameter datasets](docs/parameter-datasets.md) and
+[password-file metadata](docs/password-file.md). Report selection stays in the
+application; no internal hidden-default catalog, credentials or file contents
+are collected.

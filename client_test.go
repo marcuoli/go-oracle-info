@@ -283,3 +283,74 @@ func TestClientRequestGuardsIssueNoSQL(t *testing.T) {
 		t.Fatal("nil client accepted")
 	}
 }
+
+func TestHiddenFacadeRetainsRowsAndDefaultFacts(t *testing.T) {
+	t.Parallel()
+	step := parameterStep(true, false)
+	for i, name := range step.Columns {
+		if name == "NAME" {
+			step.Values[0][i] = "_candidate"
+		}
+		if name == "ISDEFAULT" {
+			step.Values[0][i] = "TRUE"
+		}
+	}
+	db, state := testsql.New(t, append(versionSteps("23"), step)...)
+	spy := &nativeSpy{db: db}
+	rows, err := info.New(spy).HiddenParameters(t.Context(), info.ParameterFilter{})
+	if err != nil || rows != spy.last || !rows.Next() {
+		t.Fatal("hidden cursor changed", err)
+	}
+	if err = rows.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(state.Calls()[2].SQL, `NLSSORT(SUBSTR(p.NAME,1,1), 'NLS_SORT=BINARY') = NLSSORT('_', 'NLS_SORT=BINARY')`) || strings.Contains(state.Calls()[2].SQL, "ISDEFAULT=") {
+		t.Fatal("hidden scope/report policy changed")
+	}
+	db, _ = testsql.New(t, append(versionSteps("23"), step)...)
+	data, err := info.New(db).HiddenParametersJSON(t.Context(), info.ParameterFilter{})
+	if err != nil || !strings.Contains(string(data), `"name_class":"leading_underscore_only"`) || !strings.Contains(string(data), `"TRUE"`) {
+		t.Fatal(string(data), err)
+	}
+}
+func TestPasswordFileFacadeVersionAndCapability(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, version    string
+		extra, supported bool
+	}{{"12.1", "12.1.0.2.0", false, false}, {"12.2", "12.2.0.1.0", false, true}, {"modern-base", "23.26.1.0.0", false, true}, {"modern-extra", "23.26.1.0.0", true, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			steps := []testsql.Step{{SQL: legacySQL, Columns: []string{"VERSION"}, Values: [][]driver.Value{{tc.version}}}}
+			if strings.HasPrefix(tc.version, "23.") {
+				steps = append(steps, testsql.Step{SQL: fullSQL, Columns: []string{"VERSION"}, Values: [][]driver.Value{{tc.version}}})
+			}
+			versionCalls := len(steps)
+			names := []string{"FILE_NAME", "FORMAT", "IS_ASM"}
+			values := []driver.Value{nil, "12.2", "FALSE"}
+			if tc.extra {
+				names = append(names, "IS_EXC")
+				values = append(values, "UNKNOWN")
+			}
+			names = append(names, "CON_ID")
+			values = append(values, int64(0))
+			if tc.supported {
+				steps = append(steps, testsql.Step{Columns: names, Values: [][]driver.Value{values}})
+			}
+			db, state := testsql.New(t, steps...)
+			data, err := info.New(db).PasswordFileInfoJSON(t.Context(), info.PasswordFileOptions{IncludeExascale: tc.extra})
+			if !tc.supported {
+				if err == nil || data != nil || len(state.Calls()) != versionCalls {
+					t.Fatal("unsupported source queried", string(data), err)
+				}
+				return
+			}
+			if err != nil || len(state.Calls()) != versionCalls+1 || strings.Contains(state.Calls()[versionCalls].SQL, "IS_EXC") != tc.extra || !strings.Contains(string(data), "null") {
+				t.Fatal(string(data), err)
+			}
+		})
+	}
+	db, state := testsql.New(t)
+	if _, err := info.New(db).PasswordFileInfoJSON(t.Context(), info.PasswordFileOptions{}, info.JSONLimits{MaxBytes: -1}); err == nil || len(state.Calls()) != 0 {
+		t.Fatal("invalid budget queried version/source", err)
+	}
+}

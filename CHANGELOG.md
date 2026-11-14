@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.0 (2026-11-14)
+
+- Add a separate visible/configured hidden-parameter dataset with native rows/JSON and complete typed buffered readers for effective, hidden and stored SPFILE facts, preserving raw NULL/default/source/instance/container/list semantics.
+- Add metadata-only password-file selectors, decoders, owned-reader and borrowed native/JSON methods, with the 12.2 source floor and documented 21c Exascale-column defaults; preserve explicit capability choices and absence/unavailable states.
+- Document the punctual fact-method pattern and application developer/request workflow without introducing generic execution or application report-selection policy.
 ## v0.11.0 (2026-11-14)
 
 - Move generic query/native-row/JSON ownership to go-oracle-session/rowset and delegate Oracle fact readers directly to that functional package.

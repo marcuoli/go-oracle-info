@@ -91,3 +91,27 @@ func TestParameterFilterValidation(t *testing.T) {
 		t.Fatal("unsupported source accepted")
 	}
 }
+
+func TestHiddenSelectionIsVisibleLiteralUnderscoreSubset(t *testing.T) {
+	t.Parallel()
+	for _, major := range []int{11, 12, 19, 23} {
+		filter := parameters.Filter{Names: []string{"_candidate", "processes", "__raw"}, Instances: []int64{1, 7}}
+		sql, args, err := parameters.HiddenStatement(major, filter)
+		if err != nil || !strings.Contains(sql, `NLSSORT(SUBSTR(p.NAME,1,1), 'NLS_SORT=BINARY') = NLSSORT('_', 'NLS_SORT=BINARY')`) || !strings.Contains(sql, "FROM GV$SYSTEM_PARAMETER2 p") || !reflect.DeepEqual(args, []any{int64(1), int64(7), "_candidate", "processes", "__raw"}) {
+			t.Fatal(sql, args, err)
+		}
+		if strings.Contains(sql, "X$") || strings.Contains(sql, "ISDEFAULT=") || strings.Contains(sql, "ISDEFAULT =") || strings.Contains(sql, "_candidate") {
+			t.Fatal("source expanded or report policy added", sql)
+		}
+		effective, _, err := parameters.EffectiveStatement(major, filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Split(sql, " FROM ")[0] != strings.Split(effective, " FROM ")[0] {
+			t.Fatal("hidden projection differs")
+		}
+		if strings.Contains(sql, "p.CON_ID AS CON_ID") != (major >= 12) {
+			t.Fatal("scope version gate changed")
+		}
+	}
+}

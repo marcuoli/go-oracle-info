@@ -38,6 +38,26 @@ func EffectiveRows(ctx context.Context, q rowset.Queryer, major int, filter Filt
 	return open(ctx, q, plan)
 }
 
+// HiddenRows returns the actual caller-owned cursor for visible underscore
+// instance parameters. It does not scan X$ or filter out default-state facts.
+func HiddenRows(ctx context.Context, q rowset.Queryer, major int, filter Filter) (*sql.Rows, error) {
+	plan, err := hiddenPlan(major, filter)
+	if err != nil {
+		return nil, err
+	}
+	return open(ctx, q, plan)
+}
+
+// HiddenJSON is the bounded independent JSON counterpart of HiddenRows. Empty
+// selected names remain absent; no unobserved internal defaults are invented.
+func HiddenJSON(ctx context.Context, q rowset.Queryer, major int, filter Filter, limits rowset.Limits) (json.RawMessage, error) {
+	plan, err := hiddenPlan(major, filter)
+	if err != nil {
+		return nil, err
+	}
+	return readJSON(ctx, q, plan, limits)
+}
+
 // SPFileRows preserves all selected stored clauses, wildcard/defaults and raw
 // ISSPECIFIED. Its native cursor has the same ownership as EffectiveRows.
 func SPFileRows(ctx context.Context, q rowset.Queryer, major int, filter SPFileFilter) (*sql.Rows, error) {

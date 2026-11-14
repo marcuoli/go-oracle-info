@@ -10,6 +10,7 @@ import (
 
 	"github.com/marcuoli/go-oracle-info/identity"
 	"github.com/marcuoli/go-oracle-info/parameters"
+	"github.com/marcuoli/go-oracle-info/passwordfile"
 	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
@@ -153,4 +154,73 @@ func jsonLimits(limits []JSONLimits) (JSONLimits, error) {
 		return rowset.Resolve(JSONLimits{})
 	}
 	return rowset.Resolve(limits[0])
+}
+
+// PasswordFileOptions admits an optional IS_EXC column independently of version.
+// Leave it false unless the caller established that column on this exact source.
+type PasswordFileOptions struct{ IncludeExascale bool }
+
+// HiddenParameters returns the caller-native cursor for visible underscore
+// instance facts, using the same source shape and filters as InitParameters.
+func (c *Client) HiddenParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error) {
+	if _, _, err := parameters.HiddenStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.HiddenRows(ctx, c.native(), major, filter)
+}
+
+// HiddenParametersJSON independently consumes visible underscore facts as bounded
+// standard JSON. Default/nondefault report selection remains with the caller.
+func (c *Client) HiddenParametersJSON(ctx context.Context, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err := parameters.HiddenStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.HiddenJSON(ctx, c.native(), major, filter, resolved)
+}
+
+// PasswordFileInfo returns the actual caller-native metadata cursor on12.2+.
+// It reads no password/verifier/users/file and never refreshes metadata caches.
+func (c *Client) PasswordFileInfo(ctx context.Context, options PasswordFileOptions) (*sql.Rows, error) {
+	selected, err := c.passwordFileOptions(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return passwordfile.Rows(ctx, c.native(), selected)
+}
+
+// PasswordFileInfoJSON independently consumes the same admitted metadata into
+// bounded JSON. IncludeExascale is a capability admission, never an auto-probe.
+func (c *Client) PasswordFileInfoJSON(ctx context.Context, options PasswordFileOptions, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	selected, err := c.passwordFileOptions(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return passwordfile.JSON(ctx, c.native(), selected, resolved)
+}
+
+func (c *Client) passwordFileOptions(ctx context.Context, options PasswordFileOptions) (passwordfile.Options, error) {
+	version, err := c.Version(ctx)
+	if err != nil {
+		return passwordfile.Options{}, err
+	}
+	if version.State != identity.Available {
+		return passwordfile.Options{}, ErrVersionUnavailable
+	}
+	return passwordfile.Options{OracleVersion: version.Value, IncludeExascale: options.IncludeExascale}, nil
 }
