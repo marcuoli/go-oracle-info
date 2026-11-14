@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.0 (2026-11-14)
+
+- Add a thin non-owning native fact client with reused scalar identity properties and effective-instance/SPFILE parameter datasets as actual database/sql rows or bounded atomic JSON; preserve source/NULL/type/multivalue/SID semantics and all existing APIs.
+- Persist the JSON-only result serialization rule, excluding genuine DBMS_OUTPUT and typed scalar/SQL-source values.
+
 ## v0.9.0 (2026-11-14)
 
 - Add independent connected architecture, numeric-version and explicit-edition property readers with guarded source selection, typed precision/provenance and safe failure/cancellation retention; preserve all low-level APIs.

@@ -20,3 +20,5 @@ introduced. Exact owner filters remain binds, dictionary identifiers are quoted,
 and static bounded selectors validate their integer limits. A caller's successful
 execution/admission determines evidence availability; query selection alone
 cannot establish complete source coverage, acceptance or native compatibility.
+
+The root oracleinfo.Client is a thin, non-owning facade over a caller-admitted native QueryContext handle. parameters owns effective-instance versus stored-SPFILE source/filter semantics; rowset only consumes/finalizes provided native cursors into ordered bounded standard JSON. It owns no connection/driver/lease/recovery engine. Existing low-level APIs remain available. Resultsets must never be serialized as CSV/plaintext except genuine DBMS_OUTPUT; typed scalar/string values and SQL source are separate from formatted resultsets.

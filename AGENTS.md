@@ -9,3 +9,10 @@ Every change uses a typed, area-labeled issue with `## Validation and acceptance
 Use compatible official upstream dependencies and released first-party module versions. No patched third-party copies, permanent local replace directives or unqualified native compatibility claims. Implement shared mechanisms only for real consumers. Preserve UPL notices and keep private provenance evidence outside the repository.
 
 Validate formatting, tests, vet, module verification, build, race and advisories with recorded compiler/settings and approved V: storage. Libraries use conventional immutable module tags; public distribution is a separate gate from private implementation history.
+
+## Result APIs and serialization
+Expose simple non-owning domain properties and companion complete native rows/JSON methods over caller-admitted handles. Hide source/version/reference wiring in the facade without capability caches, connection/container/driver ownership, unsafe lease escapes or generic query registries. Raw *sql.Rows must be the actual caller-native cursor; callers own iteration/Err/Close and budgets. JSON owns its separate cursor and publishes nothing on any iteration/scan/close/cancellation/budget failure. Preserve SQL NULL, native numeric meaning, raw text, ordering and provenance.
+
+NEVER serialize query result data as CSV or plaintext; only genuine DBMS_OUTPUT may be textual output. Typed string columns/scalar properties and SQL-source strings are not formatted resultsets. Use standard JSON, keeping diagnostics separate. Preserve immutable historical releases.
+
+Keep effective instance settings, session settings and stored SPFILE definitions distinct. SPFILE reporting INST_ID is not SID applicability; preserve wildcard/defaults, overrides and dormant SID clauses without inferring effective precedence or complete file/RAC/container coverage. Test-only database/sql fixture drivers are unit scaffolding, never production cursor fabrication or native Oracle qualification.
