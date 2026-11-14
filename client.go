@@ -10,7 +10,7 @@ import (
 
 	"github.com/marcuoli/go-oracle-info/identity"
 	"github.com/marcuoli/go-oracle-info/parameters"
-	"github.com/marcuoli/go-oracle-info/rowset"
+	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
 // Queryer is a caller-owned native database/sql handle. Prefer an admitted,

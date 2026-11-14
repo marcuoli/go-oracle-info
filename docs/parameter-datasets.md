@@ -22,7 +22,7 @@ New stores the handle; it opens, closes and configures nothing. Prefer an
 already-admitted session-affine sql.Conn or sql.Tx. A pool/custom Queryer must
 provide caller-proven compatible targets and supported cursor concurrency.
 The facade adds no retry or recovery and holds no lease/capability cache.
-The supplied handle retains its native database/sql/driver behavior.
+The supplied handle retains its native database/sql/driver behavior. Generic execution, native-row consumption and bounded JSON are delegated directly to go-oracle-session/rowset; this module owns Oracle fact selection, filters, schema and provenance.
 
 Version, Architecture and Edition reuse the existing independent identity
 observations, with actual sources, availability, precision, fallback and safe
@@ -100,7 +100,7 @@ caller's transport disposal/cleanup policy; JSON limits do not replace that.
 InitParameters reads GV$SYSTEM_PARAMETER2, the instance-effective source with
 one row per list element. It is not current-session V$PARAMETER and not stored
 SPFILE configuration. Existing database.ParametersSQL/ParametersWithDefaultsSQL
-and every other exported API remain unchanged.
+remain unchanged. The former go-oracle-info/rowset package is removed; direct generic dataset users import go-oracle-session/rowset.
 
 ParameterFilter.Names and Instances are optional. Empty lists mean all names
 and reporting instance IDs visible in that admitted view. Names are exact
@@ -164,11 +164,13 @@ facade methods, reuse the native Queryer/ordered rowset contract and standard JS
 and retain their own source semantics. Do not introduce a query registry/ORM or
 convert existing consumers wholesale.
 
-Pinned go-oracle-sessionv0.2.1 still supplies exact scalar values for the identity
-adapter. Its Query buffers results; newer Stream owns a private native cursor,
-and WithDriver is metadata-only. None is cast to sql.Rows or used to leak a lease.
-The shared native-row helper owns only bounded consumption/finalization of rows
-already supplied by a caller, not connection transport or recovery.
+The released go-oracle-session v0.6.0 requires Go 1.27.4. Use its rowset package directly for generic borrowed-native queries and
+ordered bounded datasets. Its helpers own only consumption/finalization of rows
+already supplied by the caller. The owned Session.Stream API retains its private
+cursor and lease lifecycle; no Session cursor is cast to sql.Rows or detached
+from its lease. No second transport or cancellation watcher is introduced here.
+There is no go-oracle-info/rowset compatibility package. The facade's Queryer and
+JSONLimits conveniences refer directly to the session module's functional types.
 
 ## Oracle references
 

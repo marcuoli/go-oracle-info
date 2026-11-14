@@ -12,7 +12,7 @@ import (
 	info "github.com/marcuoli/go-oracle-info"
 	"github.com/marcuoli/go-oracle-info/identity"
 	"github.com/marcuoli/go-oracle-info/internal/testsql"
-	"github.com/marcuoli/go-oracle-info/rowset"
+	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
 const legacySQL = "SELECT VERSION AS VERSION FROM V$INSTANCE"

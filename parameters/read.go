@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/marcuoli/go-oracle-info/rowset"
+	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
 // JSONEnvelope keeps source/filter provenance separate from ordered native data.

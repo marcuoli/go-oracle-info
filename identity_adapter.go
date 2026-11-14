@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/marcuoli/go-oracle-info/identity"
-	"github.com/marcuoli/go-oracle-info/rowset"
+	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
 )

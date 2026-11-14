@@ -16,3 +16,5 @@ Expose simple non-owning domain properties and companion complete native rows/JS
 NEVER serialize query result data as CSV or plaintext; only genuine DBMS_OUTPUT may be textual output. Typed string columns/scalar properties and SQL-source strings are not formatted resultsets. Use standard JSON, keeping diagnostics separate. Preserve immutable historical releases.
 
 Keep effective instance settings, session settings and stored SPFILE definitions distinct. SPFILE reporting INST_ID is not SID applicability; preserve wildcard/defaults, overrides and dormant SID clauses without inferring effective precedence or complete file/RAC/container coverage. Test-only database/sql fixture drivers are unit scaffolding, never production cursor fabrication or native Oracle qualification.
+
+Generic query execution, native row consumption and JSON datasets belong exclusively in go-oracle-session/rowset. Domain facts delegate there; do not implement or preserve an info/rowset compatibility package. Keep Oracle SQL/filter/schema/provenance here. Borrowed caller-native rows do not expose an owned Session.Stream lease or private cursor.

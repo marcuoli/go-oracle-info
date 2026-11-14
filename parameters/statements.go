@@ -9,7 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/marcuoli/go-oracle-info/rowset"
+	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
 // Filter selects exact parameter names and reporting instance numbers. Empty

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.0 (2026-11-14)
+
+- Move generic query/native-row/JSON ownership to go-oracle-session/rowset and delegate Oracle fact readers directly to that functional package.
+- Remove go-oracle-info/rowset without compatibility aliases or forwarders. Direct generic dataset consumers must update their imports; Oracle-specific fact filters, typed values, provenance and facade methods remain here.
+- Keep borrowed native database/sql handles separate from the existing owned Session.Stream lease lifecycle. Historical v0.10.0 remains immutable.
+- Require released go-oracle-session v0.6.0 and Go 1.27.4 for the shared dataset implementation.
+
 ## v0.10.0 (2026-11-14)
 
 - Add a thin non-owning native fact client with reused scalar identity properties and effective-instance/SPFILE parameter datasets as actual database/sql rows or bounded atomic JSON; preserve source/NULL/type/multivalue/SID semantics and all existing APIs.

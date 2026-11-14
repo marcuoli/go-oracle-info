@@ -8,6 +8,8 @@ The initial memory contract preserves non-CDB, CDB-root and PDB scope, inherited
 
 Oracle platform names are not complete operating-system distribution/vendor/release evidence. Native release/platform qualification must be recorded by each consumer; synthetic tests do not certify a database deployment.
 
+Generic query, borrowed native-row and JSON dataset mechanics belong to `go-oracle-session/rowset`. This module delegates there and owns Oracle SQL selection, fact filters/schema/provenance and decoding. The misplaced `go-oracle-info/rowset` package is removed without compatibility wrappers; update generic consumer imports directly. Owned `Session.Stream` leases remain in the session module.
+
 Use released module dependencies, with GOWORK=off and no local replacements for final validation. See docs/architecture.md and scripts/validate.ps1. License: UPL 1.0.
 
 The existing `*session.Session` satisfies `memory.Reader`; an application can also adapt its admitted executor to that interface. With a bounded context, an admitted direct-PDB reader, and two distinct application-owned SQL references:
@@ -28,7 +30,7 @@ value, err := memory.Collect(ctx, reader, memory.Request{
 
 Inspect both `err` and `value.State`. A failed effective query can return the valid primary observation alongside an error. The library does not acquire a different scope to make a query succeed. `identity` exposes statement selection and decoding separately so an application keeps its bootstrap/admission sequence.
 
-Validation uses Go 1.27.4 on Windows/amd64 with released module versions. The module's language minimum remains Go 1.27.3. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. Public module releases use github.com/marcuoli/go-oracle-info; the private Gitea repository remains the source authority.
+Validation uses Go 1.27.4 on Windows/amd64 with released module versions. The minimum is Go 1.27.4, required by the session module that owns generic dataset execution and consumption. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. Public module releases use github.com/marcuoli/go-oracle-info; the private Gitea repository remains the source authority.
 
 ## Engineered-system facts
 
