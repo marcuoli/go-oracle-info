@@ -11,7 +11,9 @@ unchanged.
 Use objects.OldestStatisticsStatement with StatisticsOptions and optional bound
 owners. Limit must be 1..MaxStatisticsRows (1000). A reporting limit of 10 selects
 ten rows total across the admitted owners, not ten per owner. Owners remain
-exact, case-preserving bound values; at most MaxStatisticsOwners (1000) are
+exact, case-preserving bound values. Owner IN predicates and dictionary-username
+joins compare binary NLSSORT RAW keys on both sides, preserving admission even
+under linguistic/case-insensitive NLS_COMP/NLS_SORT settings; at most MaxStatisticsOwners (1000) are
 accepted. A limit is required; there is no unbounded mode.
 
 OracleMaintainedAvailable must reflect admitted DBA_USERS column availability.
@@ -86,6 +88,12 @@ follows from source review or fixtures.
 - Oracle Database SQL Language Reference 11.2, ROW_NUMBER (E26088-02), nested
   top-N and deterministic ordering:
   https://docs.oracle.com/html/E26088_02/functions156.htm
+
+- Oracle Database Globalization Support Guide 11.2, Linguistic Sorting and
+  Matching, comparison behavior under NLS_COMP/NLS_SORT:
+  https://docs.oracle.com/cd/E11882_01/server.112/e10729/ch5lingsort.htm
+- Oracle Database SQL Language Reference 19c, NLSSORT, RAW collation keys:
+  https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/NLSSORT.html
 
 Number/calendar conversion references and their exact tested native limits
 remain in object-row-counts.md. This additive selector requires separate native

@@ -55,7 +55,7 @@ type Statistics struct {
 // OldestStatisticsStatement selects at most Limit rows across admitted owners,
 // with NULL analysis dates first, then oldest dates and binary identity ordering.
 // The limit and owner names are bound values. An empty owner list requires the
-// admitted ORACLE_MAINTAINED capability and selects only its exact N rows;
+// admitted ORACLE_MAINTAINED capability and requires its exact 'N' flag;
 // that flag alone does not establish application ownership. Otherwise the caller
 // supplies the entire owner admission, with no heuristic internal-schema list.
 // The complete bounded selection is not a complete dictionary inventory.
@@ -75,14 +75,25 @@ func OldestStatisticsStatement(options StatisticsOptions, owners ...string) (str
 			return "", nil, ErrInvalidStatisticsOptions
 		}
 	}
-	filter, args := ownerFilter(owners)
+	args := make([]any, len(owners))
+	filter := ""
+	if len(owners) > 0 {
+		values := make([]string, len(owners))
+		for i, owner := range owners {
+			values[i] = "NLSSORT(:" + strconv.Itoa(i+1) + ", 'NLS_SORT=BINARY')"
+			args[i] = owner
+		}
+		// Character equality/IN can broaden admission under NLS_COMP=LINGUISTIC.
+		// Compare binary RAW keys on both sides, including the dictionary join.
+		filter = " WHERE NLSSORT(s.OWNER, 'NLS_SORT=BINARY') IN (" + strings.Join(values, ",") + ")"
+	}
 	if options.OracleMaintainedAvailable {
 		if filter == "" {
 			filter = " WHERE "
 		} else {
 			filter += " AND "
 		}
-		filter += "EXISTS (SELECT 1 FROM DBA_USERS u WHERE u.USERNAME=s.OWNER AND u.ORACLE_MAINTAINED='N')"
+		filter += "EXISTS (SELECT 1 FROM DBA_USERS u WHERE NLSSORT(u.USERNAME, 'NLS_SORT=BINARY')=NLSSORT(s.OWNER, 'NLS_SORT=BINARY') AND u.ORACLE_MAINTAINED='N')"
 	}
 	names := statisticsNames(options.OracleMajor)
 	outer := make([]string, len(names))

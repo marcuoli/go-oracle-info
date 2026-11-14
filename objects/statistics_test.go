@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -21,6 +22,7 @@ func TestOldestStatisticsStatement(t *testing.T) {
 	}{
 		{"legacy-admitted", 11, false, []string{"MiXeD", "X') OR 1=1 --"}},
 		{"12-admitted", 12, false, []string{"App"}},
+		{"case-distinct-admission", 11, false, []string{"App", "APP"}},
 		{"12-capability", 12, true, nil},
 		{"19-all-non-maintained", 19, true, nil},
 		{"26-restricted", 26, true, []string{"雪"}},
@@ -58,10 +60,16 @@ func TestOldestStatisticsStatement(t *testing.T) {
 			if strings.Contains(text, "PARTITION BY") || strings.Contains(text, "FETCH FIRST") || strings.Contains(text, "COUNT(") {
 				t.Fatalf("query changed global 11g-compatible selection: %s", text)
 			}
-			if tc.automatic && !strings.Contains(text, "u.USERNAME=s.OWNER AND u.ORACLE_MAINTAINED='N'") {
+			if tc.automatic && !strings.Contains(text, "NLSSORT(u.USERNAME, 'NLS_SORT=BINARY')=NLSSORT(s.OWNER, 'NLS_SORT=BINARY') AND u.ORACLE_MAINTAINED='N'") {
 				t.Fatal("automatic selection lost exact maintained-owner filter")
 			}
-			if len(tc.owners) == 2 && !strings.Contains(text, "OWNER IN (:1,:2)") {
+			if !strings.HasSuffix(text, ") WHERE STATISTICS_RANK<=:"+strconv.Itoa(len(want))+" ORDER BY STATISTICS_RANK") {
+				t.Fatal("bound applies before final global top-N ordering")
+			}
+			if strings.Contains(text, "NLSSORT(s.SCOPE, 'NLS_SORT=BINARY')") != (tc.major >= 12) {
+				t.Fatal("statistics scope omitted from deterministic identity order")
+			}
+			if len(tc.owners) == 2 && !strings.Contains(text, "NLSSORT(s.OWNER, 'NLS_SORT=BINARY') IN (NLSSORT(:1, 'NLS_SORT=BINARY'),NLSSORT(:2, 'NLS_SORT=BINARY'))") {
 				t.Fatal("legacy owner admission lost")
 			}
 			if len(args) > 1 {
@@ -74,6 +82,20 @@ func TestOldestStatisticsStatement(t *testing.T) {
 	}
 }
 
+func TestOldestStatisticsRowBudgetBoundaries(t *testing.T) {
+	t.Parallel()
+	for _, limit := range []int{1, objects.MaxStatisticsRows} {
+		t.Run(strconv.Itoa(limit), func(t *testing.T) {
+			text, args, err := objects.OldestStatisticsStatement(objects.StatisticsOptions{
+				OracleMajor: 19, Limit: limit, OracleMaintainedAvailable: true,
+			})
+			if err != nil || !reflect.DeepEqual(args, []any{limit}) ||
+				!strings.HasSuffix(text, ") WHERE STATISTICS_RANK<=:1 ORDER BY STATISTICS_RANK") {
+				t.Fatalf("row budget lost: %s %v %v", text, args, err)
+			}
+		})
+	}
+}
 func TestOldestStatisticsRejectsUnsafeSelection(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
