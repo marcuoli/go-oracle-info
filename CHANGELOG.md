@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.1 (2026-11-14)
+
+- Add a conservative legacy11g banner helper for explicit edition descriptions, preserving raw evidence and descriptive provenance without synthesizing codes or changing modern edition APIs.
+
 ## v0.6.0 (2026-11-14)
 
 - Add observed edition and complete version-banner decoding plus current-container dictionary-component selectors/decoders, preserving exact nullable values, raw modification labels and legacy/full-column provenance.
