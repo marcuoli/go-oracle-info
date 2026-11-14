@@ -31,3 +31,5 @@ visible instance-effective source and retain nullable/default-state provenance.
 Password-file facts are cached view metadata, with documented 12.2 availability
 and 21c optional-column selection; they never inspect credentials/files or refresh
 settings. Application-owned report unions do not alter raw source evidence.
+
+Instance-wide scalar-row system parameters and qualified instance visibility are documented in [system parameter contracts](system-parameters.md). Preserve the published SYSTEM_PARAMETER2 list APIs; per-member scheduling, partial coverage and report selection remain consumer-owned.

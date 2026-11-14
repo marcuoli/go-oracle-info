@@ -158,3 +158,5 @@ SQL, bindings, paths or credentials.
 Oracle references and bounded source contracts are in
 [parameter datasets](parameter-datasets.md) and
 [password-file metadata](password-file.md).
+
+For scalar-row instance parameters, use parameters.ReadSystem and parameters.ModifiedSystem. Enumerate qualified IDs with instances.Read before bounded per-member collection; see [system parameter contracts](system-parameters.md). These APIs preserve raw modification flags and never infer persistence or certify physical RAC membership.

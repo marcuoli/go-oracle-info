@@ -223,3 +223,7 @@ Oracle-published hidden-name guidance checked 2026-11-14:
 The instance-effective source remains the documented `GV$SYSTEM_PARAMETER2`
 contract above; the upgrade examples do not establish all hidden defaults,
 current-session equivalence or native cross-instance/container acceptance.
+
+## Scalar-row system parameters and visibility
+
+Use SystemParameters/SystemParametersJSON for GV$SYSTEM_PARAMETER without ordinals and InstanceVisibility/InstanceVisibilityJSON for qualified GV$INSTANCE facts. Typed owned-reader counterparts, raw MODIFIED selection and consumer-owned per-member/partial coverage rules are in [system parameter contracts](system-parameters.md). Existing InitParameters and its list-element projection are unchanged.

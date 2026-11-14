@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/marcuoli/go-oracle-info/identity"
+	"github.com/marcuoli/go-oracle-info/instances"
 	"github.com/marcuoli/go-oracle-info/parameters"
 	"github.com/marcuoli/go-oracle-info/passwordfile"
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -223,4 +224,58 @@ func (c *Client) passwordFileOptions(ctx context.Context, options PasswordFileOp
 		return passwordfile.Options{}, ErrVersionUnavailable
 	}
 	return passwordfile.Options{OracleVersion: version.Value, IncludeExascale: options.IncludeExascale}, nil
+}
+
+// SystemParameters returns all selected instance-wide GV$SYSTEM_PARAMETER rows.
+// Empty Instances means every qualified visible ID, not just the connected one.
+func (c *Client) SystemParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error) {
+	if _, _, err := parameters.SystemStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.SystemRows(ctx, c.native(), major, filter)
+}
+
+// SystemParametersJSON independently consumes the same scalar-row system source
+// as bounded JSON; it never converts list text into invented ordinal rows.
+func (c *Client) SystemParametersJSON(ctx context.Context, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err := parameters.SystemStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.SystemJSON(ctx, c.native(), major, filter, resolved)
+}
+
+// InstanceVisibility returns the caller-native cursor of all qualified visible
+// instances. It does not connect to members or certify physical RAC coverage.
+func (c *Client) InstanceVisibility(ctx context.Context) (*sql.Rows, error) {
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return instances.Rows(ctx, c.native(), major)
+}
+
+// InstanceVisibilityJSON is the independent bounded JSON visibility counterpart.
+// A failed source never falls back to a connected-instance-only success.
+func (c *Client) InstanceVisibilityJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return instances.JSON(ctx, c.native(), major, resolved)
 }

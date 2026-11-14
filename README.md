@@ -122,3 +122,5 @@ in [parameter datasets](docs/parameter-datasets.md) and
 [password-file metadata](docs/password-file.md). Report selection stays in the
 application; no internal hidden-default catalog, credentials or file contents
 are collected.
+
+Instance-wide scalar-row system parameters and qualified instance visibility are documented in [system parameter contracts](docs/system-parameters.md). Preserve the published SYSTEM_PARAMETER2 list APIs; per-member scheduling, partial coverage and report selection remain consumer-owned.

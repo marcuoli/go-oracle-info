@@ -28,3 +28,5 @@ Hidden facts use the reviewed visible underscore source; no all-default X$ scan.
 Password-file APIs expose metadata only, with documented version/capability
 selection; never inspect users/verifiers/file contents or flush metadata caches.
 Applications retain non-default/explicit-name report unions and peer selection.
+
+Instance-wide scalar-row system parameters and qualified instance visibility are documented in [system parameter contracts](docs/system-parameters.md). Preserve the published SYSTEM_PARAMETER2 list APIs; per-member scheduling, partial coverage and report selection remain consumer-owned.

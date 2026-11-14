@@ -229,6 +229,8 @@ func build(major int, provenance Provenance, columns []rowset.Column, sids []str
 	if provenance.Source == "GV$SPPARAMETER" {
 		text += ", NLSSORT(p.SID, 'NLS_SORT=BINARY')"
 	}
-	text += ", p.ORDINAL"
+	if provenance.Source != "GV$SYSTEM_PARAMETER" {
+		text += ", p.ORDINAL"
+	}
 	return selection{sql: text, args: args, schema: columns, provenance: provenance}
 }

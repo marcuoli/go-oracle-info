@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.13.0 (2026-11-14)
+
+- Add scalar-row instance-wide GV$SYSTEM_PARAMETER selectors, complete typed readers, borrowed native rows/JSON and facade methods without changing published SYSTEM_PARAMETER2 list APIs.
+- Add qualified GV$INSTANCE visibility facts with raw instance/container/status fields, explicit empty/unavailable states and no complete RAC membership or reachability claim.
+- Add a pure exact ISMODIFIED=MODIFIED selector and document per-member collection/partial-result ownership without persistence inference or a generic SDK orchestrator.
+
 ## v0.12.0 (2026-11-14)
 
 - Add a separate visible/configured hidden-parameter dataset with native rows/JSON and complete typed buffered readers for effective, hidden and stored SPFILE facts, preserving raw NULL/default/source/instance/container/list semantics.
