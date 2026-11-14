@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.0 (2026-11-13)
+
+- Add seven-column execution identity selection and decoding, preserving independent nullable facts and raw IDs alongside validated numeric instance/container IDs; version and target admission remain caller-owned.
+
 ## v0.3.0 (2026-11-13)
 
 - Add independent scalar database-name and role selectors and decoders, preserving exact SQL/text, typed NULL/no-row states and existing identity APIs.
