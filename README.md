@@ -96,3 +96,7 @@ IDs, while available container zero is valid. Invalid numeric IDs return
 text has no inferred timezone; the decoder neither gates on version text nor
 admits a target. Failed or truncated samples must never be passed as complete
 results. Application-required fields and target comparisons remain caller-owned.
+
+Observed edition/full-banner APIs and the `registry` component inventory preserve
+legacy versus full-column evidence without guessing editions, release updates or
+timezones. See [edition/version/registry contracts](docs/edition-version-registry.md).
