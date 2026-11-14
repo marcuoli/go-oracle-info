@@ -53,15 +53,7 @@ func QuoteIdentifier(value string) (string, error) {
 // Callers must first admit the object as an ordinary table in the intended scope;
 // this function cannot establish cost, cutoff consistency or access permission.
 func CountStatement(owner, table string) (string, error) {
-	o, err := QuoteIdentifier(owner)
-	if err != nil {
-		return "", err
-	}
-	t, err := QuoteIdentifier(table)
-	if err != nil {
-		return "", err
-	}
-	return "SELECT TO_CHAR(COUNT(*), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS ROW_COUNT FROM " + o + "." + t, nil
+	return CountStatementWithOptions(owner, table, CountOptions{})
 }
 
 // SchemaSQL looks up the exact bound schema (:1).

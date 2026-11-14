@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0 (2026-11-13)
+
+- Add bound ordinary-table optimizer statistics selectors with NULL-preserving NUM_ROWS and Gregorian database-local LAST_ANALYZED text.
+- Add validated optional PARALLEL(n) exact-count hints while preserving the existing CountStatement output and identifier quoting.
+
 ## v0.4.0 (2026-11-13)
 
 - Add seven-column execution identity selection and decoding, preserving independent nullable facts and raw IDs alongside validated numeric instance/container IDs; version and target admission remain caller-owned.
