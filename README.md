@@ -100,3 +100,5 @@ results. Application-required fields and target comparisons remain caller-owned.
 Observed edition/full-banner APIs and the `registry` component inventory preserve
 legacy versus full-column evidence without guessing editions, release updates or
 timezones. See [edition/version/registry contracts](docs/edition-version-registry.md).
+
+For bounded oldest table/partition/subpartition optimizer facts, see [statistics selection and admission](docs/oldest-statistics.md). The API preserves parent identities and nullable statistics scope; legacy sources require reliable caller-owned schema admission.

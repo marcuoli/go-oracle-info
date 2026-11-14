@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.0 (2026-11-14)
+
+- Add bounded oldest table/partition/subpartition optimizer statistics selection and typed decoding, preserving nullable values, parent identities and statistics scope with explicit legacy owner-admission limits.
+
 ## v0.7.0 (2026-11-14)
 
 - Add native session parameter NAME/VALUE/ISDEFAULT selection without filtering or default inference, preserving the existing display-value parameter API.
