@@ -21,3 +21,36 @@ EntriesSQL, JobsSQL and ConnectedCells accept row bounds 1 through 10000. A call
 Static numeric projections use TM9 with explicit decimal characters to preserve exact count text independent of session locale. Configured SGA/PGA stay separate from observed allocation. Empty allocation aggregates and missing rows must not be converted into known zero. Full parameter selection is raw inventory; comparison allowlists and expected differences belong to callers.
 
 No new database capability or version/platform qualification is claimed by moving these selectors. Existing memory/identity and engineered-system APIs remain compatible. Fixture tests establish selection, binding and escaping contracts; native grants, driver/LOB behavior, mounted-state access and deployment qualification require consumer evidence.
+
+## Parameter default-state observations
+
+`database.ParametersWithDefaultsSQL` returns exactly `NAME`, native raw `VALUE`
+and `ISDEFAULT` from `V$PARAMETER`, ordered by name, with no binds or row filters.
+It preserves source NULL/empty/unknown text through the caller's admitted result
+transport. Keep a NULL flag or an unrecognized value distinct from literal `TRUE`
+and `FALSE`; absent historical metadata is not a known default flag. No decoder,
+boolean conversion or default-value comparison is introduced by this selector.
+
+`ParametersSQL` retains its existing two-column SQL bytes and display-value
+fallback. Its `VALUE` can therefore have different formatting from the new raw
+projection; consumer compatibility/adoption must explicitly account for that.
+
+The actual scope is initialization values effective for the executing session in
+its admitted current container, with instance values inherited where no session
+modification applies. This is not a direct instance/SPFILE configuration snapshot,
+a cross-container inventory or proof of RAC-wide settings. Oracle documents
+`ISDEFAULT` as default/parameter-file metadata; it must not be re-derived by value
+comparison or treated as independent evidence of every runtime modification.
+`ISMODIFIED` is a separate, unselected column. Selection of required parameters,
+NLS patterns, either-endpoint differences or report acceptance belongs to callers.
+
+Readers must enforce complete-result budgets and terminal/close checks. Failed or
+inaccessible reads (including open-state restrictions), truncated or incomplete
+evidence must remain unavailable;
+never label it a successful complete inventory or fabricate missing flags.
+
+Oracle-published references checked 2026-11-14: [V$PARAMETER 11.2, E17110-04](https://docs.oracle.com/cd/E18283_01/server.112/e17110/dynviews_2087.htm),
+[V$PARAMETER 19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-PARAMETER.html)
+and [V$PARAMETER 26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-PARAMETER.html).
+These support the static column/scope contract; they do not establish native
+release/RU/platform, mounted-state, driver or grants qualification.

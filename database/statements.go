@@ -39,6 +39,13 @@ const PDBCountSQL = `SELECT TO_CHAR(COUNT(*), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.
 // ParametersSQL reads display/raw initialization values without choosing comparison policy.
 const ParametersSQL = `SELECT NAME, COALESCE(DISPLAY_VALUE,VALUE) AS VALUE FROM V$PARAMETER ORDER BY NAME`
 
+// ParametersWithDefaultsSQL retains native NAME, raw VALUE and ISDEFAULT text
+// effective for the executing session in its admitted container. It is not a
+// V$SYSTEM_PARAMETER/SPFILE or cross-container/RAC inventory. Unlike ParametersSQL,
+// VALUE is not display-formatted. Preserve SQL NULL and unknown ISDEFAULT values;
+// neither default comparisons nor report selection policy belong in this query.
+const ParametersWithDefaultsSQL = `SELECT NAME AS NAME, VALUE AS VALUE, ISDEFAULT AS ISDEFAULT FROM V$PARAMETER ORDER BY NAME`
+
 // NLSDatabaseSQL reads all database NLS values without normalizing their text.
 const NLSDatabaseSQL = `SELECT PARAMETER AS NAME, VALUE FROM NLS_DATABASE_PARAMETERS ORDER BY PARAMETER`
 
