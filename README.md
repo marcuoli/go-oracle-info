@@ -82,3 +82,17 @@ Pass complete `session.Result` values to `identity.DecodeName` or
 `identity.DecodeRole`. Each validates its column and scalar shape, returning
 `identity.Text` with `Available`, `Null` or `NoRows` state; source text is never
 trimmed or inferred. Existing combined database and instance APIs remain available.
+
+`identity.ExecutionStatement()` selects the connected database/session identity
+with `DATABASE_NAME`, `DBID`, `ORACLE_VERSION`, `INSTANCE_ID`, `CONTAINER_ID`,
+`SERVICE_NAME` and `STARTUP_KEY`. Callers must establish `VERSION_FULL` and view
+support before executing it. `identity.DecodeExecution` preserves those seven
+fields as `Text` in `Execution.Database`, `DBID`, `Version`, `Instance`,
+`Container`, `Service` and `Startup`. It also parses positive `InstanceID` and
+nonnegative `ContainerID` values when their raw fields are available. Check both
+the error and raw field states before using numeric IDs: NULL/no-row retain zero
+IDs, while available container zero is valid. Invalid numeric IDs return
+`ErrInvalidEvidence` alongside the raw and independently valid facts. Startup
+text has no inferred timezone; the decoder neither gates on version text nor
+admits a target. Failed or truncated samples must never be passed as complete
+results. Application-required fields and target comparisons remain caller-owned.
