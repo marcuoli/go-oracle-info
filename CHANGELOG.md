@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.0 (2026-11-14)
+
+- Add native session parameter NAME/VALUE/ISDEFAULT selection without filtering or default inference, preserving the existing display-value parameter API.
+
 ## v0.6.1 (2026-11-14)
 
 - Add a conservative legacy11g banner helper for explicit edition descriptions, preserving raw evidence and descriptive provenance without synthesizing codes or changing modern edition APIs.
