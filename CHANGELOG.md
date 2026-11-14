@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.0 (2026-11-14)
+
+- Add independent connected architecture, numeric-version and explicit-edition property readers with guarded source selection, typed precision/provenance and safe failure/cancellation retention; preserve all low-level APIs.
+
 ## v0.8.0 (2026-11-14)
 
 - Add bounded oldest table/partition/subpartition optimizer statistics selection and typed decoding, preserving nullable values, parent identities and statistics scope with explicit legacy owner-admission limits.
