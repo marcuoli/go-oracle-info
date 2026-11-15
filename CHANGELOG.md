@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add an explicit X$KSPPI/X$KSPPCV2 context-value source with the INDX+1 parameter identity, ordinary and underscore names, raw default flags and exact instance/container/context-row observations.
+- Expose complete typed readers, caller-native rows and bounded JSON with identical name/default admission and a SQL-only selector example; retain existing hidden catalogs and distinguish server SQL evidence from Go-driver qualification.
+
 - Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
 - Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
 
