@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add exact redo groups, members, bounded history/archive-copy inputs, tablespace/file/free-extent/segment inventories, LONG-column attribution, default temporary groups, per-instance SGA components and ASM connection facts.
+- Preserve raw byte/block units, optional columns, SQL NULL, instance/container scope and local Gregorian time bounds; validate every JSON dataset with its matching domain decoder before publication.
+
 - Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
 - Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
 
