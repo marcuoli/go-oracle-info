@@ -7,7 +7,7 @@ admit endpoint/container/edition, source privileges and reporting-member coverag
 
 ## Functional API and ownership
 
-`redo.Groups`, `Members`, `History` and `ArchivedLogs` each expose `Statement`,
+`redo.Groups`, `Members`, `History`, `ArchivedLogs` and `Clock` each expose `Statement`,
 `Decode`, `Read`, `Rows` and `JSON` companions (for example `ReadGroups` and
 `GroupsStatement`). Storage provides the same companions for `Tablespaces`,
 `Datafiles`, `Tempfiles`, `FreeExtents`, `Segments`, `LongColumns`,
@@ -51,6 +51,7 @@ buffer limits are not evidence of exhaustive source coverage.
 | --- | --- | --- |
 | Redo groups | GV$LOG, qualified visible reporting IDs | Common 11g group/thread/sequence/bytes/member/archive/status/first-SCN/time. BLOCK_SIZE selected from 12; NEXT_CHANGE/NEXT_TIME conservatively from 18 because a major 12 alone cannot establish the reviewed 12.2 source. |
 | Redo members | GV$LOGFILE, qualified visible reporting IDs | Group/member/status/type/recovery-destination. NULL status stays NULL (documented in-use member). |
+| Source-local clock | SYSDATE via SYS.DUAL, connected source instance | Exactly one non-NULL Gregorian whole-second civil label, reporting instance and optional connected CON_ID; no timezone/UTC interpretation. |
 | History | GV$LOG_HISTORY, qualified visible IDs and finite first-time interval | Record/stamp/thread/sequence/resetlogs/SCN/time; no retention proof. |
 | Archive copies | GV$ARCHIVED_LOG, qualified visible IDs and finite first-time interval | Destination/name, record/stamp, thread/sequence, resetlogs ID/change/time, activation, archival thread, block counts/size, first/next/completion times and raw status/role/copy flags. |
 | Tablespaces | DBA_TABLESPACES, current-container dictionary | Contents/status/retention/bigfile, block size, logging/management/encryption. No undo/owner exclusions. |
@@ -82,6 +83,24 @@ integer JSON columns use the shared rowset integer contract and fail on a value
 it cannot represent exactly. No resultset CSV/plaintext serialization is added.
 
 ## Time, totals and attribution limits
+
+`ClockStatement`, `DecodeClock`, `ReadClock`, `ClockRows` and `ClockJSON` provide
+one separately observed source-local `SYSDATE` label. `ClockResult.LocalTime`
+retains exact `YYYY-MM-DDTHH:MM:SS` text, with `ReportingInstanceID` and optional
+`ContainerID`. `ReadClock` accepts `Request{OracleMajor, Reference}` and rejects
+nonempty instance filters because the source is connected-instance only. The
+facade methods are `RedoClock` and `RedoClockJSON`. Empty, multiple, malformed or
+SQL NULL clock rows are invalid evidence; JSON applies the same decoder.
+
+Derive a history interval from this admitted civil label instead of a client UTC
+clock. Parsing the fields for civil arithmetic does not establish a UTC instant
+or offset. Retain the original source label and the application's independently
+collected UTC observation separately. No session setting, timezone conversion,
+shared clock-synchronization claim or connection ownership is introduced. The
+label observes SYSDATE as configured, including a possible FIXED_DATE override;
+it does not establish that the source clock is accurate. The
+connection-free `examples/redo-clock-selectors` command emits only exact SQL
+selection metadata as JSON for native verification.
 
 History filters require explicit increasing `[From, Until)` source-local wall-clock
 bounds, whole seconds, one location and at most 31 calendar days. Zone offsets are
@@ -120,6 +139,7 @@ names; no old MOS Doc ID transition is asserted.
 - Oracle 11.2 Database Reference: [V$LOG](https://docs.oracle.com/cd/E18283_01/server.112/e17110/dynviews_2031.htm); Oracle 12.2 [V$LOG](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-LOG.html). Conservative major-only capability choices are intentional.
 - Oracle 19c Database Reference: [DBA_TABLESPACES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TABLESPACES.html), [DBA_DATA_FILES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_DATA_FILES.html), [DBA_TEMP_FILES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TEMP_FILES.html), [DBA_FREE_SPACE](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_FREE_SPACE.html), [DBA_SEGMENTS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_SEGMENTS.html), [DBA_TAB_COLUMNS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TAB_COLUMNS.html), [DATABASE_PROPERTIES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DATABASE_PROPERTIES.html), [DBA_TABLESPACE_GROUPS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TABLESPACE_GROUPS.html).
 - Oracle 19c [V$SGASTAT](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-SGASTAT.html) and [V$ASM_CLIENT](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-ASM_CLIENT.html); Oracle 26ai [V$SGASTAT](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SGASTAT.html). The 26ai 23.26.1 ALLOCATION_COUNT column is deliberately outside this common projection.
+- Oracle 19c [SYSDATE](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/SYSDATE.html) defines the read-only source; its returned DATE contains no timezone field.
 - Oracle 19c SQL Reference: [EXTRACT(datetime)](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/EXTRACT-datetime.html) documents Gregorian numeric fields; [Literals](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Literals.html) defines ANSI DATE literals.
 
 Unit tests cover exact values/NULL/optional absence, version/source and instance
@@ -130,3 +150,20 @@ failures. The fixture driver is unit scaffolding, not native Oracle qualificatio
 Calendar tests verify the selected SQL construction; they do not execute an Oracle
 session with an alternate calendar. Native 11g+,19c EE and 26ai EE qualification,
 including alternate calendars, remains a separate acceptance gate.
+
+## Source-clock SQL qualification
+
+On 2026-11-15 the exact generated `ClockStatement` projections were fully fetched
+as server-produced JSON through SQLPlus on the existing 11.2.0.2 legacy XE fixture,
+19.32 Enterprise CDB root, and 23.26.1 Enterprise CDB root and mounted physical
+standby. Each returned one non-NULL whole-second Gregorian civil label and the
+actual reporting instance; the 11g SQL omitted CON_ID and modern SQL retained it.
+Before/after database role and open-mode observations matched within each probe.
+The two initially stopped fixtures were started separately and restored; the
+shared running Enterprise instances were not stopped or reconfigured.
+
+This is a source-SQL result, separate from fixture-based Go reader/native-cursor/
+JSON tests. It does not qualify the Oracle Go driver, alternate-calendar native
+sessions, PDB scopes, restricted grants, multi-node RAC, every RU/platform or the
+other redo/storage datasets. Raw source labels and independent host collection
+UTC observations remain separate in the private qualification evidence.
