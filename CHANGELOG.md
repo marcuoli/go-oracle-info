@@ -2,9 +2,20 @@
 
 ## Unreleased
 
+- Add complete read-only database properties, observed session/client context, database NLS, installed options, component and patch history, detailed services and invalid-object facts with explicit source/version choices.
+- Expose typed complete readers, caller-native rows and atomic JSON with matching domain admission; preserve exact nullable values, source/container semantics and existing APIs.
+
+- Add a connected-source SYSDATE civil clock fact for finite local redo-history windows, preserving reporting/container identity and keeping source-local labels separate from client UTC observations.
+
+- Add exact redo groups, members, bounded history/archive-copy inputs, tablespace/file/free-extent/segment inventories, LONG-column attribution, default temporary groups, per-instance SGA components and ASM connection facts.
+- Preserve raw byte/block units, optional columns, SQL NULL, instance/container scope and local Gregorian time bounds; validate every JSON dataset with its matching domain decoder before publication.
+
 - Add complete account/table metadata, sequences, directories, database links, direct/column/role grants, triggers and explicitly admitted ACL, SQL profile/baseline and metadata DDL datasets.
 - Preserve source/version/filter provenance and exact nullable fields, validate full CLOB length/budgets in owned typed/JSON readers, and retain caller-owned native cursors without executing links, sequences, grants or tuning operations.
 
+## v0.14.0 (2026-11-15)
+
+- Rename the shared EngineeredSystem SQL catalog to statements.go; SQL bytes, capability selection and public APIs are unchanged.
 - Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
 - Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
 
