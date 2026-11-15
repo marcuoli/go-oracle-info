@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add complete account/table metadata, sequences, directories, database links, direct/column/role grants, triggers and explicitly admitted ACL, SQL profile/baseline and metadata DDL datasets.
+- Preserve source/version/filter provenance and exact nullable fields, validate full CLOB length/budgets in owned typed/JSON readers, and retain caller-owned native cursors without executing links, sequences, grants or tuning operations.
+
 - Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
 - Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
 
