@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.15.1 (2026-11-15)
+
+- Add explicit aliases to every inner/outer connected-cell projection while preserving column order, values, scope, sorting and row limits.
+
 ## v0.15.0 (2026-11-15)
 
 - Add complete read-only database properties, observed session/client context, database NLS, installed options, component and patch history, detailed services and invalid-object facts with explicit source/version choices.
