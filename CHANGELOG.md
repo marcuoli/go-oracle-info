@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## v0.14.0 (2026-11-15)
+
+- Rename the shared EngineeredSystem SQL catalog to statements.go; SQL bytes, capability selection and public APIs are unchanged.
 - Add an opt-in fixed-table hidden-parameter catalog with distinct raw session/instance values, decoded modifiability, description and bound exact-name/literal-substring filters.
 - Expose complete typed readers, actual native rows and bounded atomic JSON through the responsibility package and thin facade; preserve the existing visible-underscore API and caller-owned scope/privileges.
 
