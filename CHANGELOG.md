@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.15.0 (2026-11-15)
+
 - Add complete read-only database properties, observed session/client context, database NLS, installed options, component and patch history, detailed services and invalid-object facts with explicit source/version choices.
 - Expose typed complete readers, caller-native rows and atomic JSON with matching domain admission; preserve exact nullable values, source/container semantics and existing APIs.
 
