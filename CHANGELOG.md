@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.17.0 (2026-11-17)
+
+- Update released go-oracle-session to v0.9.1; recheck official compiler/dependency/tool releases and independently verify the selected-dependency Go boundary, retaining documented upstream compatibility exceptions (#57).
 
 - Admit Oracle 9i/10g for ORACLE_HOME properties and direct datasets; retain
   explicit library inference and unavailable GET_ENV attempts on 9i; admit their
