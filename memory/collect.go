@@ -67,24 +67,26 @@ func Collect(ctx context.Context, reader Reader, request Request) (Observation, 
 		args = []any{sql.Named("target_container_id", o.TargetContainerID)}
 	}
 	result, err := reader.Query(ctx, session.Statement{Reference: request.PrimaryReference, Text: statement, Args: args})
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && !onlyNoRows(err) {
 		return Observation{}, &ReadError{Parameter: request.Parameter, cause: err}
 	}
 	observation := Observation{State: NoRows}
 	if err == nil {
 		observation, err = Decode(result, request.Parameter, o)
 	}
-	if errors.Is(err, sql.ErrNoRows) {
+	if onlyNoRows(err) {
 		err = nil
 	}
 	if err != nil {
 		return Observation{}, err
 	}
-	if !eligible || (observation.State != Null && observation.State != NoRows) {
-		return observation, nil
-	}
+	// A complete read can race cancellation. Keep validated primary evidence,
+	// but never report it as a successful collection after cancellation.
 	if err := ctx.Err(); err != nil {
 		return observation, err
+	}
+	if !eligible || (observation.State != Null && observation.State != NoRows) {
+		return observation, nil
 	}
 	o.PDB.EffectiveADB = true
 	statement, err = Statement(request.Parameter, o)
@@ -92,13 +94,20 @@ func Collect(ctx context.Context, reader Reader, request Request) (Observation, 
 		return observation, err
 	}
 	result, err = reader.Query(ctx, session.Statement{Reference: request.EffectiveReference, Text: statement})
-	if errors.Is(err, sql.ErrNoRows) {
-		return observation, nil
+	missing := onlyNoRows(err)
+	if missing {
+		err = nil
 	}
-	if err != nil {
+	if err = errors.Join(err, ctx.Err()); err != nil {
 		return observation, &ReadError{Parameter: request.Parameter, Effective: true, cause: err}
 	}
+	if missing {
+		return observation, nil
+	}
 	effective, err := Decode(result, request.Parameter, o)
+	if cancelled := ctx.Err(); cancelled != nil {
+		return observation, errors.Join(err, cancelled)
+	}
 	if err != nil {
 		return observation, err
 	}
@@ -108,4 +117,26 @@ func Collect(ctx context.Context, reader Reader, request Request) (Observation, 
 		return effective, nil
 	}
 	return observation, nil
+}
+
+// ErrNoRows can coexist with a terminal failure in an error tree. Normalize it
+// only when every cause is a no-row outcome, including ordinary wrapped adapters.
+func onlyNoRows(err error) bool {
+	switch cause := err.(type) {
+	case interface{ Unwrap() []error }:
+		causes := cause.Unwrap()
+		if len(causes) == 0 {
+			return false
+		}
+		for _, child := range causes {
+			if !onlyNoRows(child) {
+				return false
+			}
+		}
+		return true
+	case interface{ Unwrap() error }:
+		return onlyNoRows(cause.Unwrap())
+	default:
+		return errors.Is(err, sql.ErrNoRows)
+	}
 }

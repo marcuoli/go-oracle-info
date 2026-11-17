@@ -95,12 +95,17 @@ func TestCollectionFallbackPreservesErrorsAndOnlyRetriesMissingPrimary(t *testin
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reader := &sequenceReader{results: []session.Result{tc.primary, sample("7.813", "3", "sga_target")}, failures: []error{tc.err}}
-			_, err := memory.Collect(context.Background(), reader, memory.Request{
+			got, err := memory.Collect(context.Background(), reader, memory.Request{
 				Parameter: memory.SGA, Options: memory.Options{Scope: memory.ConnectedPDB, OracleMajor: 19, PDB: memory.PDBOptions{AllowInherited: true}},
 				PrimaryReference: testRef(t, 1), EffectiveReference: testRef(t, 2),
 			})
 			if (err != nil) != tc.wantErr || len(reader.statements) != tc.wantCalls {
 				t.Fatalf("calls=%d err=%v", len(reader.statements), err)
+			}
+			if err == nil && tc.wantCalls == 2 {
+				if got.State != memory.Available || got.ValueGiB != "7.813" || got.Origin != memory.EffectiveADB || got.InstanceID != 2 || got.SourceContainerID != 3 || got.CurrentContainerID != 3 || got.TargetContainerID != 3 {
+					t.Fatalf("usable effective replacement lost value or provenance: %+v", got)
+				}
 			}
 			if errors.Is(tc.err, failure) && !errors.Is(err, failure) {
 				t.Fatal("primary cause lost")

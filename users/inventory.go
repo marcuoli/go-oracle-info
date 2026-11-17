@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strings"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -61,15 +62,15 @@ func inventoryPlan(options Options) (selection, error) {
 	integers = append(integers, "USER_ID")
 	expressions = append(expressions, "t.ACCOUNT_STATUS AS ACCOUNT_STATUS")
 	schema = append(schema, rowset.Column{Name: "ACCOUNT_STATUS", Kind: rowset.Text})
-	expressions = append(expressions, "TO_CHAR(t.LOCK_DATE, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS LOCK_DATE")
+	expressions = append(expressions, datetime.GregorianDate("t.LOCK_DATE")+" AS LOCK_DATE")
 	schema = append(schema, rowset.Column{Name: "LOCK_DATE", Kind: rowset.Text})
-	expressions = append(expressions, "TO_CHAR(t.EXPIRY_DATE, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS EXPIRY_DATE")
+	expressions = append(expressions, datetime.GregorianDate("t.EXPIRY_DATE")+" AS EXPIRY_DATE")
 	schema = append(schema, rowset.Column{Name: "EXPIRY_DATE", Kind: rowset.Text})
 	expressions = append(expressions, "t.DEFAULT_TABLESPACE AS DEFAULT_TABLESPACE")
 	schema = append(schema, rowset.Column{Name: "DEFAULT_TABLESPACE", Kind: rowset.Text})
 	expressions = append(expressions, "t.TEMPORARY_TABLESPACE AS TEMPORARY_TABLESPACE")
 	schema = append(schema, rowset.Column{Name: "TEMPORARY_TABLESPACE", Kind: rowset.Text})
-	expressions = append(expressions, "TO_CHAR(t.CREATED, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS CREATED")
+	expressions = append(expressions, datetime.GregorianDate("t.CREATED")+" AS CREATED")
 	schema = append(schema, rowset.Column{Name: "CREATED", Kind: rowset.Text})
 	expressions = append(expressions, "t.PROFILE AS PROFILE")
 	schema = append(schema, rowset.Column{Name: "PROFILE", Kind: rowset.Text})

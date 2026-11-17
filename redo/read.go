@@ -93,10 +93,7 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 			if !exists {
 				continue
 			}
-			// DBA_TEMP_FILES.INST_ID is an optional owning ID, not reporting identity.
-			if plan.provenance.Source == "DBA_TEMP_FILES" && name == "INST_ID" {
-				continue
-			}
+
 			v := row[pos]
 			id, err := strconv.ParseInt(v.Text, 10, 64)
 			if v.Null || err != nil || id <= 0 {
@@ -240,20 +237,4 @@ func instanceClause(ids []int64) (string, []any, error) {
 }
 func exactNumber(expr string) string {
 	return "TO_CHAR(" + expr + ", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')"
-}
-
-// localDate uses Gregorian EXTRACT fields rather than session NLS_CALENDAR.
-// Oracle DATE has whole seconds and no timezone; NULL stays SQL NULL.
-func localDate(expression string) string {
-	stamp := "CAST(" + expression + " AS TIMESTAMP)"
-	fields := []struct{ name, format string }{{"YEAR", "FM0000"}, {"MONTH", "FM00"}, {"DAY", "FM00"}, {"HOUR", "FM00"}, {"MINUTE", "FM00"}, {"SECOND", "FM00"}}
-	separators := []string{"-", "-", "T", ":", ":"}
-	text := "CASE WHEN " + expression + " IS NULL THEN NULL ELSE "
-	for i, field := range fields {
-		if i > 0 {
-			text += " || '" + separators[i-1] + "' || "
-		}
-		text += "TO_CHAR(EXTRACT(" + field.name + " FROM " + stamp + "), '" + field.format + "', 'NLS_NUMERIC_CHARACTERS=''.,''')"
-	}
-	return text + " END"
 }

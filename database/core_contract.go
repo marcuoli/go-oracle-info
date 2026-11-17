@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"strconv"
-	"unicode/utf8"
 
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -53,26 +51,9 @@ func validateFactRequest(reader Reader, ref reference.Reference) error {
 }
 
 func factColumns(result session.Result, schema []rowset.Column) (map[string]int, error) {
-	names := make([]string, len(schema))
-	for i, column := range schema {
-		names[i] = column.Name
-	}
-	index, ok := projection.Columns(result, names...)
+	index, ok := projection.TypedColumns(result, schema)
 	if !ok {
 		return nil, ErrInvalidEvidence
-	}
-	for _, row := range result.Rows {
-		for _, column := range schema {
-			value := row[index[column.Name]]
-			if !utf8.ValidString(value.Text) || (value.Null && value.Text != "") {
-				return nil, ErrInvalidEvidence
-			}
-			if column.Kind == rowset.Integer && !value.Null {
-				if _, err := strconv.ParseInt(value.Text, 10, 64); err != nil {
-					return nil, ErrInvalidEvidence
-				}
-			}
-		}
 	}
 	return index, nil
 }

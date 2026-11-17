@@ -266,6 +266,9 @@ func parameterColumns(result session.Result, plan selection) (map[string]int, er
 		if plan.provenance.NameClass != "" && (name.Null || !strings.HasPrefix(name.Text, "_")) {
 			return fail()
 		}
+		if !strings.Contains(strings.ToLower(name.Text), strings.ToLower(plan.provenance.NameContains)) {
+			return fail()
+		}
 		if !admittedText(name, plan.provenance.Names) {
 			return fail()
 		}

@@ -128,11 +128,8 @@ func decodeHiddenCatalog(result session.Result, plan selection) (HiddenCatalogRe
 	}
 	rows := make([]HiddenParameter, len(result.Rows))
 	for i, row := range result.Rows {
-		name := row[index["NAME"]]
-		if !strings.Contains(strings.ToLower(name.Text), strings.ToLower(plan.provenance.NameContains)) {
-			return HiddenCatalogResult{}, &Error{Source: hiddenCatalogSource, cause: ErrInvalidEvidence}
-		}
-		rows[i] = HiddenParameter{Name: name, SessionValue: row[index["SESSION_VALUE"]], InstanceValue: row[index["INSTANCE_VALUE"]], IsSessionModifiable: row[index["ISSES_MODIFIABLE"]], IsSystemModifiable: row[index["ISSYS_MODIFIABLE"]], Description: row[index["DESCRIPTION"]]}
+
+		rows[i] = HiddenParameter{Name: row[index["NAME"]], SessionValue: row[index["SESSION_VALUE"]], InstanceValue: row[index["INSTANCE_VALUE"]], IsSessionModifiable: row[index["ISSES_MODIFIABLE"]], IsSystemModifiable: row[index["ISSYS_MODIFIABLE"]], Description: row[index["DESCRIPTION"]]}
 	}
 	return HiddenCatalogResult{Provenance: plan.provenance, Rows: rows}, nil
 }

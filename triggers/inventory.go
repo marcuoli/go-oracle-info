@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strings"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -63,7 +64,7 @@ func inventoryPlan(options Options) (selection, error) {
 	schema = append(schema, rowset.Column{Name: "TRIGGER_STATUS", Kind: rowset.Text})
 	expressions = append(expressions, "o.STATUS AS OBJECT_STATUS")
 	schema = append(schema, rowset.Column{Name: "OBJECT_STATUS", Kind: rowset.Text})
-	expressions = append(expressions, "TO_CHAR(o.LAST_DDL_TIME, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS LAST_DDL_TIME")
+	expressions = append(expressions, datetime.GregorianDate("o.LAST_DDL_TIME")+" AS LAST_DDL_TIME")
 	schema = append(schema, rowset.Column{Name: "LAST_DDL_TIME", Kind: rowset.Text})
 	expressions = append(expressions, "t.BASE_OBJECT_TYPE AS BASE_OBJECT_TYPE")
 	schema = append(schema, rowset.Column{Name: "BASE_OBJECT_TYPE", Kind: rowset.Text})

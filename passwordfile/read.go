@@ -142,9 +142,21 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	if err != nil {
 		return nil, err
 	}
-	data, err := rowset.ReadJSON(ctx, rows, plan.schema, resolved)
+	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
 	if err != nil {
 		return nil, &Error{Operation: "consume", cause: err}
+	}
+	// A typed rowset is complete transport evidence, not domain admission.
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
+	}
+	if _, err = decode(result, plan); err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(table)
+	if err != nil {
+		return nil, &Error{Operation: "encode", cause: err}
 	}
 	payload, err := json.Marshal(JSONEnvelope{Provenance: plan.provenance, Data: data})
 	original, _ := rowset.Resolve(limits)

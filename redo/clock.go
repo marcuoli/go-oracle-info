@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"time"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -31,7 +32,7 @@ func clockPlan(major int) (selection, error) {
 		return selection{}, ErrUnsupportedVersion
 	}
 	plan := selection{schema: []rowset.Column{{Name: "INST_ID", Kind: rowset.Integer}, {Name: "LOCAL_TIME", Kind: rowset.Text}}, provenance: Provenance{Source: "SYSDATE", OracleMajor: major, Scope: "connected_instance_clock"}}
-	plan.sql = "SELECT TO_NUMBER(SYS_CONTEXT('USERENV','INSTANCE')) AS INST_ID, " + localDate("SYSDATE") + " AS LOCAL_TIME"
+	plan.sql = "SELECT TO_NUMBER(SYS_CONTEXT('USERENV','INSTANCE')) AS INST_ID, " + datetime.GregorianDate("SYSDATE") + " AS LOCAL_TIME"
 	if major >= 12 {
 		plan.schema = append(plan.schema, rowset.Column{Name: "CON_ID", Kind: rowset.Integer})
 		plan.sql += ", TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID')) AS CON_ID"

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strconv"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -62,10 +63,10 @@ func historyPlan(major int, filter HistoryFilter) (selection, error) {
 		"v.THREAD# AS THREAD_NUMBER" + ", " +
 		"v.SEQUENCE# AS SEQUENCE_NUMBER" + ", " +
 		exactNumber("v.FIRST_CHANGE#") + " AS FIRST_CHANGE" + ", " +
-		localDate("v.FIRST_TIME") + " AS FIRST_TIME" + ", " +
+		datetime.GregorianDate("v.FIRST_TIME") + " AS FIRST_TIME" + ", " +
 		exactNumber("v.NEXT_CHANGE#") + " AS NEXT_CHANGE" + ", " +
 		exactNumber("v.RESETLOGS_CHANGE#") + " AS RESETLOGS_CHANGE" + ", " +
-		localDate("v.RESETLOGS_TIME") + " AS RESETLOGS_TIME"
+		datetime.GregorianDate("v.RESETLOGS_TIME") + " AS RESETLOGS_TIME"
 	if major >= 12 {
 		schema = append(schema, rowset.Column{Name: "CON_ID", Kind: rowset.Integer})
 		projection += ", v.CON_ID AS CON_ID"
