@@ -166,3 +166,8 @@ For scalar-row instance parameters, use parameters.ReadSystem and parameters.Mod
 For distinct session/instance values and decoded modifiability from fixed tables,
 use the [hidden catalog APIs](hidden-parameter-catalog.md). These are separate
 from visible underscore facts and reuse the same shared rows/JSON ownership.
+
+For the executing instance's server home and its explicitly inferred 11g library
+path counterpart, see [ORACLE_HOME facts](oracle-home.md). Reuse its existing
+statement/decoder or admitted reader; never substitute the client environment
+or copy one member's value to other RAC members.
