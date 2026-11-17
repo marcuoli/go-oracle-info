@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## v0.16.0 (2026-11-17)
+
+- Update released go-oracle-session from v0.6.0 to v0.9.0 and current official metadata-only graph versions; refresh govulncheck to v1.9.0 and document the independently checked compiler boundary (#53).
+
+- Correct GoldenGate message-number text projections and order-independent latest patch selection; share instance-source validation without changing public APIs (#51, #52).
+
+- Add generic database-visible GoldenGate capture and integrated apply coordinator facts, typed complete reads, caller-native rows/JSON and facade methods; preserve instance/container identity, exact values and source availability (#52).
+
+- Add complete qualified visible-member full version/context facts and a pure admitted SQL release-level evaluator with raw attempt retention, retry/rollback/tie handling and explicit unknown/parity limits (#51).
+
+- Add an opt-in typed conditional parameter persistence evaluator and bounded standard JSON over admitted effective/SPFILE observations, preserving raw APIs, per-member unknown states and exact-value/provenance semantics (#50).
+
+- Add exact visible controlfile file datasets and allocation/storage properties, independent scoped encryption counts, native/JSON facade methods and global visible-cell presence; preserve legacy APIs and explicit unknown/visibility states (#49).
 
 ## v0.15.1 (2026-11-15)
 

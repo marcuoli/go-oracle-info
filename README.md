@@ -1,5 +1,8 @@
 # go-oracle-info
 
+![Source compatibility](https://img.shields.io/badge/source%20compatibility-Go%201.27.4%2B-blue)
+![Module and build requirement](https://img.shields.io/badge/module%2Fbuild-Go%201.27.4-blue)
+
 Reusable read-only Oracle identity/platform, configured-memory and engineered-system facts.
 
 Public packages select reviewed SQL and validate exact results from a caller-owned reader. The module opens no connections, changes no container or endpoint, and selects no credentials, driver, retry policy, scoring or report layout. It reuses the driver-neutral query/value contract in go-oracle-session.
@@ -30,7 +33,7 @@ value, err := memory.Collect(ctx, reader, memory.Request{
 
 Inspect both `err` and `value.State`. A failed effective query can return the valid primary observation alongside an error. The library does not acquire a different scope to make a query succeed. `identity` exposes statement selection and decoding separately so an application keeps its bootstrap/admission sequence.
 
-Validation uses Go 1.27.4 on Windows/amd64 with released module versions. The minimum is Go 1.27.4, required by the session module that owns generic dataset execution and consumption. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. Public module releases use github.com/marcuoli/go-oracle-info; the private Gitea repository remains the source authority.
+Verified **source compatibility with the selected dependencies: Go 1.27.4** on Windows/amd64. The exact Go 1.27.3 compiler rejects an isolated, hash-matched source snapshot with only its main-module directive lowered, because released go-oracle-session v0.9.0 requires Go 1.27.4. This establishes the selected dependency boundary; it does not claim that every source file intrinsically needs that patch. The unchanged shipping **module requirement is Go 1.27.4**, and the **build/validation compiler is Go 1.27.4**. Native Oracle-version/platform qualification and consumer adoption are not established by the fixture suite. Public module releases use github.com/marcuoli/go-oracle-info; the private Gitea repository remains the source authority.
 
 ## Engineered-system facts
 
@@ -124,3 +127,19 @@ application; no internal hidden-default catalog, credentials or file contents
 are collected.
 
 Instance-wide scalar-row system parameters and qualified instance visibility are documented in [system parameter contracts](docs/system-parameters.md). Preserve the published SYSTEM_PARAMETER2 list APIs; per-member scheduling, partial coverage and report selection remain consumer-owned.
+
+## Database capacity and encryption
+
+See [scoped capacity and encryption facts](docs/database-capacity-encryption.md) for exact visible file allocation, ASM/FileSystem classification, independent encryption counts and matching typed/native/JSON APIs. Source visibility and mounted/open limitations remain explicit.
+
+For conditional restart-persistence comparison of admitted existing parameter datasets, see [parameter persistence](docs/parameter-persistence.md). Raw APIs and ModifiedSystem retain their existing contracts; unknown startup/default/SID/scope evidence remains explicit.
+
+
+For complete qualified member versions and pure within-database SQL release-level assessment, see [patch consistency](docs/patch-consistency.md). Raw history/SQL attempts remain complete; unknown deployment/scope/coverage and non-SQL binary parity remain explicit.
+
+## GoldenGate activity facts
+
+See [database-visible GoldenGate facts](docs/goldengate.md) for typed complete
+reads, actual native row cursors and bounded JSON. Sources retain qualified
+visible instance/container identity without opening connections, controlling
+processes, inferring synchronization or deciding readiness.

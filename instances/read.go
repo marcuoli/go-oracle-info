@@ -6,10 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
-	"strconv"
-	"unicode/utf8"
 
-	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -169,31 +166,9 @@ func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, err
 func decode(result session.Result, plan selection) (Result, error) {
 	unavailable := Result{State: Unavailable, Provenance: plan.provenance}
 	fail := func() (Result, error) { return unavailable, &Error{Operation: "decode", cause: ErrInvalidEvidence} }
-	names := make([]string, len(plan.schema))
-	for i, column := range plan.schema {
-		names[i] = column.Name
-	}
-	index, ok := projection.Columns(result, names...)
-	if !ok {
+	index, err := columns(result, plan.schema)
+	if err != nil {
 		return fail()
-	}
-	for _, row := range result.Rows {
-		for _, column := range plan.schema {
-			value := row[index[column.Name]]
-			if !utf8.ValidString(value.Text) || (value.Null && value.Text != "") {
-				return fail()
-			}
-			if column.Kind == rowset.Integer && !value.Null {
-				if _, err := strconv.ParseInt(value.Text, 10, 64); err != nil {
-					return fail()
-				}
-			}
-		}
-		id := row[index["INST_ID"]]
-		number, err := strconv.ParseInt(id.Text, 10, 64)
-		if id.Null || err != nil || number < 1 {
-			return fail()
-		}
 	}
 	rows := make([]Instance, len(result.Rows))
 	for i, row := range result.Rows {
