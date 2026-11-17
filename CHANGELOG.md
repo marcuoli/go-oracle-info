@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Admit Oracle 9i/10g for ORACLE_HOME properties and direct datasets; retain
+  explicit library inference and unavailable GET_ENV attempts on 9i; admit their
+  five-part numeric version bootstrap while retaining fact-specific gates (#55).
+
+- Add executing-instance ORACLE_HOME facts, safe context/GET_ENV/library fallback with retained attempts, native rows/JSON and a punctual facade; distinguish documented 12c+ USERENV metadata from inferred 9i-11g dictionary library paths, preserving NULL/error/provenance and caller ownership (#55).
+
 ## v0.16.0 (2026-11-17)
 
 - Update released go-oracle-session from v0.6.0 to v0.9.0 and current official metadata-only graph versions; refresh govulncheck to v1.9.0 and document the independently checked compiler boundary (#53).

@@ -20,6 +20,8 @@ func TestReadVersionSelectsActualNumericPrecision(t *testing.T) {
 		precision identity.VersionPrecision
 		fallback  bool
 	}{
+		{"9i", available("9.2.0.8.0"), nil, "9.2.0.8.0", identity.Available, identity.LegacyPrecision, false},
+		{"10g", available("10.2.0.1.0"), nil, "10.2.0.1.0", identity.Available, identity.LegacyPrecision, false},
 		{"11g", available("11.2.0.4.0"), nil, "11.2.0.4.0", identity.Available, identity.LegacyPrecision, false},
 		{"12c", available("12.2.0.1.0"), nil, "12.2.0.1.0", identity.Available, identity.LegacyPrecision, false},
 		{"18-full", available("18.0.0.0.0"), textPointer(available("18.3.0.0.0")), "18.3.0.0.0", identity.Available, identity.FullPrecision, false},

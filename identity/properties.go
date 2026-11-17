@@ -163,7 +163,9 @@ func numericVersionMajor(value string) (int, error) {
 			major = int(number)
 		}
 	}
-	if major < 11 {
+	// Bootstrap syntax does not establish a fact's capability. Each selector
+	// keeps its own release floor; ORACLE_HOME also admits 9i/10g sources.
+	if major < 9 {
 		return 0, ErrUnsupportedVersion
 	}
 	return major, nil
