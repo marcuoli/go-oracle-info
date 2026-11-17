@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 )
 
@@ -114,7 +115,20 @@ func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rows
 	if err != nil {
 		return nil, err
 	}
-	data, err := rowset.ReadJSON(ctx, rows, plan.schema, resolved)
+	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
+	if err != nil {
+		return nil, &Error{Source: plan.provenance.Source, cause: err}
+	}
+	// Transport validation cannot admit names, instances or stored SID clauses.
+	// Share the typed decoder's complete domain validation before publishing JSON.
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return nil, &Error{Source: plan.provenance.Source, cause: ErrInvalidEvidence}
+	}
+	if _, err = parameterColumns(result, plan); err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(table)
 	if err != nil {
 		return nil, &Error{Source: plan.provenance.Source, cause: err}
 	}

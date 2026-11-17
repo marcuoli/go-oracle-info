@@ -209,7 +209,7 @@ func TestPropertyReferenceAdmissionPrecedesQueries(t *testing.T) {
 }
 func TestInvalidBootstrapNeverSelectsModernSource(t *testing.T) {
 	t.Parallel()
-	for _, value := range []string{"26ai", "19.0.0.0", "19.0.0.0.0.0", "19.0.0.0.0 ", "+19.0.0.0.0", "１９.0.0.0.0", "19.0.0.0.4294967296", "10.2.0.5.0"} {
+	for _, value := range []string{"26ai", "19.0.0.0", "19.0.0.0.0.0", "19.0.0.0.0 ", "+19.0.0.0.0", "１９.0.0.0.0", "19.0.0.0.4294967296", "8.1.7.4.0"} {
 		t.Run(value, func(t *testing.T) {
 			ctx := context.Background()
 			for name, call := range propertyCalls(t) {

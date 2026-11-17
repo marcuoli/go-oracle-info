@@ -66,7 +66,9 @@ not select that column; a nonnil null pointer value means projected SQL NULL.
 Numeric dictionary fields use Oracle `TO_CHAR(...,'TM9',...)` with explicit decimal
 characters and remain exact decimal text, including values beyond signed 64-bit
 range. JSON deliberately retains those SQL text columns as strings. DATE fields
-are timezone-free ISO calendar text to seconds; TIMESTAMP fields retain fractional
+are timezone-free ISO Gregorian text to seconds, rendered from EXTRACT components
+independently of session NLS_CALENDAR. NULL remains NULL and no session state is
+changed. TIMESTAMP fields retain fractional
 precision to nine places without inventing a timezone. Flags and unknown statuses
 remain raw, rather than coercing NULL/unknown to false.
 

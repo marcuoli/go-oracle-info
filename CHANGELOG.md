@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.17.0 (2026-11-17)
+
+- Update released go-oracle-session to v0.9.1; recheck official compiler/dependency/tool releases and independently verify the selected-dependency Go boundary, retaining documented upstream compatibility exceptions (#57).
+
+- Admit Oracle 9i/10g for ORACLE_HOME properties and direct datasets; retain
+  explicit library inference and unavailable GET_ENV attempts on 9i; admit their
+  five-part numeric version bootstrap while retaining fact-specific gates (#55).
+
+- Add executing-instance ORACLE_HOME facts, safe context/GET_ENV/library fallback with retained attempts, native rows/JSON and a punctual facade; distinguish documented 12c+ USERENV metadata from inferred 9i-11g dictionary library paths, preserving NULL/error/provenance and caller ownership (#55).
+
+- Reject cancelled memory collections and preserve independent errors joined with no-row outcomes, while retaining valid primary fallback evidence with errors (#56).
+- Validate parameter/password-file/instance domain admission before publishing complete JSON, and strengthen positive JSON/fallback output regressions (#56).
+- Render documented ISO DATE fields from Gregorian components without changing session state; reuse reviewed DATE SQL and exact rowset conversion/validation, and remove unreachable storage policy from ASM/redo (#56).
+
 ## v0.16.0 (2026-11-17)
 
 - Update released go-oracle-session from v0.6.0 to v0.9.0 and current official metadata-only graph versions; refresh govulncheck to v1.9.0 and document the independently checked compiler boundary (#53).

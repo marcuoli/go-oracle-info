@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strings"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -49,7 +50,7 @@ func inventoryPlan(options Options) (selection, error) {
 	schema = append(schema, rowset.Column{Name: "USERNAME", Kind: rowset.Text})
 	expressions = append(expressions, "t.HOST AS HOST")
 	schema = append(schema, rowset.Column{Name: "HOST", Kind: rowset.Text})
-	expressions = append(expressions, "TO_CHAR(t.CREATED, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS CREATED")
+	expressions = append(expressions, datetime.GregorianDate("t.CREATED")+" AS CREATED")
 	schema = append(schema, rowset.Column{Name: "CREATED", Kind: rowset.Text})
 	statement := "SELECT " + strings.Join(expressions, ", ") + " FROM " + "DBA_DB_LINKS t"
 	args := []any{}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strings"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -94,7 +95,7 @@ func tableMetadataPlan(options Options) (selection, error) {
 	expressions = append(expressions, "TO_CHAR(t.SAMPLE_SIZE, 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS SAMPLE_SIZE")
 	schema = append(schema, rowset.Column{Name: "SAMPLE_SIZE", Kind: rowset.Text})
 	integers = append(integers, "SAMPLE_SIZE")
-	expressions = append(expressions, "TO_CHAR(t.LAST_ANALYZED, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') AS LAST_ANALYZED")
+	expressions = append(expressions, datetime.GregorianDate("t.LAST_ANALYZED")+" AS LAST_ANALYZED")
 	schema = append(schema, rowset.Column{Name: "LAST_ANALYZED", Kind: rowset.Text})
 	expressions = append(expressions, "t.GLOBAL_STATS AS GLOBAL_STATS")
 	schema = append(schema, rowset.Column{Name: "GLOBAL_STATS", Kind: rowset.Text})
