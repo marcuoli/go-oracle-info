@@ -90,10 +90,7 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 			if !exists {
 				continue
 			}
-			// DBA_TEMP_FILES.INST_ID is an optional owning ID, not reporting identity.
-			if plan.provenance.Source == "DBA_TEMP_FILES" && name == "INST_ID" {
-				continue
-			}
+
 			v := row[pos]
 			id, err := strconv.ParseInt(v.Text, 10, 64)
 			if v.Null || err != nil || id <= 0 {

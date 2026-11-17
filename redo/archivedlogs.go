@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strconv"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
@@ -99,12 +100,12 @@ func archivedLogsPlan(major int, filter HistoryFilter) (selection, error) {
 		"v.THREAD# AS THREAD_NUMBER" + ", " +
 		"v.SEQUENCE# AS SEQUENCE_NUMBER" + ", " +
 		exactNumber("v.RESETLOGS_CHANGE#") + " AS RESETLOGS_CHANGE" + ", " +
-		localDate("v.RESETLOGS_TIME") + " AS RESETLOGS_TIME" + ", " +
+		datetime.GregorianDate("v.RESETLOGS_TIME") + " AS RESETLOGS_TIME" + ", " +
 		exactNumber("v.FIRST_CHANGE#") + " AS FIRST_CHANGE" + ", " +
-		localDate("v.FIRST_TIME") + " AS FIRST_TIME" + ", " +
+		datetime.GregorianDate("v.FIRST_TIME") + " AS FIRST_TIME" + ", " +
 		exactNumber("v.NEXT_CHANGE#") + " AS NEXT_CHANGE" + ", " +
-		localDate("v.NEXT_TIME") + " AS NEXT_TIME" + ", " +
-		localDate("v.COMPLETION_TIME") + " AS COMPLETION_TIME" + ", " +
+		datetime.GregorianDate("v.NEXT_TIME") + " AS NEXT_TIME" + ", " +
+		datetime.GregorianDate("v.COMPLETION_TIME") + " AS COMPLETION_TIME" + ", " +
 		"v.BLOCKS AS BLOCKS" + ", " +
 		"v.BLOCK_SIZE AS BLOCK_SIZE" + ", " +
 		"v.ARCHIVED AS ARCHIVED" + ", " +

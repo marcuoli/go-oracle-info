@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -70,7 +71,7 @@ func groupsPlan(major int, filter Filter) (selection, error) {
 		"v.ARCHIVED AS ARCHIVED" + ", " +
 		"v.STATUS AS STATUS" + ", " +
 		exactNumber("v.FIRST_CHANGE#") + " AS FIRST_CHANGE" + ", " +
-		localDate("v.FIRST_TIME") + " AS FIRST_TIME"
+		datetime.GregorianDate("v.FIRST_TIME") + " AS FIRST_TIME"
 	if major >= 12 {
 		schema = append(schema, rowset.Column{Name: "BLOCK_SIZE", Kind: rowset.Integer})
 		projection += ", v.BLOCKSIZE AS BLOCK_SIZE"
@@ -84,7 +85,7 @@ func groupsPlan(major int, filter Filter) (selection, error) {
 	plan.integerText = []string{"FIRST_CHANGE"}
 	if major >= 18 {
 		plan.schema = append(plan.schema, rowset.Column{Name: "NEXT_CHANGE", Kind: rowset.Text}, rowset.Column{Name: "NEXT_TIME", Kind: rowset.Text})
-		projection += ", " + exactNumber("v.NEXT_CHANGE#") + " AS NEXT_CHANGE, " + localDate("v.NEXT_TIME") + " AS NEXT_TIME"
+		projection += ", " + exactNumber("v.NEXT_CHANGE#") + " AS NEXT_CHANGE, " + datetime.GregorianDate("v.NEXT_TIME") + " AS NEXT_TIME"
 		plan.integerText = append(plan.integerText, "NEXT_CHANGE")
 		plan.provenance.OptionalColumns = append(plan.provenance.OptionalColumns, "NEXT_CHANGE", "NEXT_TIME")
 	}

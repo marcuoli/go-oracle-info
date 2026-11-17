@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"strconv"
 	"strings"
 
@@ -244,19 +245,9 @@ func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	if err != nil {
 		return nil, &Error{Source: hiddenContextSource, cause: err}
 	}
-	result := session.Result{Columns: make([]string, len(table.Columns)), Rows: make([][]session.Value, len(table.Rows))}
-	for i, c := range table.Columns {
-		result.Columns[i] = c.Name
-	}
-	for i, row := range table.Rows {
-		result.Rows[i] = make([]session.Value, len(row))
-		for j, v := range row {
-			exact, e := session.ExactValue(v)
-			if e != nil {
-				return nil, &Error{Source: hiddenContextSource, cause: e}
-			}
-			result.Rows[i][j] = exact
-		}
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return nil, &Error{Source: hiddenContextSource, cause: ErrInvalidEvidence}
 	}
 	if _, err = decodeHiddenContext(result, plan); err != nil {
 		return nil, err

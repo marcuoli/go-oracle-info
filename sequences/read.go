@@ -213,23 +213,9 @@ func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rows
 	if err != nil {
 		return nil, &Error{Operation: "consume", cause: err}
 	}
-	result := session.Result{Columns: make([]string, len(table.Columns)), Rows: make([][]session.Value, len(table.Rows))}
-	for i, c := range table.Columns {
-		result.Columns[i] = c.Name
-	}
-	for i, row := range table.Rows {
-		result.Rows[i] = make([]session.Value, len(row))
-		for j, v := range row {
-			if v == nil {
-				result.Rows[i][j].Null = true
-			} else {
-				text, ok := v.(string)
-				if !ok {
-					return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
-				}
-				result.Rows[i][j].Text = text
-			}
-		}
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
 	}
 	if _, err = columns(result, plan); err != nil {
 		return nil, &Error{Operation: "decode", cause: err}

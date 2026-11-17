@@ -29,11 +29,19 @@ func CollectRAC(ctx context.Context, reader Reader, options Options, ref referen
 		args = []any{sql.Named("target_container_id", options.TargetContainerID)}
 	}
 	result, err := reader.Query(ctx, session.Statement{Reference: ref, Text: text, Args: args})
-	if errors.Is(err, sql.ErrNoRows) {
-		return RACObservation{SGA: Total{State: NoRows}, PGA: Total{State: NoRows}}, nil
+	missing := onlyNoRows(err)
+	if missing {
+		err = nil
 	}
-	if err != nil {
+	if err = errors.Join(err, ctx.Err()); err != nil {
 		return unavailable, &ReadError{cause: err}
 	}
-	return DecodeRAC(result, options)
+	if missing {
+		return RACObservation{SGA: Total{State: NoRows}, PGA: Total{State: NoRows}}, nil
+	}
+	observation, err := DecodeRAC(result, options)
+	if cancelled := ctx.Err(); cancelled != nil {
+		return unavailable, errors.Join(err, cancelled)
+	}
+	return observation, err
 }
