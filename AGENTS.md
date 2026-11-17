@@ -32,3 +32,5 @@ selection; never inspect users/verifiers/file contents or flush metadata caches.
 Applications retain non-default/explicit-name report unions and peer selection.
 
 Instance-wide scalar-row system parameters and qualified instance visibility are documented in [system parameter contracts](docs/system-parameters.md). Preserve the published SYSTEM_PARAMETER2 list APIs; per-member scheduling, partial coverage and report selection remain consumer-owned.
+
+The opt-in parameters.EvaluatePersistence/PersistenceJSON contract compares existing admitted effective/SPFILE observations only; see docs/parameter-persistence.md. Keep raw selectors and ModifiedSystem unchanged. Require complete fresh sources and admitted startup/scope evidence, preserve SID versus INST_ID and actual list/container identity, and retain unknown defaults/equivalence/PDB/PFILE states. Never infer guaranteed future restart behavior, fabricate native rows or add connection/host access for computed findings.
