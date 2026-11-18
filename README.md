@@ -143,3 +143,5 @@ See [database-visible GoldenGate facts](docs/goldengate.md) for typed complete
 reads, actual native row cursors and bounded JSON. Sources retain qualified
 visible instance/container identity without opening connections, controlling
 processes, inferring synchronization or deciding readiness.
+
+Data Guard transport/apply observations, paired incarnation admission and explicit release qualification are documented in [Data Guard facts](docs/dataguard.md).
