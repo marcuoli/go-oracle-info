@@ -118,7 +118,7 @@ record deliberate canonical source differences.
 | objects.Schema / Tables / Table / TablesStatistics / TableStatistics | DBA_USERS / DBA_TABLES; exact binary owner/table predicates; raw NUM_ROWS may be fractional optimizer statistics, never exact COUNT(*) |
 | objects.TableCount / OldestStatistics | Explicit safely quoted admitted ordinary table COUNT(*) / DBA_TAB_STATISTICS bounded owner-admitted sample; no workload authorization inferred |
 | identity.* | Reviewed V$DATABASE, V$INSTANCE, V$VERSION, V$PDBS and USERENV fields; VERSION_FULL versus VERSION bootstrap kept distinct; actual container/instance identity never inferred from branding |
-| memory.Scoped / PDB / RAC | Existing V$PARAMETER, GV$SYSTEM_PARAMETER, GV$INSTANCE/GV$PDBS and guarded GV$CON_SYSSTAT sources; selected-source observation versus proven member totals distinct; no new fallback |
+| memory.Scoped / PDB / RAC | Existing GV$SYSTEM_PARAMETER, GV$INSTANCE/GV$PDBS and caller-admitted guarded V$PARAMETER sources; selected-source observation versus proven member totals distinct; no new fallback |
 | catalog.Metadata / Configuration / VisibleCellCount / Cells / Alerts / ConnectedCells | SYS.ALL_TAB_COLUMNS and caller-admitted local/global cell/config/info/alert layouts; missing optional column, projected SQL NULL and absent source distinct. Complete UCS2 LOB length checked; scalar and XML layouts distinct; bounded connected sample stays a sample |
 
 ## Native SQL and driver evidence
