@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/marcuoli/go-oracle-info/internal/testsql"
@@ -46,6 +47,25 @@ func TestOldestStatisticsOwnedAndNative(t *testing.T) {
 	payload, err := OldestStatisticsJSON(t.Context(), db, options, rowset.Limits{}, owners...)
 	if err != nil || !json.Valid(payload) || state.Closed() != 1 {
 		t.Fatal(string(payload), err)
+	}
+
+	var document struct {
+		Provenance DatasetProvenance
+		Data       struct {
+			Columns []struct{ Name string }
+			Rows    [][]any
+		}
+	}
+	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || document.Provenance.Limit != 2 || !reflect.DeepEqual(document.Provenance.Owners, []string{"CaseOwner"}) || !reflect.DeepEqual(document.Data.Rows, [][]any{{"CaseOwner", "T\u96ea", nil, nil, "TABLE", "12.5", nil, nil, "SHARED"}}) {
+		t.Fatal(string(payload), err)
+	}
+	if len(document.Data.Columns) != 9 {
+		t.Fatal(document.Data.Columns)
+	}
+	for i, name := range []string{"OWNER", "TABLE_NAME", "PARTITION_NAME", "SUBPARTITION_NAME", "OBJECT_TYPE", "NUM_ROWS", "LAST_ANALYZED", "STATTYPE_LOCKED", "SCOPE"} {
+		if document.Data.Columns[i].Name != name {
+			t.Fatal(document.Data.Columns)
+		}
 	}
 	late := append([]driver.Value(nil), values...)
 	late[0] = "DifferentOwner"

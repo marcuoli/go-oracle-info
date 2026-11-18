@@ -18,6 +18,15 @@ func TestDatasetReleaseSelectionMatrix(t *testing.T) {
 		{name: "VisibleCellCount", selectSQL: func(major int) (string, []any, error) {
 			return VisibleCellCountStatement(VisibleCellCountOptions{OracleMajor: major})
 		}},
+		{name: "Cells", selectSQL: func(major int) (string, []any, error) {
+			return CellsStatement(CellsOptions{OracleMajor: major, Schema: Schema{"V_$CELL": {"CELL_HASHVAL": "NUMBER", "CELL_PATH": "VARCHAR2"}}})
+		}},
+		{name: "Alerts", selectSQL: func(major int) (string, []any, error) {
+			return AlertsStatement(AlertsOptions{OracleMajor: major, Schema: Schema{"V_$CELL_OPEN_ALERTS": {"CELL_NAME": "VARCHAR2", "ALERT_VALUE": "CLOB"}}})
+		}},
+		{name: "ConnectedCells", selectSQL: func(major int) (string, []any, error) {
+			return ConnectedCellsStatement(ConnectedCellsOptions{OracleMajor: major, Limit: 2, CellTypeKnownAbsent: true})
+		}},
 	}
 	for _, c := range cases {
 		for _, major := range []int{9, 10, 11, 12, 18, 19, 21, 23, 26} {

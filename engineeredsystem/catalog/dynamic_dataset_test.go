@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -79,6 +80,20 @@ func TestConnectedCellSampleAndMissingCapability(t *testing.T) {
 	if err != nil || state.Closed() != 1 || !json.Valid(b) {
 		t.Fatal(string(b), err)
 	}
+	var document struct {
+		Provenance DatasetProvenance
+		Data       struct {
+			Columns []struct{ Name string }
+			Rows    [][]any
+		}
+	}
+	if err = json.Unmarshal(b, &document); err != nil || !document.Provenance.Complete || document.Provenance.Limit != 2 || len(document.Provenance.OptionalColumns) != 0 || !reflect.DeepEqual(document.Data.Rows, [][]any{{"0007", "cell-a"}, {"0008", "cell-b"}}) {
+		t.Fatal(string(b), err)
+	}
+	if len(document.Data.Columns) != 2 || document.Data.Columns[0].Name != "CELL_HASHVAL" || document.Data.Columns[1].Name != "CELL_PATH" {
+		t.Fatal(document.Data.Columns)
+	}
+
 }
 func TestAlertScalarAndCompleteXMLVariants(t *testing.T) {
 	scalar := AlertsOptions{OracleMajor: 19, Schema: Schema{"V_$CELL_OPEN_ALERTS": {"CELL_NAME": "VARCHAR2", "CELL_HASH": "NUMBER", "BEGIN_TIME": "DATE", "SEQ_NO": "NUMBER", "MESSAGE": "VARCHAR2", "STATEFUL": "VARCHAR2", "SEVERITY": "VARCHAR2", "CON_ID": "NUMBER"}}}

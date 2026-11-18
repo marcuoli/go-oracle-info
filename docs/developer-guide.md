@@ -8,6 +8,8 @@ The session library owns generic query execution, cursor consumption and JSON.
 The application owns endpoint/container/grant admission, connection lifetime,
 deadlines, budgets, recovery, report selection, comparison and presentation.
 
+See [complete source fact APIs](fact-apis.md) for all Statement/Decode/Read/Rows/JSON families, legacy mappings and independently recorded release/native qualification.
+
 ## Choose the reader that you already own
 
 For an existing session-owned buffered reader, call the responsibility package.

@@ -30,7 +30,7 @@ func TestDatasetReleaseSelectionMatrix(t *testing.T) {
 			return TableStatement(TableOptions{OracleMajor: major, Owner: "CaseOwner", Table: "T雪"})
 		}},
 		{name: "TableCount", selectSQL: func(major int) (string, []any, error) {
-			return TableCountStatement(TableCountOptions{OracleMajor: major, Owner: "CaseOwner", Table: "T雪"})
+			return TableCountStatement(TableCountOptions{OracleMajor: major, Owner: "SYS", Table: "DUAL"})
 		}},
 		{name: "TablesStatistics", selectSQL: func(major int) (string, []any, error) {
 			return TablesStatisticsStatement(TablesStatisticsOptions{OracleMajor: major, Owner: "CaseOwner"})

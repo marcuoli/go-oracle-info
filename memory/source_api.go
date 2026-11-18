@@ -135,13 +135,39 @@ func PDBJSON(ctx context.Context, q rowset.Queryer, parameter Parameter, options
 // ReadRAC retains CollectRAC's independently valid metric evidence alongside
 // errors. This is aggregate evidence, never a failed cursor prefix or new retry.
 func ReadRAC(ctx context.Context, reader Reader, options Options, ref reference.Reference) (RACObservation, error) {
-	if _, err := sourcePlan(SGA, options, true); err != nil {
-		return RACObservation{}, err
+	unavailable := RACObservation{SGA: Total{State: Unavailable}, PGA: Total{State: Unavailable}}
+	p, err := sourcePlan(SGA, options, true)
+	if err != nil {
+		return unavailable, err
 	}
-	if !validDatasetReader(reader) {
-		return RACObservation{}, ErrInvalidRequest
+	if !validDatasetReader(reader) || ref.Validate() != nil {
+		return unavailable, ErrInvalidRequest
 	}
-	return CollectRAC(ctx, reader, options, ref)
+	if err = datasetReadError(ctx, p, nil); err != nil {
+		return unavailable, err
+	}
+	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: ref})
+	missing := onlyNoRows(err)
+	if missing {
+		err = nil
+	}
+	if err = datasetReadError(ctx, p, err); err != nil {
+		return unavailable, err
+	}
+	if missing {
+		return RACObservation{SGA: Total{State: NoRows}, PGA: Total{State: NoRows}}, nil
+	}
+	// Validate the entire transport before the legacy aggregate decoder can skip
+	// an absent metric name. A contradictory NULL scalar is not partial evidence.
+	// Valid independently available metrics still survive domain decoding errors.
+	if _, err = datasetColumns(result, p); err != nil {
+		return unavailable, err
+	}
+	observation, err := DecodeRAC(result, options)
+	if ctx.Err() != nil {
+		return unavailable, datasetReadError(ctx, p, err)
+	}
+	return observation, err
 }
 
 // RACRows returns the actual native RACStatement cursor, not a fabricated total.
