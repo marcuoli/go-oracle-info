@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.19.0 (2026-11-18)
+
 - Correct the fact API compatibility guide's guarded memory source reference to V$PARAMETER, matching the unchanged selector (#65).
 
 - Add complete typed, admitted-reader, caller-native rows and atomic JSON APIs for operational and compatibility fact datasets, preserving existing SQL/public APIs and explicit sample/scope/value semantics (#65).
