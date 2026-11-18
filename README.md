@@ -112,6 +112,8 @@ Use the independent [connected identity property readers](docs/identity-properti
 
 For the simplest caller API, use [the non-owning fact client and parameter datasets](docs/parameter-datasets.md): oracleinfo.New(existingConn), scalar properties, native InitParameters/SPFileParameters and bounded JSON companions. SQL/version selection stays internal, the native handle lifetime stays with its owner, and result serialization uses JSON rather than CSV/plaintext.
 
+See [complete source fact APIs](docs/fact-apis.md) for all Statement/Decode/Read/Rows/JSON families, legacy mappings and independently recorded release/native qualification.
+
 ## Punctual facts and developer integration
 
 Use the [application developer guide](docs/developer-guide.md) to choose the

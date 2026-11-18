@@ -99,6 +99,8 @@ catalog. Do not label a missing ordinary fact path complete by calling it legacy
 Do not duplicate an existing typed source or promote legacy presentation policy
 into a new database fact merely to fill a naming checklist.
 
+See [complete source fact APIs](fact-apis.md) for all Statement/Decode/Read/Rows/JSON families, legacy mappings and independently recorded release/native qualification.
+
 ## Code organization and extension
 
 Keep one cohesive fact in `<fact>.go`, including its selector, schema, decoder
