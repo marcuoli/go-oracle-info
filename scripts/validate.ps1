@@ -39,7 +39,7 @@ try {
     & $GoExecutable version -m $binary | Set-Content -LiteralPath (Join-Path $output 'build-metadata.txt');if($LASTEXITCODE -ne 0){throw 'Metadata inspection failed'}
     & $GoExecutable env -json GOVERSION GOOS GOARCH GOFLAGS CGO_ENABLED GOWORK | Set-Content -LiteralPath (Join-Path $output 'build-settings.json');if($LASTEXITCODE -ne 0){throw 'Build settings inspection failed'}
     & $GoExecutable list -m -json all | Set-Content -LiteralPath (Join-Path $output 'modules.json');if($LASTEXITCODE -ne 0){throw 'Module graph inspection failed'}
-    if($Scan){Invoke-Go -Arguments @('run','golang.org/x/vuln/cmd/govulncheck@v1.9.0','./...');Invoke-Go -Arguments @('run','golang.org/x/vuln/cmd/govulncheck@v1.9.0','-mode=binary',$binary)}
+    if($Scan){Invoke-Go -Arguments @('run','golang.org/x/vuln/cmd/govulncheck@v1.10.0','./...');Invoke-Go -Arguments @('run','golang.org/x/vuln/cmd/govulncheck@v1.10.0','-mode=binary',$binary)}
     Write-Output "Validation passed. Evidence: $output"
 } finally {
     foreach($key in $settings){[Environment]::SetEnvironmentVariable($key,$saved[$key],'Process')}
