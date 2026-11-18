@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
-	"strings"
 )
 
 // Entry preserves exact source text and SQL NULL; no flags or limits are inferred.
@@ -19,7 +20,8 @@ type Entry struct {
 }
 
 // EntriesOptions admits the numeric release and the exact source selection.
-// New projections admit19/21/23;26ai must carry its observed numeric23.x version.
+// New projections admit numeric majors 19, 21 and 23; Oracle 26ai uses its
+// observed numeric version, not a synthetic major 26.
 type EntriesOptions struct {
 	OracleMajor   int
 	Limit         int
@@ -41,8 +43,8 @@ type EntriesResult struct {
 
 // EntriesStatement selects the fixed reviewed source with bound caller values.
 func EntriesStatement(options EntriesOptions) (string, []any, error) {
-	p, e := entriesPlan(options)
-	return p.sql, p.args, e
+	p, err := entriesPlan(options)
+	return p.sql, p.args, err
 }
 func entriesPlan(options EntriesOptions) (selection, error) {
 	if err := admittedMajor(options.OracleMajor); err != nil {
@@ -66,13 +68,13 @@ func entriesPlan(options EntriesOptions) (selection, error) {
 
 // DecodeEntries validates all rows before returning typed facts, preserving NULLs.
 func DecodeEntries(result session.Result, options EntriesOptions) (EntriesResult, error) {
-	p, e := entriesPlan(options)
-	if e != nil {
-		return EntriesResult{}, e
+	p, err := entriesPlan(options)
+	if err != nil {
+		return EntriesResult{}, err
 	}
-	index, e := columns(result, p, "MESSAGE_TYPE", "MESSAGE_LEVEL")
-	if e != nil {
-		return EntriesResult{}, e
+	index, err := columns(result, p, "MESSAGE_TYPE", "MESSAGE_LEVEL")
+	if err != nil {
+		return EntriesResult{}, err
 	}
 	if len(result.Rows) > options.Limit {
 		return EntriesResult{}, ErrInvalidEvidence
@@ -87,23 +89,23 @@ func DecodeEntries(result session.Result, options EntriesOptions) (EntriesResult
 // ReadEntries executes once on an admitted complete bounded reader; failures
 // and cancellation publish no successful prefix. It owns no scope or retry.
 func ReadEntries(ctx context.Context, reader Reader, request EntriesRequest) (EntriesResult, error) {
-	p, e := entriesPlan(request.Options)
-	if e != nil {
-		return EntriesResult{}, e
+	p, err := entriesPlan(request.Options)
+	if err != nil {
+		return EntriesResult{}, err
 	}
 	if !validReader(reader) || request.Reference.Validate() != nil {
 		return EntriesResult{}, ErrInvalidRequest
 	}
-	if e = readError(ctx, p, nil); e != nil {
-		return EntriesResult{}, e
+	if err = readError(ctx, p, nil); err != nil {
+		return EntriesResult{}, err
 	}
-	result, e := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
-	if e = readError(ctx, p, e); e != nil {
-		return EntriesResult{}, e
+	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
+	if err = readError(ctx, p, err); err != nil {
+		return EntriesResult{}, err
 	}
-	facts, e := DecodeEntries(result, request.Options)
-	if e = readError(ctx, p, e); e != nil {
-		return EntriesResult{}, e
+	facts, err := DecodeEntries(result, request.Options)
+	if err = readError(ctx, p, err); err != nil {
+		return EntriesResult{}, err
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -112,13 +114,13 @@ func ReadEntries(ctx context.Context, reader Reader, request EntriesRequest) (En
 // EntriesRows returns the actual caller-native cursor. Its caller owns
 // iteration, Err/Close, affinity, cancellation and finite stream budgets.
 func EntriesRows(ctx context.Context, q rowset.Queryer, options EntriesOptions) (*sql.Rows, error) {
-	p, e := entriesPlan(options)
-	if e != nil {
-		return nil, e
+	p, err := entriesPlan(options)
+	if err != nil {
+		return nil, err
 	}
-	r, e := rowset.Query(ctx, q, p.sql, p.args...)
-	if e != nil {
-		return nil, &Error{p.provenance.Source, e}
+	r, err := rowset.Query(ctx, q, p.sql, p.args...)
+	if err != nil {
+		return nil, &Error{p.provenance.Source, err}
 	}
 	return r, nil
 }
@@ -126,9 +128,9 @@ func EntriesRows(ctx context.Context, q rowset.Queryer, options EntriesOptions) 
 // EntriesJSON consumes its own complete cursor, validates domain facts, then
 // publishes bounded standard JSON. Any scan/terminal/close/budget error returns nil.
 func EntriesJSON(ctx context.Context, q rowset.Queryer, options EntriesOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, e := entriesPlan(options)
-	if e != nil {
-		return nil, e
+	p, err := entriesPlan(options)
+	if err != nil {
+		return nil, err
 	}
-	return readJSON(ctx, q, p, limits, func(r session.Result) error { _, e := DecodeEntries(r, options); return e })
+	return readJSON(ctx, q, p, limits, func(r session.Result) error { _, err := DecodeEntries(r, options); return err })
 }

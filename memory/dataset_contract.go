@@ -4,29 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"strings"
+
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
-	"reflect"
-	"strings"
 )
 
-// DatasetProvenance separates a completed selected transport from source/RAC/history coverage.
-// Limit identifies a bounded sample, even when Complete is true. Timestamp offsets
-// and database-local DATE labels remain source values, not inferred UTC instants.
+// DatasetProvenance records the admitted source, numeric release and visibility.
+// Complete is selected-transport completion, never physical RAC, history or
+// whole-database coverage.
 type DatasetProvenance struct {
 	Parameter         Parameter `json:"parameter,omitempty"`
 	TargetContainerID int       `json:"admitted_target_container_id,omitempty"`
 	AllowInherited    bool      `json:"admitted_inheritance,omitempty"`
 	EffectiveADB      bool      `json:"admitted_effective_adb,omitempty"`
-	Owners            []string  `json:"owners,omitempty"`
-	Table             string    `json:"table,omitempty"`
 	Source            string    `json:"source"`
 	OracleMajor       int       `json:"oracle_major"`
 	Scope             string    `json:"scope"`
-	Limit             int       `json:"sample_limit,omitempty"`
-	WindowSeconds     int64     `json:"window_seconds,omitempty"`
-	Owner             string    `json:"owner,omitempty"`
 	Complete          bool      `json:"complete"`
 }
 

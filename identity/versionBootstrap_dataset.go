@@ -14,8 +14,9 @@ import (
 type VersionBootstrapRow struct{ Value session.Value }
 
 // VersionBootstrapOptions admits the independently reviewed source selection.
-// New projections admit numeric majors 19, 21 and 23. Oracle 26ai uses its
-// observed numeric version. Older compatibility selectors remain unchanged.
+// Zero major explicitly admits the legacy VERSION bootstrap before capability
+// discovery. Known modern majors must agree with the returned numeric value.
+// This source never supplies VERSION_FULL precision or an observed RU.
 type VersionBootstrapOptions struct{ OracleMajor int }
 
 // VersionBootstrapRequest supplies admitted options and a caller-owned SQL reference.

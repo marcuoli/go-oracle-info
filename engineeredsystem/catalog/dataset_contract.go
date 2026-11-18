@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"strings"
+
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
-	"reflect"
-	"strings"
 )
 
 // Reader supplies complete finite-budget results, including terminal/close errors.
@@ -17,19 +18,17 @@ type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
 
-// DatasetProvenance separates a completed selected transport from source/RAC/history coverage.
-// Limit identifies a bounded sample, even when Complete is true. Timestamp offsets
-// and database-local DATE labels remain source values, not inferred UTC instants.
+// DatasetProvenance records the admitted source, numeric release and visibility.
+// Complete is selected-transport completion, never physical RAC, history or
+// whole-database coverage. An explicit Limit remains a bounded sample.
 type DatasetProvenance struct {
-	Owners        []string `json:"owners,omitempty"`
-	Table         string   `json:"table,omitempty"`
-	Source        string   `json:"source"`
-	OracleMajor   int      `json:"oracle_major"`
-	Scope         string   `json:"scope"`
-	Limit         int      `json:"sample_limit,omitempty"`
-	WindowSeconds int64    `json:"window_seconds,omitempty"`
-	Owner         string   `json:"owner,omitempty"`
-	Complete      bool     `json:"complete"`
+	OptionalColumns []string `json:"optional_columns,omitempty"`
+	Layout          string   `json:"layout,omitempty"`
+	Source          string   `json:"source"`
+	OracleMajor     int      `json:"oracle_major"`
+	Scope           string   `json:"scope"`
+	Limit           int      `json:"sample_limit,omitempty"`
+	Complete        bool     `json:"complete"`
 }
 
 var ErrUnsupportedVersion = errors.New("unsupported Oracle engineeredsystem/catalog source version")
@@ -58,7 +57,7 @@ type datasetSelection struct {
 // Older compatibility SQL remains available; branding does not admit numeric26.
 func datasetMajor(major int) error {
 	switch major {
-	case 19, 21, 23:
+	case 12, 18, 19, 21, 23:
 		return nil
 	}
 	return ErrUnsupportedVersion

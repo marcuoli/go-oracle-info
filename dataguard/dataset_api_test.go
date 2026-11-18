@@ -54,9 +54,7 @@ func TestDatasetStatusCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeStatus(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -105,6 +103,33 @@ func TestDatasetStatusCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"PHYSICAL STANDBY", "MAXIMUM PERFORMANCE", "RESYNCHRONIZATION", "NOT ALLOWED"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadStatus(t.Context(), reader, StatusRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := StatusJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := StatusJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := StatusJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -144,9 +169,7 @@ func TestDatasetLagCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeLag(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -194,6 +217,33 @@ func TestDatasetLagCompleteAPI(t *testing.T) {
 	}
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"apply lag", nil, "day(2) to second(0) interval", "11/18/2026 12:34:56", nil}}) {
 		t.Fatal(string(payload), document, err)
+	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadLag(t.Context(), reader, LagRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := LagJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := LagJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := LagJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
 	}
 	for _, failure := range []struct {
 		name   string

@@ -6,11 +6,12 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/marcuoli/go-oracle-info/internal/testsql"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
-	"testing"
 )
 
 type sourceReader func(context.Context, session.Statement) (session.Result, error)
@@ -89,6 +90,10 @@ func TestRACSourceJSONAndReadAlias(t *testing.T) {
 	b, err := RACJSON(t.Context(), db, options, rowset.Limits{})
 	if err != nil || state.Closed() != 1 || !json.Valid(b) {
 		t.Fatal(string(b), err)
+	}
+	var document struct{ Provenance DatasetProvenance }
+	if err := json.Unmarshal(b, &document); err != nil || document.Provenance.Parameter != "" {
+		t.Fatal("RAC source covers both parameters", string(b), err)
 	}
 	input := session.Result{Columns: cols, Rows: [][]session.Value{{{Text: "sga_max_size"}, {Text: "3221225472"}, {Text: "1"}, {Text: "0"}, {Text: "0"}}, {{Text: "pga_aggregate_target"}, {Text: "0"}, {Text: "1"}, {Text: "0"}, {Text: "0"}}}}
 	reader := sourceReader(func(context.Context, session.Statement) (session.Result, error) { return input, nil })

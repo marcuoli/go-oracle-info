@@ -54,9 +54,7 @@ func TestDatasetConfigurationCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeConfiguration(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -105,6 +103,33 @@ func TestDatasetConfigurationCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"TRUE"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadConfiguration(t.Context(), reader, ConfigurationRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := ConfigurationJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := ConfigurationJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := ConfigurationJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -144,9 +169,7 @@ func TestDatasetEndianCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeEndian(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -195,6 +218,33 @@ func TestDatasetEndianCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"Little"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadEndian(t.Context(), reader, EndianRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := EndianJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := EndianJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := EndianJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -234,9 +284,7 @@ func TestDatasetCharacterSetCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeCharacterSet(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -285,6 +333,33 @@ func TestDatasetCharacterSetCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"AL32UTF8"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadCharacterSet(t.Context(), reader, CharacterSetRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := CharacterSetJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := CharacterSetJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := CharacterSetJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -324,9 +399,7 @@ func TestDatasetCPUCountCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeCPUCount(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -375,6 +448,33 @@ func TestDatasetCPUCountCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"8"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadCPUCount(t.Context(), reader, CPUCountRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := CPUCountJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := CPUCountJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := CPUCountJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -414,9 +514,7 @@ func TestDatasetProductsCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeProducts(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -465,6 +563,33 @@ func TestDatasetProductsCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"XDB"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadProducts(t.Context(), reader, ProductsRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := ProductsJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := ProductsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := ProductsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -504,9 +629,7 @@ func TestDatasetDatafileSizeCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeDatafileSize(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -555,6 +678,33 @@ func TestDatasetDatafileSizeCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{nil}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadDatafileSize(t.Context(), reader, DatafileSizeRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := DatafileSizeJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := DatafileSizeJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := DatafileSizeJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -594,9 +744,7 @@ func TestDatasetStorageCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeStorage(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -645,6 +793,33 @@ func TestDatasetStorageCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"+DATA/db/file", "DATAFILE"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadStorage(t.Context(), reader, StorageRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := StorageJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := StorageJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := StorageJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -684,9 +859,7 @@ func TestDatasetEncryptionCountsCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeEncryptionCounts(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -735,6 +908,33 @@ func TestDatasetEncryptionCountsCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"2", "3"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadEncryptionCounts(t.Context(), reader, EncryptionCountsRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := EncryptionCountsJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := EncryptionCountsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := EncryptionCountsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -774,9 +974,7 @@ func TestDatasetSGAAllocatedCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeSGAAllocated(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -825,6 +1023,33 @@ func TestDatasetSGAAllocatedCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"3.125"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadSGAAllocated(t.Context(), reader, SGAAllocatedRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := SGAAllocatedJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := SGAAllocatedJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := SGAAllocatedJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -864,9 +1089,7 @@ func TestDatasetPGAAllocatedCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodePGAAllocated(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -915,6 +1138,33 @@ func TestDatasetPGAAllocatedCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{nil}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadPGAAllocated(t.Context(), reader, PGAAllocatedRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := PGAAllocatedJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := PGAAllocatedJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := PGAAllocatedJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -954,9 +1204,7 @@ func TestDatasetPDBCountCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodePDBCount(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -1005,6 +1253,33 @@ func TestDatasetPDBCountCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"5"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadPDBCount(t.Context(), reader, PDBCountRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := PDBCountJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := PDBCountJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := PDBCountJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -1044,9 +1319,7 @@ func TestDatasetSessionParametersCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeSessionParameters(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -1095,6 +1368,33 @@ func TestDatasetSessionParametersCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"nls_date_format", "YYYY-MM-DD"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadSessionParameters(t.Context(), reader, SessionParametersRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := SessionParametersJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := SessionParametersJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := SessionParametersJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -1134,9 +1434,7 @@ func TestDatasetSessionParametersWithDefaultsCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeSessionParametersWithDefaults(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -1185,6 +1483,33 @@ func TestDatasetSessionParametersWithDefaultsCompleteAPI(t *testing.T) {
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"optimizer_mode", nil, "UNKNOWN"}}) {
 		t.Fatal(string(payload), document, err)
 	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadSessionParametersWithDefaults(t.Context(), reader, SessionParametersWithDefaultsRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := SessionParametersWithDefaultsJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := SessionParametersWithDefaultsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := SessionParametersWithDefaultsJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
+	}
 	for _, failure := range []struct {
 		name   string
 		step   testsql.Step
@@ -1224,9 +1549,7 @@ func TestDatasetNLSInstanceCompleteAPI(t *testing.T) {
 		t.Fatal(facts, err, calls)
 	}
 	bad := input
-	bad.Rows = [][]session.Value{input.Rows[0], {{Text: "late wrong width"}, {Text: "surplus"}, {Text: "surplus"}}}
-	bad.Columns = append([]string(nil), cols...)
-	bad.Columns[len(cols)-1] = "UNEXPECTED"
+	bad.Rows = [][]session.Value{input.Rows[0], make([]session.Value, len(cols)+1)}
 	got, err := DecodeNLSInstance(bad, options)
 	if !errors.Is(err, ErrInvalidEvidence) || got.Rows != nil {
 		t.Fatal(got, err)
@@ -1274,6 +1597,33 @@ func TestDatasetNLSInstanceCompleteAPI(t *testing.T) {
 	}
 	if err = json.Unmarshal(payload, &document); err != nil || !document.Provenance.Complete || !reflect.DeepEqual(document.Data.Rows, [][]any{{"NLS_LANGUAGE", "AMERICAN"}}) {
 		t.Fatal(string(payload), document, err)
+	}
+
+	calls = 0
+	reader = func(context.Context, session.Statement) (session.Result, error) { calls++; return input, nil }
+	_, err = ReadNLSInstance(t.Context(), reader, NLSInstanceRequest{Options: options})
+	if !errors.Is(err, ErrInvalidRequest) || calls != 0 {
+		t.Fatal("invalid reference executed SQL", err, calls)
+	}
+	for _, major := range []int{9, 11, 18, 26} {
+		options.OracleMajor = major
+		db, state = testsql.New(t)
+		b, err := NLSInstanceJSON(t.Context(), db, options, rowset.Limits{})
+		if !errors.Is(err, ErrUnsupportedVersion) || b != nil || len(state.Calls()) != 0 {
+			t.Fatal("unsupported JSON issued SQL", major, err)
+		}
+	}
+	options.OracleMajor = 19
+	exact := len(payload)
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	same, err := NLSInstanceJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact})
+	if err != nil || !reflect.DeepEqual(same, payload) {
+		t.Fatal("exact final envelope budget", string(same), err)
+	}
+	db, _ = testsql.New(t, testsql.Step{Columns: cols, Values: [][]driver.Value{values}})
+	short, err := NLSInstanceJSON(t.Context(), db, options, rowset.Limits{MaxBytes: exact - 1})
+	if !errors.Is(err, rowset.ErrCapacity) || short != nil {
+		t.Fatal("final envelope overflow", string(short), err)
 	}
 	for _, failure := range []struct {
 		name   string

@@ -5,11 +5,12 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/marcuoli/go-oracle-info/internal/testsql"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
-	"testing"
 )
 
 func TestOldestStatisticsOwnedAndNative(t *testing.T) {

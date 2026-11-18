@@ -2,8 +2,9 @@ package catalog
 
 import (
 	"errors"
-	"github.com/marcuoli/go-oracle-session/session"
 	"strconv"
+
+	"github.com/marcuoli/go-oracle-session/session"
 )
 
 // ErrUnsupportedSource means the caller-admitted capability snapshot cannot
@@ -49,4 +50,13 @@ func (facts MetadataResult) CapabilitySchema() (Schema, error) {
 		result.Rows[i] = []session.Value{r.Source, r.Column, r.DataType}
 	}
 	return DecodeSchema(result)
+}
+
+func optionalDatasetValue(row []session.Value, index map[string]int, name string, admitted bool) *session.Value {
+	pos, ok := index[name]
+	if !admitted || !ok {
+		return nil
+	}
+	v := row[pos]
+	return &v
 }

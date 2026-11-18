@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -19,7 +20,8 @@ type Count struct {
 }
 
 // CountsOptions admits the numeric release and the exact source selection.
-// New projections admit19/21/23;26ai must carry its observed numeric23.x version.
+// New projections admit numeric majors 19, 21 and 23; Oracle 26ai uses its
+// observed numeric version, not a synthetic major 26.
 type CountsOptions struct {
 	OracleMajor   int
 	WindowSeconds int64
@@ -40,8 +42,8 @@ type CountsResult struct {
 
 // CountsStatement selects the fixed reviewed source with bound caller values.
 func CountsStatement(options CountsOptions) (string, []any, error) {
-	p, e := countsPlan(options)
-	return p.sql, p.args, e
+	p, err := countsPlan(options)
+	return p.sql, p.args, err
 }
 func countsPlan(options CountsOptions) (selection, error) {
 	if err := admittedMajor(options.OracleMajor); err != nil {
@@ -58,13 +60,13 @@ func countsPlan(options CountsOptions) (selection, error) {
 
 // DecodeCounts validates all rows before returning typed facts, preserving NULLs.
 func DecodeCounts(result session.Result, options CountsOptions) (CountsResult, error) {
-	p, e := countsPlan(options)
-	if e != nil {
-		return CountsResult{}, e
+	p, err := countsPlan(options)
+	if err != nil {
+		return CountsResult{}, err
 	}
-	index, e := columns(result, p, "MESSAGE_LEVEL", "MESSAGE_TYPE", "MESSAGE_COUNT")
-	if e != nil {
-		return CountsResult{}, e
+	index, err := columns(result, p, "MESSAGE_LEVEL", "MESSAGE_TYPE", "MESSAGE_COUNT")
+	if err != nil {
+		return CountsResult{}, err
 	}
 	rows := make([]Count, len(result.Rows))
 	for i, r := range result.Rows {
@@ -76,23 +78,23 @@ func DecodeCounts(result session.Result, options CountsOptions) (CountsResult, e
 // ReadCounts executes once on an admitted complete bounded reader; failures
 // and cancellation publish no successful prefix. It owns no scope or retry.
 func ReadCounts(ctx context.Context, reader Reader, request CountsRequest) (CountsResult, error) {
-	p, e := countsPlan(request.Options)
-	if e != nil {
-		return CountsResult{}, e
+	p, err := countsPlan(request.Options)
+	if err != nil {
+		return CountsResult{}, err
 	}
 	if !validReader(reader) || request.Reference.Validate() != nil {
 		return CountsResult{}, ErrInvalidRequest
 	}
-	if e = readError(ctx, p, nil); e != nil {
-		return CountsResult{}, e
+	if err = readError(ctx, p, nil); err != nil {
+		return CountsResult{}, err
 	}
-	result, e := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
-	if e = readError(ctx, p, e); e != nil {
-		return CountsResult{}, e
+	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
+	if err = readError(ctx, p, err); err != nil {
+		return CountsResult{}, err
 	}
-	facts, e := DecodeCounts(result, request.Options)
-	if e = readError(ctx, p, e); e != nil {
-		return CountsResult{}, e
+	facts, err := DecodeCounts(result, request.Options)
+	if err = readError(ctx, p, err); err != nil {
+		return CountsResult{}, err
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -101,13 +103,13 @@ func ReadCounts(ctx context.Context, reader Reader, request CountsRequest) (Coun
 // CountsRows returns the actual caller-native cursor. Its caller owns
 // iteration, Err/Close, affinity, cancellation and finite stream budgets.
 func CountsRows(ctx context.Context, q rowset.Queryer, options CountsOptions) (*sql.Rows, error) {
-	p, e := countsPlan(options)
-	if e != nil {
-		return nil, e
+	p, err := countsPlan(options)
+	if err != nil {
+		return nil, err
 	}
-	r, e := rowset.Query(ctx, q, p.sql, p.args...)
-	if e != nil {
-		return nil, &Error{p.provenance.Source, e}
+	r, err := rowset.Query(ctx, q, p.sql, p.args...)
+	if err != nil {
+		return nil, &Error{p.provenance.Source, err}
 	}
 	return r, nil
 }
@@ -115,9 +117,9 @@ func CountsRows(ctx context.Context, q rowset.Queryer, options CountsOptions) (*
 // CountsJSON consumes its own complete cursor, validates domain facts, then
 // publishes bounded standard JSON. Any scan/terminal/close/budget error returns nil.
 func CountsJSON(ctx context.Context, q rowset.Queryer, options CountsOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, e := countsPlan(options)
-	if e != nil {
-		return nil, e
+	p, err := countsPlan(options)
+	if err != nil {
+		return nil, err
 	}
-	return readJSON(ctx, q, p, limits, func(r session.Result) error { _, e := DecodeCounts(r, options); return e })
+	return readJSON(ctx, q, p, limits, func(r session.Result) error { _, err := DecodeCounts(r, options); return err })
 }

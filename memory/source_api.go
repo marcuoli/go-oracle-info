@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -49,11 +50,15 @@ func sourcePlan(parameter Parameter, options Options, rac bool) (datasetSelectio
 	for i, name := range names {
 		schema[i] = rowset.Column{Name: name, Kind: rowset.Text}
 	}
+	provenanceParameter := parameter
+	if rac {
+		provenanceParameter = ""
+	}
 	var args []any
 	if options.Scope == DiscoveredPDB {
 		args = []any{sql.Named("target_container_id", options.TargetContainerID)}
 	}
-	return datasetSelection{sql: text, args: args, schema: schema, provenance: DatasetProvenance{Source: source, OracleMajor: options.OracleMajor, Scope: string(options.Scope), Parameter: parameter, TargetContainerID: options.TargetContainerID, AllowInherited: options.PDB.AllowInherited, EffectiveADB: options.PDB.EffectiveADB}}, nil
+	return datasetSelection{sql: text, args: args, schema: schema, provenance: DatasetProvenance{Source: source, OracleMajor: options.OracleMajor, Scope: string(options.Scope), Parameter: provenanceParameter, TargetContainerID: options.TargetContainerID, AllowInherited: options.PDB.AllowInherited, EffectiveADB: options.PDB.EffectiveADB}}, nil
 }
 
 // Read selects and decodes one complete configured-memory source without

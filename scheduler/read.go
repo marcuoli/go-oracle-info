@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"strings"
+
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
-	"reflect"
-	"strings"
 )
 
 // Reader supplies complete finite-budget results, including terminal/close errors.
@@ -17,17 +18,15 @@ type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
 
-// Provenance separates a completed selected transport from source/RAC/history coverage.
-// Limit identifies a bounded sample, even when Complete is true. Timestamp offsets
-// and database-local DATE labels remain source values, not inferred UTC instants.
+// Provenance records the admitted source, numeric release and visibility.
+// Complete is selected-transport completion, never physical RAC, history or
+// whole-database coverage.
 type Provenance struct {
-	Source        string `json:"source"`
-	OracleMajor   int    `json:"oracle_major"`
-	Scope         string `json:"scope"`
-	Limit         int    `json:"sample_limit,omitempty"`
-	WindowSeconds int64  `json:"window_seconds,omitempty"`
-	Owner         string `json:"owner,omitempty"`
-	Complete      bool   `json:"complete"`
+	Source      string `json:"source"`
+	OracleMajor int    `json:"oracle_major"`
+	Scope       string `json:"scope"`
+	Owner       string `json:"owner,omitempty"`
+	Complete    bool   `json:"complete"`
 }
 
 var (
@@ -42,8 +41,8 @@ type Error struct {
 	cause  error
 }
 
-func (e *Error) Error() string { return "Oracle scheduler fact read failed (" + e.Source + ")" }
-func (e *Error) Unwrap() error { return e.cause }
+func (err *Error) Error() string { return "Oracle scheduler fact read failed (" + err.Source + ")" }
+func (err *Error) Unwrap() error { return err.cause }
 
 type selection struct {
 	sql        string

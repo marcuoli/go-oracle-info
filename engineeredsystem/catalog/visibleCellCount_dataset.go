@@ -14,7 +14,8 @@ import (
 type VisibleCellCountRow struct{ Count session.Value }
 
 // VisibleCellCountOptions admits the independently reviewed source selection.
-// New projections admit numeric majors 19, 21 and 23. Oracle 26ai uses its
+// Capability-selected projections admit numeric majors 12, 18, 19, 21 and 23.
+// The live schema must independently admit every selected source/column. Oracle 26ai uses its
 // observed numeric version. Older compatibility selectors remain unchanged.
 type VisibleCellCountOptions struct{ OracleMajor int }
 
