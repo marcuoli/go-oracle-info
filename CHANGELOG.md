@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.18.0 (2026-11-18)
+
+- Add independent admitted Data Guard database context, standby logs, process/recovery progress, archive gaps/destinations/status and current-incarnation RFS archived progress, with typed complete reads, caller-native rows and atomic JSON; preserve reporter scope, exact NULL/SCN/time pairs, latest ties and destination-copy conflicts (#60).
 
 - Refresh released go-oracle-session to v0.10.0 and all eligible existing graph nodes; adopt compatible x/exp with newly released x/tools v0.53.0, preserving Go 1.27.4 and the separately verified dependency compatibility boundary (#59).
 
