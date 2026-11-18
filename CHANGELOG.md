@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Refresh released go-oracle-session to v0.10.0 and all eligible existing graph nodes; adopt compatible x/exp with newly released x/tools v0.53.0, preserving Go 1.27.4 and the separately verified dependency compatibility boundary (#59).
+
 ## v0.17.0 (2026-11-17)
 
 - Update released go-oracle-session to v0.9.1; recheck official compiler/dependency/tool releases and independently verify the selected-dependency Go boundary, retaining documented upstream compatibility exceptions (#57).
