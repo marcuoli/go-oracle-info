@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add database-only GoldenGate properties with exact administrator privilege rows and separate explicitly unavailable configured-schema evidence; expose complete typed reads, actual native rows and atomic JSON without inferring GGSCHEMA from users or taking configuration/connection ownership (#63).
+
 ## v0.18.0 (2026-11-18)
 
 - Add independent admitted Data Guard database context, standby logs, process/recovery progress, archive gaps/destinations/status and current-incarnation RFS archived progress, with typed complete reads, caller-native rows and atomic JSON; preserve reporter scope, exact NULL/SCN/time pairs, latest ties and destination-copy conflicts (#60).

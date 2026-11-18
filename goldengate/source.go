@@ -24,14 +24,15 @@ type Reader interface {
 }
 
 // Request admits an observed numeric Oracle version and caller-owned reference.
-// Both sources use a conservative 11.2.0.4 floor; no fallback/probe is performed.
+// Capture/apply use a conservative 11.2.0.4 floor; administrator facts have their
+// own explicit release admission. No source uses an error-triggered probe/fallback.
 type Request struct {
 	OracleVersion string
 	Reference     reference.Reference
 }
 
-// Provenance identifies qualified visible instances in the admitted container.
-// Complete describes transport, not complete RAC or process coverage.
+// Provenance identifies the selected source and admitted scope. Complete describes
+// transport, not complete container, RAC, deployment or process coverage.
 type Provenance struct {
 	Source        string `json:"source"`
 	Scope         string `json:"scope"`
@@ -122,6 +123,11 @@ func columns(result session.Result, p selection) (map[string]int, error) {
 		return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
 	}
 	for _, row := range result.Rows {
+		if pos, exists := index["USERNAME"]; exists {
+			if row[pos].Null || row[pos].Text == "" {
+				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
+			}
+		}
 		for _, c := range p.schema {
 			v := row[index[c.Name]]
 			if !utf8.ValidString(v.Text) || v.Null && v.Text != "" {
