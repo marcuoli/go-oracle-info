@@ -1,6 +1,6 @@
 # Read-only fact selection
 
-The statement packages select Oracle query text. They do not execute it, admit a database, change containers, choose credentials/drivers, retry failed reads or evaluate health/readiness. Callers establish release/view support, grants, intended scope, deadlines and a reader that rejects failed or truncated cursor prefixes. Execute only through the admitted reader; keep returned exact text, SQL NULL, empty sources, independently valid facts and errors separate.
+This document covers compatibility statement APIs; several owning packages also expose typed readers and native/JSON methods. Follow the [common implementation pattern](implementation-pattern.md) and [coverage/migration map](implementation-coverage.md). Statement selection itself does not execute SQL, admit a database, change containers, choose credentials/drivers, retry failed reads or evaluate health/readiness. Callers establish release/view support, grants, intended scope, deadlines and a reader that rejects failed or truncated cursor prefixes. Execute only through the admitted reader; keep returned exact text, SQL NULL, empty sources, independently valid facts and errors separate.
 
 | Package | Responsibility and scope |
 | --- | --- |
