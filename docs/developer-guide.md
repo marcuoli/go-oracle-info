@@ -1,5 +1,7 @@
 # Developing with punctual Oracle facts
 
+The authoritative cross-package contract is [Oracle fact implementation pattern](implementation-pattern.md). Follow its selection, decoding, ownership, completeness, value and test rules; this guide gives source-specific usage and extension examples.
+
 Use one small fact method for a cohesive Oracle responsibility. The fact library
 owns reviewed source/version choices, filters, typed decoding and provenance.
 The session library owns generic query execution, cursor consumption and JSON.

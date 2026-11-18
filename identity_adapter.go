@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/marcuoli/go-oracle-info/identity"
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -31,19 +32,9 @@ func (r nativeIdentityReader) Query(ctx context.Context, statement session.State
 	if err != nil {
 		return session.Result{}, err
 	}
-	result := session.Result{Columns: make([]string, len(table.Columns)), Rows: make([][]session.Value, len(table.Rows))}
-	for i, column := range table.Columns {
-		result.Columns[i] = column.Name
-	}
-	for i, row := range table.Rows {
-		result.Rows[i] = make([]session.Value, len(row))
-		for j, value := range row {
-			exact, err := session.ExactValue(value)
-			if err != nil {
-				return session.Result{}, &rowsetAdapterError{cause: err}
-			}
-			result.Rows[i][j] = exact
-		}
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return session.Result{}, &rowsetAdapterError{cause: identity.ErrInvalidEvidence}
 	}
 	return result, nil
 }

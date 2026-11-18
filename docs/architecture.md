@@ -1,5 +1,7 @@
 # Ownership and contracts
 
+All implementations follow the [common Oracle fact pattern](implementation-pattern.md). Keep [package coverage and migrations](implementation-coverage.md) explicit when reviewing or extending a source.
+
 - identity selects release-appropriate database/version/platform facts and preserves SQL NULL and source provenance.
 - memory owns scoped configured-parameter SQL, exact result decoding, the permitted ADB retry and RAC member resolution/aggregation.
 - engineeredsystem owns exact cell/property/payload facts, defensive snapshots, complete-result row decoding and XML normalization; its catalog owns capability-selected static SQL. Consumers attach actual execution coverage and decide collection completion. Shared decoders accept only complete go-oracle-session Results and never acquire scopes, allocate application SQL references or recover sessions.

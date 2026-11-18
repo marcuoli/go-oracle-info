@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document one implementation contract and explicit package/compatibility-selector migration map; reuse the shared rowset converter for identity and metadata without changing existing APIs or SQL (#65).
+
 - Add database-only GoldenGate properties with exact administrator privilege rows and separate explicitly unavailable configured-schema evidence; expose complete typed reads, actual native rows and atomic JSON without inferring GGSCHEMA from users or taking configuration/connection ownership (#63).
 
 ## v0.18.0 (2026-11-18)

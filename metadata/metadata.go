@@ -271,20 +271,9 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	if err != nil {
 		return nil, &Error{Operation: "consume", cause: err}
 	}
-	result := session.Result{Columns: []string{"OBJECT_TYPE", "OBJECT_NAME", "OWNER", "DDL", "CLOB_CODE_UNITS"}, Rows: make([][]session.Value, len(table.Rows))}
-	for i, row := range table.Rows {
-		result.Rows[i] = make([]session.Value, len(row))
-		for j, v := range row {
-			if v == nil {
-				result.Rows[i][j].Null = true
-			} else {
-				text, ok := v.(string)
-				if !ok {
-					return nil, ErrInvalidEvidence
-				}
-				result.Rows[i][j].Text = text
-			}
-		}
+	result, ok := projection.FromRowset(table)
+	if !ok {
+		return nil, ErrInvalidEvidence
 	}
 	facts, err := decode(result, p)
 	if err != nil {
