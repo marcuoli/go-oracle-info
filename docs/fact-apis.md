@@ -129,3 +129,5 @@ OracleHomeEnvironmentStatement is procedural OUT-bind SQL, not a query cursor.
 Its existing admitted OracleHome property/JSON route remains; no fabricated Rows
 API is added. Pure models/evaluators/expression/quoting helpers are not SQL-only
 fact gaps and acquire no artificial query API.
+
+See [GoldenGate database discovery](goldengate-discovery.md) for separate process identity, verified accessible heartbeat sources and exact lag/freshness evidence (#72).
