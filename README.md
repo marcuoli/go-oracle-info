@@ -149,3 +149,5 @@ processes, inferring synchronization or deciding readiness.
 Data Guard transport/apply observations, paired incarnation admission and explicit release qualification are documented in [Data Guard facts](docs/dataguard.md).
 
 See [tablespace quotas and direct system privileges](docs/tablespace-quotas.md) for separate complete raw datasets, unlimited/null semantics, dropped flags and release qualification.
+
+See [GoldenGate database discovery](docs/goldengate-discovery.md) for separate process identity, verified accessible heartbeat sources and exact lag/freshness evidence (#72).

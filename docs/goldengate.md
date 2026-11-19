@@ -143,3 +143,4 @@ configuration ownership was added. The credentials inventory was read in place
 and its hash remained unchanged. No database/container state, configuration,
 users, grants or data were changed. These reads do not qualify other accounts,
 legacy/21 releases, physical RAC or GoldenGate's external configuration value.
+See [GoldenGate database discovery](goldengate-discovery.md) for separate process identity, verified accessible heartbeat sources and exact lag/freshness evidence (#72).

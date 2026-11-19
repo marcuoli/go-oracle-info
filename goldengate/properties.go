@@ -51,16 +51,16 @@ func ReadNativeProperties(ctx context.Context, q rowset.Queryer, request Request
 	if err != nil {
 		return Properties{}, err
 	}
-	return ReadProperties(ctx, nativeAdministratorReader{q: q, plan: p, limits: resolved}, request)
+	return ReadProperties(ctx, nativeFactReader{q: q, plan: p, limits: resolved}, request)
 }
 
-type nativeAdministratorReader struct {
+type nativeFactReader struct {
 	q      rowset.Queryer
 	plan   selection
 	limits rowset.Limits
 }
 
-func (r nativeAdministratorReader) Query(ctx context.Context, s session.Statement) (session.Result, error) {
+func (r nativeFactReader) Query(ctx context.Context, s session.Statement) (session.Result, error) {
 	rows, err := rowset.Query(ctx, r.q, s.Text, s.Args...)
 	if err != nil {
 		return session.Result{}, err

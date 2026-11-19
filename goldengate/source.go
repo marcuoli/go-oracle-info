@@ -35,6 +35,8 @@ type Request struct {
 // transport, not complete container, RAC, deployment or process coverage.
 type Provenance struct {
 	Source        string `json:"source"`
+	ObjectOwner   string `json:"object_owner,omitempty"`
+	ObjectName    string `json:"object_name,omitempty"`
 	Scope         string `json:"scope"`
 	OracleVersion string `json:"oracle_version"`
 	Complete      bool   `json:"complete"`
@@ -63,6 +65,13 @@ func (e *Error) Unwrap() error { return e.cause }
 
 type selection struct {
 	sql        string
+	args       []any
+	required   []string
+	decimals   []string
+	timestamps []string
+	filters    []discoveryPredicate
+	catalog    bool
+	ggPurpose  bool
 	schema     []rowset.Column
 	provenance Provenance
 }
@@ -145,6 +154,9 @@ func columns(result session.Result, p selection) (map[string]int, error) {
 			}
 		}
 	}
+	if err := discoveryColumns(result, index, p); err != nil {
+		return nil, &Error{p.provenance.Source, err}
+	}
 	return index, nil
 }
 func optional(row []session.Value, index map[string]int) *session.Value {
@@ -161,7 +173,7 @@ func query(ctx context.Context, r Reader, request Request, p selection) (session
 	if err := ctx.Err(); err != nil {
 		return session.Result{}, &Error{p.provenance.Source, err}
 	}
-	result, err := r.Query(ctx, session.Statement{Text: p.sql, Reference: request.Reference})
+	result, err := r.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
 	if err = errors.Join(err, ctx.Err()); err != nil {
 		return session.Result{}, &Error{p.provenance.Source, err}
 	}
@@ -182,7 +194,7 @@ func nativeJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowse
 	if resolved.MaxBytes < 1 {
 		return nil, &Error{p.provenance.Source, rowset.ErrCapacity}
 	}
-	rows, err := rowset.Query(ctx, q, p.sql)
+	rows, err := rowset.Query(ctx, q, p.sql, p.args...)
 	if err != nil {
 		return nil, &Error{p.provenance.Source, err}
 	}

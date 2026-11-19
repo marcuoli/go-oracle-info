@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.21.0 (2026-11-19)
+
+- Add independent GoldenGate Extract/Replicat identity and attachment facts, structurally verified accessible heartbeat discovery, and complete typed/native/atomic JSON heartbeat and signed lag/freshness evidence without schema guessing, process-health policy or connection ownership (#72).
+
 ## v0.20.0 (2026-11-18)
 
 - Add complete tablespace quota and independent direct system-privilege fact APIs, preserving exact numeric/NULL values, raw dropped/container flags, scoped admission and atomic bounded results (#70).
