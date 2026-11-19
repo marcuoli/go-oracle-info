@@ -58,6 +58,18 @@ func TestDirectSystemIndependentSourceAndReleaseFlags(t *testing.T) {
 		if major >= 18 && (got.Records[0].Common.Text != "YES" || got.Records[0].Inherited.Text != "NO" || !got.Records[1].Common.Null || !got.Records[1].Inherited.Null) {
 			t.Fatal(got)
 		}
+
+		unfiltered, unfilteredArgs, err := DirectSystemStatement(Options{OracleMajor: major})
+		if err != nil || len(unfilteredArgs) != 0 || strings.Contains(unfiltered, " WHERE ") {
+			t.Fatal(unfiltered, unfilteredArgs, err)
+		}
+		source, _ := json.Marshal(struct {
+			Package, Fact string
+			Major         int
+			SQL           string
+			Args          []any
+		}{"grants", "DirectSystemUnfiltered", major, unfiltered, unfilteredArgs})
+		t.Log(string(source))
 		b, _ := json.Marshal(struct {
 			Package, Fact string
 			Major         int
