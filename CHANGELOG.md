@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.20.0 (2026-11-18)
+
+- Add complete tablespace quota and independent direct system-privilege fact APIs, preserving exact numeric/NULL values, raw dropped/container flags, scoped admission and atomic bounded results (#70).
+
 ## v0.19.0 (2026-11-18)
 
 - Correct the fact API compatibility guide's guarded memory source reference to V$PARAMETER, matching the unchanged selector (#65).
