@@ -1,7 +1,7 @@
 # Oracle release and patch catalog
 
-`releases.Load(releases.Database)`, `releases.Load(releases.Exadata)`, and
-`releases.Load(releases.ODA)` read the snapshots bundled in
+`releases.Load(releases.Database)`, `releases.Load(releases.Exadata)`,
+`releases.Load(releases.ODA)`, and `releases.Load(releases.SuperCluster)` read the snapshots bundled in
 [`releases/data`](../releases/data). All catalog JSON files live in that
 directory. The loader reads embedded data and does not open a database
 connection, query Oracle Support, or select an upgrade target.
@@ -30,6 +30,12 @@ connection, query Oracle Support, or select an upgrade target.
   source row lists multiple versions without one explicit package version,
   the original label is retained and the exact version field is empty.
 
+- **SuperCluster:** Harvester records explicitly labeled QFSDP_SUPERCLUSTER
+  seed the distinct catalog. Line and version values describe associated
+  database releases. The Oracle [SuperCluster M8/M7 guide](https://docs.oracle.com/cd/E58626_01/html/E58636/z400034a1004245704.html)
+  establishes the patch family. Selected Oracle announcements corroborate
+  package numbers; the seed does not establish the latest applicable bundle
+  for every model.
 The top-level snapshot date records when the seed was prepared. A source's
 check date, article revision, and artifact release date are separate fields.
 An absent date or package number is unresolved. A published `tbd`,
@@ -39,26 +45,64 @@ inventory, release availability on a live system, or patch eligibility.
 
 ## Refresh before publish
 
-1. Recheck the Oracle Lifetime Support policy, the saved MOS articles using
-   the Harvester refresh workflow, and public Exadata and ODA release
-   documentation. Reconcile any new source conflicts and preserve original
-   article IDs and verification dates. Review the curated public lifecycle
-   table and Exadata announcement data in the seed script if Oracle changed
-   them.
-2. Use the reviewed Harvester export and matching source manifest. Capture
-   ODA index and per-release pages using the companion script, with an
-   explicit evidence destination on V:. The capture script reads Oracle
-   public documentation only.
-3. Regenerate on V: with the same three inputs and inspect the diff against
-   `releases/data`. Run `go test ./releases` and normal project validation.
-   Promote only the reviewed JSON into the package. Keep raw downloads and
-   private evidence outside source control.
+1. Select the new module version and record the exact current canonical main
+   commit as `history_base` before starting the refresh. Review the applicable
+   sources and applicability. Use the [Harvester patch metadata refresh workflow](https://github.com/marcuoli/django_sites/blob/main/docs/PATCH_METADATA_REFRESH.md)
+   to obtain the portable export and matching captured articles, including the
+   Database quarterly patch note (KB106822 / 888.1), release schedule
+   (PNEWS1360 / 742060.1), and Exadata supported versions article
+   (KB153930 / 888828.1). Use authenticated MOS to verify SuperCluster QFSDP
+   availability for the applicable product and release. Verify Oracle's public
+   lifecycle, availability, and ODA release documentation as well. Keep original
+   IDs and exact scope, and investigate source conflicts before approving inputs.
+2. Capture the ODA index and release pages in a fresh V: evidence directory.
+   Make a private `review.json` for the selected version in that release's
+   evidence directory. Bind it to the exact Harvester export, capture manifest,
+   ODA manifest and actual Oracle evidence. A reviewer checks document contents,
+   patches, versions, platform/model scope, and dates. The script checks the
+   evidence files and hashes and cannot replace that review.
+3. Run `refresh` and review the generated changes. Merge them via a PR alongside
+   the release preparation. The reconciler retains dropped release, patch and
+   platform rows with their original source snapshots. Changed metadata for the
+   same identity retains the previous observation under `history`. Review each
+   correction against its official scoped evidence.
+4. Run `scripts/publish_module.ps1 -Action Check` on synchronized canonical main.
+   The command rebuilds the exact four files using the reviewed inputs and
+   rejects stale evidence, missing scopes, an intervening catalog change, or a
+   committed byte mismatch. The export, ODA capture, three captured MOS
+   authorities, and every review check must be within 24 hours. Even a
+   no-change result must be reviewed for the new module version. Use the
+   [gated publication actions](mirroring.md) for tag, mirror, and release
+   operations. The receipt is stored outside Git.
 
 ```powershell
 python -B scripts/capture_oda_release_sources.py --output-dir <V-oda-evidence-dir>
-python -B scripts/seed_release_catalog.py --harvester-docs <harvester-assets-docs> --harvester-revision <reviewed-commit> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir> --as-of <YYYY-MM-DD>
+python -B scripts/refresh_release_catalog.py refresh --version v0.X.Y --review <V-review.json> --harvester-docs <harvester-assets-docs> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir>
+./scripts/publish_module.ps1 -Action Check -Version v0.X.Y -Review <V-review.json> -HarvesterDocs <harvester-assets-docs> -OdaCaptures <V-oda-evidence-dir> -EvidenceDirectory <V-release-evidence-dir>
 ```
 
-Oracle Support source captures are read as local inputs, and neither script
-copies whole articles, download links, or account data into the catalog.
-Public distribution remains a separate gate.
+The review JSON is a private receipt input using `schema_version: 1`, `version`,
+`history_base`, `harvester_revision`, `reviewed_by`, `reviewed_utc`,
+`harvester_export_sha256`, `harvester_manifest_sha256`, `oda_manifest_sha256`
+and a `checks` array. Use full Git commit IDs and ISO 8601 timestamps with offsets.
+Each check has `role`, `status: "verified"`, `title`, `identifier`,
+`old_doc_id` when proven, `url`, `scope`, `finding`, `checked_utc`, `evidence`
+and `evidence_sha256`. Evidence filenames are relative to the review JSON
+directory and their bytes must match the reviewed hash. For the three MOS
+articles owned by Harvester, the current/old IDs, title and evidence bytes must
+match the capture manifest.
+
+| Role | Evidence for the check |
+| --- | --- |
+| `database_lifecycle` | Oracle Lifetime Support Policy and its review of the supported dates. |
+| `database_patches` | Captured MOS KB106822 / 888.1, scoped to relevant release lines and patch delivery. |
+| `database_roadmap` | Captured MOS PNEWS1360 / 742060.1, including applicable release milestones. |
+| `exadata_patches` | Captured MOS KB153930 / 888828.1 for component patch history and scope. |
+| `exadata_availability` | Oracle's published availability evidence for new exact builds. |
+| `oda` | Oracle public release and patch tables, including scope distinctions. |
+| `supercluster` | MOS SuperCluster QFSDP search or patch evidence for the admitted hardware/software scope. |
+
+Report a missing or conflicting check before proceeding. Update curated source
+facts in the seed script when Oracle changes them. If a source no longer lists
+a verified old record, retain it through reconciliation. Review private inputs
+outside source control; the output contains normalized metadata only.
