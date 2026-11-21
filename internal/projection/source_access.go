@@ -56,7 +56,7 @@ func sourceErrorClass(message string) error {
 	switch code {
 	case "ORA-01031", "ORA-1031":
 		return ErrSourceInaccessible
-	case "ORA-00942", "ORA-942", "ORA-01109", "ORA-1109", "ORA-01219", "ORA-1219":
+	case "ORA-00942", "ORA-942", "ORA-01109", "ORA-1109", "ORA-01219", "ORA-1219", "ORA-01507", "ORA-1507":
 		return ErrSourceUnavailable
 	}
 	return nil

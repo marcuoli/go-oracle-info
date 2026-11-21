@@ -52,7 +52,7 @@ private native cursors from a Session lease.
 | database | Configuration, Endian, CharacterSet, CPUCount, Products, DatafileSize, Storage, EncryptionCounts, SGAAllocated, PGAAllocated, PDBCount, SessionParameters, SessionParametersWithDefaults, NLSInstance |
 | dataguard | Status, Lag |
 | engineeredsystem/catalog | Metadata, Configuration, VisibleCellCount, Cells, Alerts, ConnectedCells |
-| identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap |
+| identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap, LogicalDatabase |
 | instances | Visibility |
 | parameters | ScalarSystem |
 | objects | InvalidObjects, ObjectInventory, Schema, ObjectTotals, Tables, Table, TableCount, TablesStatistics, TableStatistics, OldestStatistics |
@@ -127,6 +127,8 @@ legacy presentation/report selection where necessary:
   properties. VersionBootstrap admits unknown zero and reads legacy VERSION,
   never full-version/RU precision. Existing property fallback, attempts and
   independently valid evidence remain unchanged.
+
+- [LogicalDatabase](logical-database-identity.md) reads the control-file DBID and name on reviewed releases from 9.2, with the CDB flag from 12.1.
 
 ## Engineered-source capabilities
 
