@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build portable Oracle catalog JSON from explicit, read-only source captures."""
+"""Reproduce the historical catalog seed and read official ODA captures."""
 
 import argparse
 from collections import defaultdict
@@ -116,6 +116,7 @@ def component(patch):
 
 
 LOCAL_PATCH_EXPORT = "local-patch-export"
+LEGACY_PATCH_EXPORT = "harvester-patch-export"
 LOCAL_PATCH_EXPORT_TITLE = "Local patch metadata export"
 
 

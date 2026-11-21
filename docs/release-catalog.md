@@ -8,7 +8,7 @@ connection, query Oracle Support, or select an upgrade target.
 
 ## Evidence and scope
 
-- **Database and Grid Infrastructure:** the local patch metadata export (generated November 9, 2026), the independently published
+- **Database and Grid Infrastructure:** the historical local patch metadata export (generated November 9, 2026), the independently published
   [Lifetime Support policy](https://www.oracle.com/assets/lsp-tech-chart-069290.pdf),
   and the saved Oracle roadmap (PNEWS1360, old Doc ID 742060.1). Product
   branding and numeric patch levels remain separate. The export covers
@@ -55,65 +55,71 @@ inventory, release availability on a live system, or patch eligibility.
 
 ## Refresh before publish
 
-1. Select the new module version and record the exact current canonical main
-   commit as `history_base` before starting the refresh. Review the applicable
-   sources and applicability. Obtain a fresh `patch-catalog.json` and the
-   corresponding `mos-capture-manifest.json` and article files in the patch input
-   directory. Verify the captured articles, including the
-   Database quarterly patch note (KB106822 / 888.1), release schedule
-   (PNEWS1360 / 742060.1), and Exadata supported versions article
-   (KB153930 / 888828.1). Use authenticated MOS to verify SuperCluster QFSDP
-   availability for the applicable product and release. Verify Oracle's public
-   lifecycle, availability, and ODA release documentation as well. Keep original
-   IDs and exact scope, and investigate source conflicts before approving inputs.
-2. Capture the ODA index and release pages in a fresh V: evidence directory.
-   Make a private `review.json` for the selected version in that release's
-   evidence directory. Bind it to the exact local patch export, MOS capture manifest,
-   ODA manifest and actual Oracle evidence. A reviewer checks document contents,
-   patches, versions, platform/model scope, and dates. The script checks the
-   evidence files and hashes and cannot replace that review.
-3. Run `refresh` and review the generated changes. Merge them via a PR alongside
-   the release preparation. The reconciler retains dropped release, patch and
-   platform rows with their original source snapshots. Changed metadata for the
-   same identity retains the previous observation under `history`. Review each
-   correction against its official scoped evidence.
-4. Run `scripts/publish_module.ps1 -Action Check` on synchronized canonical main.
-   The command rebuilds the exact four files using the reviewed inputs and
-   rejects stale evidence, missing scopes, an intervening catalog change, or a
-   committed byte mismatch. The export, ODA capture, three captured MOS
-   authorities, and every review check must be within 24 hours. Even a
-   no-change result must be reviewed for the new module version. Use the
-   [gated publication actions](mirroring.md) for tag, mirror, and release
-   operations. The receipt is stored outside Git.
+1. Record the selected module version and the exact canonical main commit as
+   `history_base`. On a machine with existing My Oracle Support access, open the
+   current articles and patch search results in the authenticated browser. Check
+   the relevant product, numeric release, platform or model, and patch scope.
+   Save a read-only copy of each supporting page in the release's private V:
+   evidence directory. Record the current identifier, legacy Doc ID when known,
+   visible title, Oracle revision when shown and capture time. Use a stable
+   Oracle URL without session parameters. The historical patch export is already
+   embedded in the baseline.
+2. Verify the public Oracle authorities and capture the ODA index and release
+   pages. Create a private `review.json` for this release. For each document,
+   record the scoped finding and copy verified new or corrected facts into the
+   review's `records` array. Cite a release-specific patch article when the
+   quarterly overview lacks package details. Record an explicit no-change result
+   when the review finds no changed facts. Keep raw evidence and the review
+   outside source control.
+3. Run `refresh`, inspect the generated JSON diff, and merge it through a PR.
+   Existing release, patch and platform records remain in the catalog, including
+   records from the historical import. Reconciliation retains the previous
+   observation and its source when the same source-scoped record changes.
+4. On synchronized canonical main, run `publish_module.ps1 -Action Check`.
+   The command rebuilds the exact four files from the review and its historical
+   baseline. It rejects missing or stale evidence, changed evidence bytes,
+   intervening catalog changes and mismatches with the committed catalogs.
+   Review all required sources for every module version, including when no
+   changes are found. See [publication and resume](mirroring.md).
 
 ```powershell
 python -B scripts/capture_oda_release_sources.py --output-dir <V-oda-evidence-dir>
-python -B scripts/refresh_release_catalog.py refresh --version v0.X.Y --review <V-review.json> --patch-inputs <patch-input-directory> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir>
-./scripts/publish_module.ps1 -Action Check -Version v0.X.Y -Review <V-review.json> -PatchInputs <patch-input-directory> -OdaCaptures <V-oda-evidence-dir> -EvidenceDirectory <V-release-evidence-dir>
+python -B scripts/refresh_release_catalog.py refresh --version v0.X.Y --review <V-review.json> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir>
+./scripts/publish_module.ps1 -Action Check -Version v0.X.Y -Review <V-review.json> -OdaCaptures <V-oda-evidence-dir> -EvidenceDirectory <V-release-evidence-dir>
 ```
 
-The review JSON is a private receipt input using `schema_version: 1`, `version`,
-`history_base`, `input_revision`, `reviewed_by`, `reviewed_utc`,
-`patch_export_sha256`, `mos_manifest_sha256`, `oda_manifest_sha256`
-and a `checks` array. Use full Git commit IDs and ISO 8601 timestamps with offsets.
-Each check has `role`, `status: "verified"`, `title`, `identifier`,
-`old_doc_id` when proven, `url`, `scope`, `finding`, `checked_utc`, `evidence`
-and `evidence_sha256`. Evidence filenames are relative to the review JSON
-directory and their bytes must match the reviewed hash. For the three MOS
-articles in the patch input directory, the current/old IDs, title and evidence bytes must
-match the capture manifest.
+### Direct Oracle review
 
-| Role | Evidence for the check |
-| --- | --- |
-| `database_lifecycle` | Oracle Lifetime Support Policy and its review of the supported dates. |
-| `database_patches` | Captured MOS KB106822 / 888.1, scoped to relevant release lines and patch delivery. |
-| `database_roadmap` | Captured MOS PNEWS1360 / 742060.1, including applicable release milestones. |
-| `exadata_patches` | Captured MOS KB153930 / 888828.1 for component patch history and scope. |
-| `exadata_availability` | Oracle's published availability evidence for new exact builds. |
-| `oda` | Oracle public release and patch tables, including scope distinctions. |
-| `supercluster` | MOS SuperCluster QFSDP search or patch evidence for the admitted hardware/software scope. |
+The private review contains `schema_version: 2`, `version`, `history_base`,
+`reviewed_by`, `reviewed_utc`, `oda_manifest_sha256` (the hash of the ODA
+`sources.json`), and a `checks` array. Each check supplies `role`,
+`status: "verified"`, `title`, `identifier`, `url`, `scope`, `finding`,
+`captured_utc`, `checked_utc`, `evidence`, `evidence_sha256`, and `result`.
+Include `old_doc_id` and `revision` where known. Evidence filenames are relative to
+the review directory. Times are ISO 8601 with offsets. Each capture precedes or
+equals its review time, which in turn precedes or equals the overall review
+time. The 24-hour release window starts at the oldest bound capture or check.
 
-Report a missing or conflicting check before proceeding. Update curated source
-facts in the seed script when Oracle changes them. If a source no longer lists
-a verified old record, retain it through reconciliation. Review private inputs
-outside source control; the output contains normalized metadata only.
+| Role | Required evidence | Records |
+| --- | --- | --- |
+| `database_lifecycle` | Oracle Lifetime Support Policy and applicable edition dates. | Release facts. |
+| `database_patches` | MOS KB106822 / 888.1. Add the relevant proactive patch notes as separate checks for release-specific details. | Database and GI patch groups and packages. |
+| `database_roadmap` | MOS PNEWS1360 / 742060.1 and applicable release milestones. | Release facts. |
+| `exadata_patches` | MOS KB153930 / 888828.1, scoped to the documented software and packages. | Exadata software patches and full-stack bundles. |
+| `exadata_availability` | Oracle's public availability notice for the exact builds. | Release facts. |
+| `oda` | Public Oracle release index and captured patch tables or archived release notes. | Extracted from the checked capture. |
+| `supercluster` | MOS QFSDP results or patch details for the reviewed hardware and software scope. | SuperCluster patch groups and packages. |
+
+For ODA, set `result: "oda_capture"`. For the other roles, use
+`result: "no_changes"` with no records or `result: "updated"` with one or more
+records. Enter the fields from a catalog release or patch record and omit
+`source`. The tool assigns provenance from the check's document identifier and
+evidence hash. A patch record includes `line`, `kind`, and an exact `version` or
+the original `source_name`. Include only packages whose number or exact version
+and scope were actually verified. For a correction, use the same source ID and
+record identity, and include the observed group-level fields. Multiple source
+observations for a numeric version may remain in the catalog.
+
+The commands validate the review structure and captured bytes. The reviewer
+checks the article content and patch applicability before approving records.
+Report a missing or conflicting source before publishing.

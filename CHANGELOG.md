@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh release catalogs from directly reviewed Oracle Support captures and public Oracle sources before publication (#98).
+
 - Add the SuperCluster QFSDP catalog and require an official-source, history-preserving catalog refresh before each module publish (#91).
 - Add read-only logical database DBID and name from Oracle 9.2 onward, with the raw CDB flag from 12.1 (#84).
 

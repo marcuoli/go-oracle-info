@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture the ODA documentation index and its public patch evidence for the seed."""
+"""Capture the public ODA documentation index and patch evidence for catalog refresh."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor

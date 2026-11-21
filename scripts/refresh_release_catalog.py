@@ -2,7 +2,6 @@
 """Reconcile Oracle catalog history and verify the exact commit before a module publish."""
 
 import argparse
-from collections import Counter
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
@@ -11,23 +10,13 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
+from direct_catalog_sources import COMMIT, reviewed_catalogs, validate_review, verify_file
 from seed_release_catalog import (
-    LOCAL_PATCH_EXPORT, LOCAL_PATCH_EXPORT_TITLE, build_catalogs, oracle_url, read_json, sha, write_catalogs,
+    LEGACY_PATCH_EXPORT, LOCAL_PATCH_EXPORT, LOCAL_PATCH_EXPORT_TITLE, oda_catalog, read_json, sha, write_catalogs,
 )
 
 PRODUCTS = ("database", "exadata", "oda", "supercluster")
-ROLES = {
-    "database_lifecycle": "public",
-    "database_patches": "mos",
-    "database_roadmap": "mos",
-    "exadata_patches": "mos",
-    "exadata_availability": "public",
-    "oda": "public",
-    "supercluster": "mos",
-}
 VERSION = re.compile(r"v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)")
-COMMIT = re.compile(r"[0-9a-f]{40}")
-MOS_ARTICLES = {"database_patches": "KB106822", "database_roadmap": "PNEWS1360", "exadata_patches": "KB153930"}
 
 
 def key_json(value):
@@ -178,13 +167,12 @@ def used_sources(catalog):
 def migrate_patch_export_source(catalog):
     # Main snapshots created before #96 used the previous export ID. Reconcile
     # those rows with the same source identity and retain archived evidence.
-    legacy = "harvester-patch-export"
     sources = []
     aliases = {}
     for source in catalog["sources"]:
         id_ = source["id"]
-        if original_id(id_) == legacy:
-            renamed = LOCAL_PATCH_EXPORT + id_[len(legacy):]
+        if original_id(id_) == LEGACY_PATCH_EXPORT:
+            renamed = LOCAL_PATCH_EXPORT + id_[len(LEGACY_PATCH_EXPORT):]
             sources.append(dict(source, id=renamed, title=LOCAL_PATCH_EXPORT_TITLE))
             aliases[id_] = renamed
         else:
@@ -250,67 +238,6 @@ def committed(ref, product, *, missing_ok=False):
     return subprocess.check_output(["git", "show", f"{ref}:{path}"])
 
 
-def recent(value, now, field):
-    parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None or not now - timedelta(hours=24) <= parsed <= now:
-        raise ValueError(f"{field} is outside the preceding 24 hours")
-    return parsed
-
-
-def validate_review(review, version, docs, oda, evidence_root, now):
-    if review.get("schema_version") != 1 or review.get("version") != version:
-        raise ValueError("review does not match the requested version or schema")
-    for field in ("history_base", "input_revision"):
-        if not COMMIT.fullmatch(review.get(field, "")):
-            raise ValueError(f"review needs a full commit ID for {field}")
-    if not review.get("reviewed_by", "").strip():
-        raise ValueError("reviewer is required")
-    timestamps = [recent(review["reviewed_utc"], now, "review")]
-    captured = (docs / "patch-catalog.json").read_bytes()
-    if sha(captured) != review.get("patch_export_sha256"):
-        raise ValueError("patch export hash differs from the reviewed input")
-    timestamps.append(recent(json.loads(captured)["generated_at"], now, "patch export"))
-    oda_input = (oda / "sources.json").read_bytes()
-    if sha(oda_input) != review.get("oda_manifest_sha256"):
-        raise ValueError("ODA capture manifest differs from the reviewed input")
-    oda_manifest = json.loads(oda_input)
-    timestamps.append(recent(oda_manifest["checked_utc"], now, "ODA capture"))
-    if any(row["status"] in {"source_unavailable", "no_matching_patch_table", "patch_page_unavailable"}
-           for row in oda_manifest["releases"]):
-        raise ValueError("ODA source capture is incomplete; reconcile the unavailable patch pages before publishing")
-    manifest = (docs / "mos-capture-manifest.json").read_bytes()
-    if sha(manifest) != review.get("mos_manifest_sha256"):
-        raise ValueError("MOS capture manifest differs from the reviewed input")
-    captures = index(json.loads(manifest)["articles"], lambda r: r["current_id"], "MOS capture")
-    checks = review["checks"]
-    if Counter(x["role"] for x in checks) != Counter(ROLES.keys()):
-        raise ValueError("review must cover each Oracle authority exactly once")
-    for check in checks:
-        role, url = check["role"], check["url"]
-        if not oracle_url(url) or (ROLES[role] == "mos" and not re.match(r"^https://support\.oracle\.com/", url)):
-            raise ValueError(f"unexpected authority URL for {role}")
-        if any(not check.get(field, "").strip() for field in ("title", "identifier", "scope", "finding")):
-            raise ValueError(f"incomplete official-source review: {role}")
-        if check.get("status") != "verified":
-            raise ValueError(f"source review not verified: {role}")
-        timestamps.append(recent(check["checked_utc"], now, role))
-        if role in MOS_ARTICLES:
-            article = MOS_ARTICLES[role]
-            capture = captures.get(article, {})
-            if (check["identifier"] != article or check["title"] != capture.get("title")
-                    or check.get("old_doc_id") != capture.get("old_doc_id")
-                    or check["evidence_sha256"] != capture.get("sha256")):
-                raise ValueError(f"review must match the current MOS capture for {role}")
-            timestamps.append(recent(capture["checked_utc"], now, role + " capture"))
-        pathname = Path(check["evidence"])
-        if pathname.is_absolute() or ".." in pathname.parts:
-            raise ValueError(f"evidence outside the review directory: {role}")
-        resolved = (evidence_root / pathname).resolve(strict=True)
-        if not resolved.is_relative_to(evidence_root) or sha(resolved.read_bytes()) != check["evidence_sha256"]:
-            raise ValueError(f"source evidence hash mismatch: {role}")
-    return min(timestamps) + timedelta(hours=24)
-
-
 def verify_transaction(saved, version):
     if saved.get("schema_version") != 1 or saved.get("version") != version:
         raise ValueError("release transaction does not match the requested version")
@@ -337,7 +264,6 @@ def main():
     ap.add_argument("mode", choices=("refresh", "verify", "resume"))
     ap.add_argument("--version", required=True)
     ap.add_argument("--review", type=Path)
-    ap.add_argument("--patch-inputs", type=Path)
     ap.add_argument("--oda-captures", type=Path)
     ap.add_argument("--output-dir", type=Path)
     ap.add_argument("--transaction", type=Path)
@@ -349,13 +275,18 @@ def main():
             ap.error("the original release transaction is required")
         verify_transaction(read_json(args.transaction), args.version)
         return
-    if not all((args.review, args.patch_inputs, args.oda_captures, args.output_dir)):
-        ap.error("review, patch input, ODA capture and output paths are required")
+    if not all((args.review, args.oda_captures, args.output_dir)):
+        ap.error("review, ODA capture and output paths are required")
+    repo = Path(git("rev-parse", "--show-toplevel")).resolve()
     review_file = args.review.resolve(strict=True)
+    oda_captures = args.oda_captures.resolve(strict=True)
+    dest = args.output_dir.resolve()
+    if any(path.is_relative_to(repo) for path in (review_file, oda_captures, dest)):
+        raise ValueError("catalog refresh evidence must stay outside the source checkout")
     raw_review = review_file.read_bytes()
     review = json.loads(raw_review)
     now = datetime.now(timezone.utc)
-    valid_until = validate_review(review, args.version, args.patch_inputs, args.oda_captures, review_file.parent, now)
+    valid_until, proofs = validate_review(review, args.version, oda_captures, review_file.parent, now)
     base = review["history_base"]
     git("merge-base", "--is-ancestor", base, "HEAD")
     # All tagged history already shipped must be within the selected baseline.
@@ -364,26 +295,18 @@ def main():
     if prior_tags:
         latest = max(prior_tags, key=lambda tag: tuple(int(s) for s in tag[1:].split(".")))
         git("merge-base", "--is-ancestor", f"refs/tags/{latest}^{{commit}}", base)
-    results = []
+    previous = {product: json.loads(raw) if (raw := committed(base, product, missing_ok=product == "supercluster"))
+                else None for product in PRODUCTS}
     as_of = datetime.fromisoformat(review["reviewed_utc"]).astimezone(timezone.utc).date().isoformat()
-    for candidate in build_catalogs(args.patch_inputs, review["input_revision"], args.oda_captures,
-                                    as_of, "2026-11-21"):
-        product = candidate["product"]
-        previous = committed(base, product, missing_ok=product == "supercluster")
-        results.append(merge_catalog(json.loads(previous), candidate) if previous else candidate)
-    # The reviewer commits to exact inputs; a background refresh may not
-    # exchange manifests or the export while the preview is being produced.
-    for path, field in (
-        (args.patch_inputs / "patch-catalog.json", "patch_export_sha256"),
-        (args.patch_inputs / "mos-capture-manifest.json", "mos_manifest_sha256"),
-        (args.oda_captures / "sources.json", "oda_manifest_sha256"),
-    ):
-        if sha(path.read_bytes()) != review[field]:
-            raise ValueError(f"reviewed input changed while building: {path.name}")
-    dest = args.output_dir.resolve()
-    repo = Path(git("rev-parse", "--show-toplevel")).resolve()
-    if dest == repo or dest.is_relative_to(repo):
-        raise ValueError("catalog refresh evidence must be staged outside the source checkout")
+    candidates = reviewed_catalogs(review["checks"], as_of, previous)
+    candidates["oda"] = oda_catalog(oda_captures, as_of)
+    results = [
+        merge_catalog(previous[product], candidates[product]) if previous[product] else candidates[product]
+        for product in PRODUCTS
+    ]
+    # A reviewer pins the exact files. Catch an exchange during preview generation.
+    for proof in proofs:
+        verify_file(*proof)
     if args.mode == "refresh":
         write_catalogs(results, dest)
         return
@@ -418,5 +341,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as err:
+    except (ValueError, KeyError, TypeError, OSError, subprocess.CalledProcessError) as err:
         sys.exit(f"Catalog publish gate: {err}")

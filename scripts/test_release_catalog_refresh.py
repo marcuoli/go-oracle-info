@@ -7,7 +7,8 @@ import unittest
 from unittest import mock
 
 import refresh_release_catalog as refresh
-from refresh_release_catalog import MOS_ARTICLES, ROLES, merge_catalog, validate_review
+from direct_catalog_sources import MOS_ARTICLES, ROLES, reviewed_catalogs, validate_review
+from refresh_release_catalog import merge_catalog
 from seed_release_catalog import sha, write_catalogs
 
 
@@ -106,39 +107,43 @@ class ReviewTests(unittest.TestCase):
         self.root = Path(self.tmp.name).resolve()
         self.now = datetime(2026, 11, 21, 15, tzinfo=timezone.utc)
         stamp = self.now.isoformat()
-        captured = json.dumps({"generated_at": stamp}).encode()
-        (self.root / "patch-catalog.json").write_bytes(captured)
-        oda = json.dumps({"checked_utc": stamp, "releases": [{"status": "patch_table"}]}).encode()
+        oda = json.dumps({"checked_utc": stamp, "releases": [{"status": "patch_table"}, {"status": "archive_index_only"}]}).encode()
         (self.root / "sources.json").write_bytes(oda)
-        evidence = b"test fixture evidence"
-        (self.root / "evidence.txt").write_bytes(evidence)
-        articles = [{"current_id": id_, "title": "Fixture authority", "checked_utc": stamp, "sha256": sha(evidence)}
-                    for id_ in MOS_ARTICLES.values()]
-        manifest = json.dumps({"articles": articles}).encode()
-        (self.root / "mos-capture-manifest.json").write_bytes(manifest)
         checks = []
-        for role, kind in ROLES.items():
-            checks.append(dict(
-                role=role, title="Fixture authority", identifier=MOS_ARTICLES.get(role, "fixture-1"),
-                url="https://support.oracle.com/fixture" if kind == "mos" else "https://docs.oracle.com/fixture",
-                scope="fixture scope", finding="fixture finding", status="verified", checked_utc=stamp,
-                evidence="evidence.txt", evidence_sha256=sha(evidence),
-            ))
+        for role, (_, kind, field) in ROLES.items():
+            evidence = f"visible Oracle evidence for {role}".encode()
+            filename = f"{role}.html"
+            (self.root / filename).write_bytes(evidence)
+            identifier, old_id = MOS_ARTICLES.get(role, (f"oracle-{role}", None))
+            oracle_url = "https://support.oracle.com/support/" if kind == "mos" else "https://docs.oracle.com/fixture"
+            if old_id:
+                oracle_url += f"?kmContentId={identifier}"
+            check = dict(
+                role=role, title="Fixture authority", identifier=identifier, url=oracle_url,
+                scope="fixture scope", finding="fixture finding", status="verified",
+                result="no_changes" if field else "oda_capture", checked_utc=stamp, captured_utc=stamp,
+                evidence=filename, evidence_sha256=sha(evidence),
+            )
+            if old_id:
+                check["old_doc_id"] = old_id
+            checks.append(check)
         self.review = dict(
-            schema_version=1, version="v0.23.0", history_base="1" * 40, input_revision="2" * 40,
-            reviewed_by="Fixture", reviewed_utc=stamp, patch_export_sha256=sha(captured),
-            oda_manifest_sha256=sha(oda), mos_manifest_sha256=sha(manifest), checks=checks,
+            schema_version=2, version="v0.23.0", history_base="1" * 40,
+            reviewed_by="Fixture", reviewed_utc=stamp, oda_manifest_sha256=sha(oda), checks=checks,
         )
 
     def verify(self):
-        validate_review(self.review, "v0.23.0", self.root, self.root, self.root, self.now)
+        return validate_review(self.review, "v0.23.0", self.root, self.root, self.now)
+
+    def check(self, role):
+        return next(item for item in self.review["checks"] if item["role"] == role)
 
     def test_complete_review(self):
         self.verify()
 
     def test_missing_product(self):
         self.review["checks"].pop()
-        with self.assertRaisesRegex(ValueError, "each Oracle authority"):
+        with self.assertRaisesRegex(ValueError, "each required Oracle authority"):
             self.verify()
 
     def test_stale_verification(self):
@@ -151,27 +156,127 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not verified"):
             self.verify()
 
+    def test_oda_capture_still_required_and_bound(self):
+        capture = self.root / "sources.json"
+        capture.write_text(json.dumps({"checked_utc": self.now.isoformat(),
+                                       "releases": [{"status": "source_unavailable"}]}), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "ODA capture manifest hash mismatch"):
+            self.verify()
+        self.review["oda_manifest_sha256"] = sha(capture.read_bytes())
+        with self.assertRaisesRegex(ValueError, "ODA source capture is incomplete"):
+            self.verify()
+
+    def test_receipt_expires_at_oldest_capture(self):
+        oldest = self.now - timedelta(hours=5)
+        self.check("supercluster")["captured_utc"] = oldest.isoformat()
+        expires, _ = self.verify()
+        self.assertEqual(expires, oldest + timedelta(hours=24))
+
     def test_wrong_version(self):
         self.review["version"] = "v0.23.1"
         with self.assertRaisesRegex(ValueError, "requested version"):
             self.verify()
 
-    def test_changed_patch_export(self):
-        (self.root / "patch-catalog.json").write_text("{}", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "export hash"):
+    def test_legacy_export_review_is_not_a_publish_input(self):
+        self.review["schema_version"] = 1
+        with self.assertRaisesRegex(ValueError, "direct Oracle evidence schema"):
             self.verify()
 
-    def test_mos_review_must_match_saved_capture(self):
-        check = next(item for item in self.review["checks"] if item["role"] == "database_patches")
-        check["identifier"] = "different"
-        with self.assertRaisesRegex(ValueError, "current MOS capture"):
+    def test_mos_review_requires_the_primary_article_and_legacy_id(self):
+        check = self.check("database_patches")
+        check["identifier"] = "KB111276"
+        check["url"] = "https://support.oracle.com/support/?kmContentId=KB111276"
+        with self.assertRaisesRegex(ValueError, "each required Oracle authority"):
+            self.verify()
+        check.update(identifier="KB106822", url="https://support.oracle.com/support/?kmContentId=888")
+        check.pop("old_doc_id")
+        with self.assertRaisesRegex(ValueError, "original MOS Doc ID"):
             self.verify()
 
-    def test_changed_evidence(self):
-        (self.root / "evidence.txt").write_bytes(b"changed")
-        with self.assertRaisesRegex(ValueError, "source evidence hash mismatch"):
+    def test_mos_url_must_identify_the_reviewed_article(self):
+        self.check("database_patches")["url"] = "https://support.oracle.com/support/?kmContentId=KB111276"
+        with self.assertRaisesRegex(ValueError, "reviewed article"):
             self.verify()
 
+    def test_accepts_stable_mos_document_url_and_rejects_conflicting_selectors(self):
+        check = self.check("exadata_patches")
+        check["url"] = "https://support.oracle.com/support/?documentId=KB153930"
+        self.verify()
+        check["url"] += "&kmContentId=KB111276"
+        with self.assertRaisesRegex(ValueError, "reviewed article"):
+            self.verify()
+
+    def test_mos_reference_may_not_contain_session_parameters(self):
+        self.check("supercluster")["url"] = "https://support.oracle.com/support/?sessionId=example"
+        with self.assertRaisesRegex(ValueError, "unexpected official source"):
+            self.verify()
+
+    def test_review_cannot_reassign_the_historical_export_source(self):
+        supplemental = dict(self.check("database_patches"), url="https://support.oracle.com/support/")
+        self.review["checks"].append(supplemental)
+        for identifier in ("local-patch-export", "harvester-patch-export"):
+            with self.subTest(identifier=identifier):
+                supplemental["identifier"] = identifier
+                with self.assertRaisesRegex(ValueError, "unexpected official source"):
+                    self.verify()
+
+    def test_stale_direct_capture_blocks_a_no_change_review(self):
+        self.check("supercluster")["captured_utc"] = (self.now - timedelta(hours=25)).isoformat()
+        with self.assertRaisesRegex(ValueError, "supercluster capture.*preceding 24 hours"):
+            self.verify()
+
+    def test_requires_explicit_result_even_without_changes(self):
+        del self.check("supercluster")["result"]
+        with self.assertRaisesRegex(ValueError, "explicit no-change"):
+            self.verify()
+
+    def test_changed_or_missing_evidence(self):
+        saved = self.root / self.check("database_patches")["evidence"]
+        saved.write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "database_patches evidence hash mismatch"):
+            self.verify()
+        saved.unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.verify()
+
+    def test_evidence_cannot_resolve_outside_review_directory(self):
+        self.check("database_patches")["evidence"] = "../unrelated.html"
+        with self.assertRaisesRegex(ValueError, "evidence outside"):
+            self.verify()
+
+    def test_record_cannot_assign_provenance_or_string_patch_numbers(self):
+        check = self.check("database_patches")
+        row = dict(line="19", version="19.32.0.0.0", kind="RU", source="local-patch-export")
+        check.update(result="updated", records=[row])
+        with self.assertRaisesRegex(ValueError, "unexpected catalog fields"):
+            self.verify()
+        del row["source"]
+        row["artifacts"] = [{"number": "12345678"}]
+        with self.assertRaisesRegex(ValueError, "invalid number"):
+            self.verify()
+
+    def test_verified_product_patch_joins_catalog_with_document_provenance(self):
+        evidence = b"fixture release-specific MOS patch article"
+        (self.root / "19c-patches.html").write_bytes(evidence)
+        article = dict(self.check("database_patches"), identifier="KB111276", old_doc_id="2521164.1",
+                       evidence="19c-patches.html", evidence_sha256=sha(evidence),
+                       url="https://support.oracle.com/support/?kmContentId=2521164", result="updated",
+                       records=[dict(line="19", version="19.33.0.0.0", kind="RU", component="GI",
+                                     artifacts=[dict(number=12345678, platform_id=13)])])
+        self.review["checks"].append(article)
+        self.verify()
+        old = fixture()
+        prior = {"database": old, "exadata": None, "supercluster": None}
+        incoming = reviewed_catalogs(self.review["checks"], "2026-11-21", prior)["database"]
+        merged = merge_catalog(old, incoming)
+        self.assertEqual(len(merged["patches"]), len(old["patches"]) + 1)
+        self.assertEqual(merged["patches"][0]["source"], "KB111276")
+        self.assertEqual(merged["patches"][0]["artifacts"], [dict(number=12345678, platform_id=13)])
+        self.assertEqual(merged["patches"][1:], old["patches"])
+        proof = next(s for s in merged["sources"] if s["id"] == "KB111276")
+        self.assertEqual(proof["sha256"], article["evidence_sha256"])
+        self.assertEqual(proof["checked_utc"], article["checked_utc"])
+        self.assertEqual(proof["old_doc_id"], "2521164.1")
 
     def run_publish_verifier(self, *, changed_product=None, skipped_history=False):
         base = self.review["history_base"]
@@ -204,11 +309,11 @@ class ReviewTests(unittest.TestCase):
                 previous = dict(previous, notes=["intervening catalog"])
             return json.dumps(previous).encode()
         args = ["refresh_release_catalog.py", "verify", "--version", "v0.23.0",
-                "--review", str(review_file), "--patch-inputs", str(self.root),
+                "--review", str(review_file),
                 "--oda-captures", str(self.root), "--output-dir", str(output_dir)]
         with (mock.patch.object(refresh, "git", side_effect=lambda *a: git_responses[a]),
               mock.patch.object(refresh, "committed", side_effect=committed),
-              mock.patch.object(refresh, "build_catalogs", return_value=fresh),
+              mock.patch.object(refresh, "oda_catalog", return_value=fresh[2]),
               mock.patch.object(refresh, "datetime", wraps=datetime) as clock,
               mock.patch.object(sys, "argv", args)):
             clock.now.return_value = self.now
