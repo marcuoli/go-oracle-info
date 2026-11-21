@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/marcuoli/go-oracle-info/internal/numeric"
+	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -30,7 +30,9 @@ var (
 	// ErrContainerSystemUnsupportedScope reports a known non-CDB connection.
 	ErrContainerSystemUnsupportedScope = errors.New("scoped system parameters require a CDB connection")
 	// ErrContainerSystemInaccessible marks an explicit ORA-01031 source failure.
-	ErrContainerSystemInaccessible = errors.New("scoped system parameter source is inaccessible")
+	ErrContainerSystemInaccessible = projection.ErrSourceInaccessible
+	// ErrContainerSystemUnavailable marks an unresolved or unavailable source.
+	ErrContainerSystemUnavailable = projection.ErrSourceUnavailable
 )
 
 // ContainerSystemOptions supplies the observed numeric release and the executing
@@ -67,6 +69,7 @@ type ContainerSystemParameter struct {
 // and transport completion do not establish coverage of all containers or RAC members.
 type ContainerSystemProvenance struct {
 	Provenance
+	Complete           bool    `json:"complete"`
 	OracleVersion      string  `json:"oracle_version"`
 	CurrentContainerID int64   `json:"current_container_id"`
 	ContainerIDs       []int64 `json:"container_ids,omitempty"`
@@ -179,20 +182,9 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 }
 
 func containerSystemMajor(version string) int {
-	if len(version) > 128 {
+	numbers, ok := oracleversion.Parse(version)
+	if !ok {
 		return 0
-	}
-	parts := strings.Split(version, ".")
-	if len(parts) < 2 || len(parts) > 5 {
-		return 0
-	}
-	var numbers [5]uint64
-	for i, part := range parts {
-		value, err := strconv.ParseUint(part, 10, 64)
-		if err != nil || !numeric.IsUnsignedInteger(part) {
-			return 0
-		}
-		numbers[i] = value
 	}
 	switch numbers[0] {
 	case 12:
@@ -276,6 +268,7 @@ func ReadContainerSystem(ctx context.Context, reader Reader, request ContainerSy
 	if err = errors.Join(decodeErr, ctx.Err()); err != nil {
 		return ContainerSystemResult{}, &Error{Source: p.provenance.Source, cause: err}
 	}
+	facts.Provenance.Complete = true
 	return facts, nil
 }
 
@@ -298,6 +291,7 @@ func ContainerSystemJSON(ctx context.Context, q rowset.Queryer, options Containe
 		return nil, err
 	}
 	invalid := &Error{Source: p.provenance.Source, cause: ErrInvalidEvidence}
+	p.evidence.Complete = true
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
 		Provenance: p.evidence,
 		Validate: projection.ValidateRowset(invalid, func(result session.Result) error {
@@ -309,7 +303,7 @@ func ContainerSystemJSON(ctx context.Context, q rowset.Queryer, options Containe
 		switch stage {
 		case "limits", "validate":
 			return cause
-		case "query":
+		case "query", "consume":
 			return markContainerSystemAccess(&Error{Source: p.provenance.Source, cause: cause})
 		default:
 			return &Error{Source: p.provenance.Source, cause: cause}
@@ -319,31 +313,8 @@ func ContainerSystemJSON(ctx context.Context, q rowset.Queryer, options Containe
 
 func markContainerSystemAccess(err error) error {
 	failure, ok := err.(*Error)
-	if !ok || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
-		!isContainerSystemPrivilegeError(failure.cause) {
+	if !ok {
 		return err
 	}
-	return &Error{Source: failure.Source, cause: errors.Join(ErrContainerSystemInaccessible, failure.cause)}
-}
-
-func isContainerSystemPrivilegeError(err error) bool {
-	switch value := err.(type) {
-	case nil:
-		return false
-	case *session.Error:
-		return value.Code == "ORA-01031" || isContainerSystemPrivilegeError(value.Unwrap())
-	case interface{ Unwrap() []error }:
-		return slices.ContainsFunc(value.Unwrap(), isContainerSystemPrivilegeError)
-	case interface{ Unwrap() error }:
-		return isContainerSystemPrivilegeError(value.Unwrap())
-	default:
-		// go-ora can render the Oracle code without its zero padding.
-		// Check only the leading code so a diagnostic mentioning a second
-		// error does not turn an ambiguous ORA-00942 into a privilege denial.
-		message := err.Error()
-		if i := strings.IndexAny(message, ": \t\r\n"); i >= 0 {
-			message = message[:i]
-		}
-		return message == "ORA-01031" || message == "ORA-1031"
-	}
+	return &Error{Source: failure.Source, cause: projection.ClassifySourceError(failure.cause)}
 }

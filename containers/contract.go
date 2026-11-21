@@ -240,3 +240,44 @@ func readJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.
 		return sourceFailure(p.provenance.Source, cause, stage == "query" || stage == "consume")
 	})
 }
+
+// ResourceOptions admits the observed release and the connected visibility scope
+// for the optional Resource Manager views.
+type ResourceOptions struct {
+	OracleVersion string
+	Scope         Scope
+}
+
+func memberPredicate(scope Scope) string {
+	if scope == CurrentContainer {
+		return "v.CON_ID >= 1 AND v.CON_ID = " + connectedContainer
+	}
+	return "v.CON_ID >= 1 AND " + connectedContainer + " = 1"
+}
+
+// Complete member and source IDs were scanned from the selected native row.
+func validMember(instance, container, source session.Value, scope Scope) bool {
+	con, reporter := id(container), id(source)
+	if id(instance) < 1 || con < 1 {
+		return false
+	}
+	if scope == Root {
+		return reporter == 1
+	}
+	return con == reporter
+}
+
+func resourceSelection(options ResourceOptions, source string, fields []field, order string) (selection, error) {
+	r, err := profile(options.OracleVersion, options.Scope)
+	if err != nil {
+		return selection{}, err
+	}
+	if r < release122 {
+		return selection{}, ErrUnsupportedVersion
+	}
+	p := Provenance{Source: source, OracleVersion: options.OracleVersion, Scope: options.Scope}
+	return selectFields(p, append([]field{
+		raw("INST_ID", rowset.Integer), raw("CON_ID", rowset.Integer),
+		projected("SOURCE_CON_ID", connectedContainer, rowset.Integer),
+	}, fields...), nil, memberPredicate(options.Scope), order), nil
+}
