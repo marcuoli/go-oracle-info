@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add version-aware per-member container inventory and independently readable PDB saved states (#81).
 - Organize complete Oracle facts in uniform source files with their SQL, decoding and native APIs together, preserving compatibility symbols and removing superseded files (#76).
 
 - Simplify exact RAC GiB rounding after byte aggregation and share integer-text validation across fact decoders (#77).
