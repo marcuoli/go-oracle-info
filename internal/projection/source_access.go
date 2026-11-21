@@ -49,7 +49,10 @@ func ClassifySourceError(err error) error {
 }
 
 func sourceErrorClass(message string) error {
-	code, _, _ := strings.Cut(strings.TrimSpace(message), ":")
+	code := strings.TrimSpace(message)
+	if end := strings.IndexAny(code, ": \t\r\n"); end >= 0 {
+		code = code[:end]
+	}
 	switch code {
 	case "ORA-01031", "ORA-1031":
 		return ErrSourceInaccessible

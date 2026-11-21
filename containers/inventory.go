@@ -79,12 +79,8 @@ func inventoryPlan(options InventoryOptions) (selection, error) {
 			raw("APPLICATION_PDB", rowset.Text), raw("APPLICATION_SEED", rowset.Text),
 			raw("APPLICATION_ROOT_CON_ID", rowset.Integer))
 	}
-	predicate := "v.CON_ID >= 1 AND " + connectedContainer + " = 1"
-	if options.Scope == CurrentContainer {
-		predicate = "v.CON_ID >= 1 AND v.CON_ID = " + connectedContainer
-	}
 	provenance := Provenance{Source: "GV$CONTAINERS", OracleVersion: options.OracleVersion, Scope: options.Scope}
-	return selectFields(provenance, fields, extras, predicate, "v.CON_ID, v.INST_ID"), nil
+	return selectFields(provenance, fields, extras, memberPredicate(options.Scope), "v.CON_ID, v.INST_ID"), nil
 }
 
 // DecodeInventory validates all supplied rows and preserves their raw evidence.
@@ -111,9 +107,7 @@ func decodeInventory(result session.Result, p selection) (InventoryResult, error
 			ApplicationRoot: optional(row, index, "APPLICATION_ROOT"), ApplicationPDB: optional(row, index, "APPLICATION_PDB"),
 			ApplicationSeed: optional(row, index, "APPLICATION_SEED"), ApplicationRootContainerID: optional(row, index, "APPLICATION_ROOT_CON_ID"),
 		}
-		container, reporter := id(v.ContainerID), id(v.SourceContainerID)
-		if container < 1 || id(v.InstanceID) < 1 || !requiredText(v.Name) ||
-			(p.provenance.Scope == Root && reporter != 1) || (p.provenance.Scope == CurrentContainer && container != reporter) ||
+		if !validMember(v.InstanceID, v.ContainerID, v.SourceContainerID, p.provenance.Scope) || !requiredText(v.Name) ||
 			!unsigned(v.DBID) || !unsigned(v.ContainerUID) || !guid(v.GUID) ||
 			(v.TotalSizeBytes != nil && !unsigned(*v.TotalSizeBytes)) || (v.MaxSizeBytes != nil && !unsigned(*v.MaxSizeBytes)) ||
 			(v.ApplicationRootContainerID != nil && !v.ApplicationRootContainerID.Null && id(*v.ApplicationRootContainerID) < 0) {
