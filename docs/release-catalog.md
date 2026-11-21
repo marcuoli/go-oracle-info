@@ -123,6 +123,12 @@ and scope were actually verified. For a correction, use the same source ID and
 record identity, and include the observed group-level fields. Multiple source
 observations for a numeric version may remain in the catalog.
 
+An Oracle support announcement with an explicit MOS patch link can establish
+the patch facts shown publicly. Retain the announcement URL, linked MOS
+reference and exact observed scope in the evidence. A historical announcement
+can corroborate its named patch and scope. Latest availability and broader
+hardware or platform coverage require their own evidence.
+
 The commands validate the review structure and captured bytes. The reviewer
 checks the article content and patch applicability before approving records.
 Report a missing or conflicting source before publishing.
