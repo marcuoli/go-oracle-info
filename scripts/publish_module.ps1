@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$EvidenceDirectory,
     [ValidateSet('Check','Tag','PrivateRefs','PublicRefs','PrivateRelease','PublicRelease')][string]$Action = 'Check',
     [string]$Review,
-    [string]$HarvesterDocs,
+    [string]$PatchInputs,
     [string]$OdaCaptures,
     [string]$ReleaseNotes,
     [string]$Python = 'python'
@@ -46,12 +46,12 @@ function Is-Ancestor([string]$Older,[string]$Newer) {
 }
 
 function Check-NewCatalog {
-    foreach ($path in @($Review,$HarvesterDocs,$OdaCaptures)) {
+    foreach ($path in @($Review,$PatchInputs,$OdaCaptures)) {
         if (-not $path -or -not [IO.Path]::IsPathFullyQualified($path)) {
-            throw 'Check and Tag need absolute review, Harvester and ODA input paths'
+            throw 'Check and Tag need absolute review, patch input and ODA input paths'
         }
     }
-    & $Python -B $verifier verify --version $Version --review $Review --harvester-docs $HarvesterDocs --oda-captures $OdaCaptures --output-dir $evidencePath
+    & $Python -B $verifier verify --version $Version --review $Review --patch-inputs $PatchInputs --oda-captures $OdaCaptures --output-dir $evidencePath
     if ($LASTEXITCODE -ne 0) { throw 'Catalog publish verification failed before any release mutation' }
 }
 

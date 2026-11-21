@@ -93,7 +93,7 @@ def patch_kind(patch):
     if patch["type"] == "RECOMMENDED":
         return "one_off"
     if patch["type"] != "BUNDLE":
-        raise ValueError(f"unknown Harvester record type {patch['type']}")
+        raise ValueError(f"unknown patch input record type {patch['type']}")
     label = patch["title"]
     if label in {"PSU", "MRP", "SPU"}:
         return label
@@ -101,7 +101,7 @@ def patch_kind(patch):
         return "RUR"
     if label in {"RU_DB", "RU_GI"} and patch["release"] not in {"11.2.0.4", "12.1.0.2"}:
         return "RU"
-    # Historical Harvester bundles sometimes carry RU_DB/RU_GI labels on
+    # Imported bundles sometimes carry RU_DB/RU_GI labels on
     # legacy releases. Preserve the label without assigning modern RU semantics.
     return "bundle"
 
@@ -115,15 +115,19 @@ def component(patch):
     return patch["subtype"]
 
 
-def database_catalog(docs, manifest, as_of, harvester_revision):
+LOCAL_PATCH_EXPORT = "local-patch-export"
+LOCAL_PATCH_EXPORT_TITLE = "Local patch metadata export"
+
+
+def database_catalog(docs, manifest, as_of, input_revision):
     raw = (docs / "patch-catalog.json").read_bytes()
     export = json.loads(raw)
     if export["schema_version"] != 1:
-        raise ValueError("unexpected Harvester export schema")
-    primary = "harvester-patch-export"
+        raise ValueError("unexpected patch export schema")
+    primary = LOCAL_PATCH_EXPORT
     sources = [
-        source(primary, "Harvester portable patch catalog", checked_utc=None,
-               revision=harvester_revision, sha256=sha(raw)),
+        source(primary, LOCAL_PATCH_EXPORT_TITLE, checked_utc=None,
+               revision=input_revision, sha256=sha(raw)),
         source("oracle-lifetime-policy", "Oracle Lifetime Support Policy: Technology Products",
                LIFETIME_URL, checked_utc="2026-11-21", revision="2026-10-02"),
         source("oracle-database-faq", "Oracle AI Database FAQ", FAQ_URL, checked_utc="2026-11-21"),
@@ -138,7 +142,7 @@ def database_catalog(docs, manifest, as_of, harvester_revision):
     grouped = defaultdict(list)
     parent_keys = {p["key"] for p in export["patches"]}
     if len(parent_keys) != len(export["patches"]):
-        raise ValueError("duplicate Harvester patch key")
+        raise ValueError("duplicate patch key in export")
     row_keys = set()
     for r in export["platform_patches"]:
         if r["key"] in row_keys or r["patch_key"] not in parent_keys:
@@ -193,15 +197,16 @@ def database_catalog(docs, manifest, as_of, harvester_revision):
             elif label == "18c Innovation Release":
                 releases.append(dict(line="18c", classification="innovation", source="PNEWS1360"))
     coverage = [
-        dict(line=line, source=primary, status="harvester_snapshot")
+        dict(line=line, source=primary, status="local_patch_snapshot")
         for line in sorted({p["line"] for p in patches})
     ] + [dict(source="oracle-lifetime-policy", status="lifecycle_table"),
          dict(source="PNEWS1360", status="saved_release_roadmap")]
     notes = [
-        f"Harvester export generated {export['generated_at']}; the stored metadata is a historical snapshot.",
+        f"Local patch export generated {export['generated_at']}; the stored metadata is a historical snapshot.",
         "Recorded article IDs link to document-level provenance. Prior stored rows are not necessarily present in the current article.",
+        "An empty artifacts array means the source provides no platform-specific package records for that patch group.",
         "Legacy RU_DB/RU_GI labels are preserved under bundle; they do not establish modern RU semantics.",
-        "The source's conflicting Windows patch row was excluded by Harvester. Unresolved dates remain absent.",
+        "The input excludes a conflicting Windows patch row. Unresolved dates remain absent.",
         "Edition and error-correction exceptions are in the Oracle policy footnotes. Lifecycle dates do not establish availability for a platform.",
         "Historical patch coverage begins in the Oracle 11.2 family. The lifecycle includes older Oracle versions.",
     ]
@@ -238,13 +243,13 @@ def supercluster_catalog(database, as_of):
         used.add(old["source"])
         patches.append(patch)
     if not patches:
-        raise ValueError("Harvester export has no SuperCluster QFSDP records")
+        raise ValueError("patch export has no SuperCluster QFSDP records")
     sources = [s for s in database["sources"] if s["id"] in used] + [guide, *notices.values()]
-    coverage = [dict(line=line, source="harvester-patch-export", status="harvester_qfsdp_snapshot")
+    coverage = [dict(line=line, source=LOCAL_PATCH_EXPORT, status="local_qfsdp_snapshot")
                 for line in sorted({p["line"] for p in patches})]
     coverage.append(dict(source=guide["id"], status="official_patch_family_reference"))
     return catalog("supercluster", as_of, sources, [], patches, coverage, [
-        "Harvester lines and versions are associated Database release levels, not SuperCluster hardware or image versions.",
+        "Imported lines and versions are associated Database release levels, not SuperCluster hardware or image versions.",
         "Only explicit SuperCluster QFSDP labels are admitted. Oracle announcements corroborate named package identities only.",
         "The saved source does not establish the current latest SuperCluster QFSDP or every model and platform applicability.",
     ])
@@ -253,7 +258,7 @@ def supercluster_catalog(database, as_of):
 def verified_mhtml(docs, item):
     raw = (docs / item["file"]).read_bytes()
     if sha(raw) != item["sha256"]:
-        raise ValueError(f"Harvester capture hash mismatch: {item['current_id']}")
+        raise ValueError(f"MOS capture hash mismatch: {item['current_id']}")
     message = BytesParser(policy=policy.default).parsebytes(raw)
     parts = [p.get_content() for p in message.walk() if p.get_content_type() == "text/html"]
     if len(parts) != 1:
@@ -525,17 +530,17 @@ def oda_catalog(root, as_of):
     ])
 
 
-def build_catalogs(docs, harvester_revision, oda_captures, as_of, announcement_check):
+def build_catalogs(docs, input_revision, oda_captures, as_of, announcement_check):
     capture = read_json(docs / "mos-capture-manifest.json")
     if capture["schema"] != 1:
-        raise ValueError("unexpected Harvester source manifest schema")
+        raise ValueError("unexpected MOS capture manifest schema")
     manifest = {r["current_id"]: r for r in capture["articles"]}
     if len(manifest) != len(capture["articles"]):
-        raise ValueError("duplicate Harvester source ID")
+        raise ValueError("duplicate MOS capture source ID")
     for item in manifest.values():
         if sha((docs / item["file"]).read_bytes()) != item["sha256"]:
-            raise ValueError(f"Harvester capture hash mismatch: {item['current_id']}")
-    database = database_catalog(docs, manifest, as_of, harvester_revision)
+            raise ValueError(f"MOS capture hash mismatch: {item['current_id']}")
+    database = database_catalog(docs, manifest, as_of, input_revision)
     return [
         database, supercluster_catalog(database, as_of),
         exadata_catalog(docs, manifest, as_of, announcement_check),
@@ -567,14 +572,14 @@ def write_catalogs(catalogs, output_dir):
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
-    cli.add_argument("--harvester-docs", type=Path, required=True)
-    cli.add_argument("--harvester-revision", required=True)
+    cli.add_argument("--patch-inputs", type=Path, required=True)
+    cli.add_argument("--input-revision", required=True)
     cli.add_argument("--oda-captures", type=Path, required=True)
     cli.add_argument("--output-dir", type=Path, required=True)
     cli.add_argument("--as-of", type=date.fromisoformat, required=True)
     cli.add_argument("--exadata-announcement-checked", type=date.fromisoformat, default=date(2026, 11, 21))
     a = cli.parse_args()
-    catalogs = build_catalogs(a.harvester_docs, a.harvester_revision, a.oda_captures,
+    catalogs = build_catalogs(a.patch_inputs, a.input_revision, a.oda_captures,
                               a.as_of.isoformat(), a.exadata_announcement_checked.isoformat())
     write_catalogs(catalogs, a.output_dir)
 

@@ -18,8 +18,8 @@ const (
 	SuperCluster Product = "supercluster"
 )
 
-// Source identifies an Oracle document or a named, reproducible Harvester export.
-// A checked date describes the source, without claiming verification of all rows.
+// Source identifies an Oracle document or a local patch metadata export.
+// Source fields in catalog records reference this ID. A checked date describes the source.
 type Source struct {
 	ID         string `json:"id"`
 	Title      string `json:"title"`
@@ -49,7 +49,7 @@ type Release struct {
 
 // Patch retains a recorded release and package classification. Kind and
 // Component use the catalog's labels; SourceKind retains a finer source label.
-// Artifacts may be empty when the source records no verified package.
+// An empty Artifacts list means the source provides no package records for this group.
 type Patch struct {
 	Line          string     `json:"line"`
 	Version       string     `json:"version,omitempty"`

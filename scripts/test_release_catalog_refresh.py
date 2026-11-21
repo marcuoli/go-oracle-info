@@ -64,6 +64,33 @@ class ReconcileTests(unittest.TestCase):
         self.assertTrue(earlier["source"].startswith("source@"))
         self.assertEqual(merge_catalog(merged, fresh), merged)
 
+    def test_legacy_export_rename_reconciles_rows_and_archived_sources(self):
+        fresh = fixture()
+        current_id = "local-patch-export"
+        old_id = "harvester-patch-export"
+        fresh = json.loads(json.dumps(fresh).replace('"source": "source"', f'"source": "{current_id}"'))
+        fresh["sources"] = [{"id": current_id, "title": "Local patch metadata export", "sha256": "a" * 64}]
+        fresh["coverage"][0]["status"] = "local_patch_snapshot"
+        old = json.loads(json.dumps(fresh).replace(current_id, old_id))
+        old["sources"][0]["title"] = "Legacy export title"
+        old["coverage"][0]["status"] = "harvester_snapshot"
+        self.assertEqual(merge_catalog(old, fresh), fresh)
+
+        # One package and one observation were recorded against a prior export.
+        archive_id = old_id + "@" + "c" * 64
+        old["sources"].append(dict(old["sources"][0], id=archive_id, sha256="b" * 64))
+        old["patches"][0]["artifacts"][1].update(source=archive_id, corroborated_by=[old_id])
+        old["history"] = {"patches": [dict(old["patches"][1], source=archive_id)]}
+        fresh["patches"][0]["artifacts"].pop()
+        merged = merge_catalog(old, fresh)
+        archived = next(s for s in merged["sources"] if s["id"].startswith(current_id + "@"))
+        self.assertEqual(archived["sha256"], "b" * 64)
+        self.assertEqual(len(merged["patches"]), len(fresh["patches"]))
+        self.assertEqual(merged["history"]["patches"][0]["source"], archived["id"])
+        self.assertEqual(merged["patches"][0]["artifacts"][1]["source"], archived["id"])
+        self.assertEqual(merged["patches"][0]["artifacts"][1]["corroborated_by"], [current_id])
+        self.assertEqual(merge_catalog(merged, fresh), merged)
+
     def test_conflicting_duplicate_fails(self):
         old = fixture()
         fresh = fixture()
@@ -98,9 +125,9 @@ class ReviewTests(unittest.TestCase):
                 evidence="evidence.txt", evidence_sha256=sha(evidence),
             ))
         self.review = dict(
-            schema_version=1, version="v0.23.0", history_base="1" * 40, harvester_revision="2" * 40,
-            reviewed_by="Fixture", reviewed_utc=stamp, harvester_export_sha256=sha(captured),
-            oda_manifest_sha256=sha(oda), harvester_manifest_sha256=sha(manifest), checks=checks,
+            schema_version=1, version="v0.23.0", history_base="1" * 40, input_revision="2" * 40,
+            reviewed_by="Fixture", reviewed_utc=stamp, patch_export_sha256=sha(captured),
+            oda_manifest_sha256=sha(oda), mos_manifest_sha256=sha(manifest), checks=checks,
         )
 
     def verify(self):
@@ -129,7 +156,7 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requested version"):
             self.verify()
 
-    def test_changed_harvester_export(self):
+    def test_changed_patch_export(self):
         (self.root / "patch-catalog.json").write_text("{}", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "export hash"):
             self.verify()
@@ -137,7 +164,7 @@ class ReviewTests(unittest.TestCase):
     def test_mos_review_must_match_saved_capture(self):
         check = next(item for item in self.review["checks"] if item["role"] == "database_patches")
         check["identifier"] = "different"
-        with self.assertRaisesRegex(ValueError, "current Harvester MOS capture"):
+        with self.assertRaisesRegex(ValueError, "current MOS capture"):
             self.verify()
 
     def test_changed_evidence(self):
@@ -177,7 +204,7 @@ class ReviewTests(unittest.TestCase):
                 previous = dict(previous, notes=["intervening catalog"])
             return json.dumps(previous).encode()
         args = ["refresh_release_catalog.py", "verify", "--version", "v0.23.0",
-                "--review", str(review_file), "--harvester-docs", str(self.root),
+                "--review", str(review_file), "--patch-inputs", str(self.root),
                 "--oda-captures", str(self.root), "--output-dir", str(output_dir)]
         with (mock.patch.object(refresh, "git", side_effect=lambda *a: git_responses[a]),
               mock.patch.object(refresh, "committed", side_effect=committed),
