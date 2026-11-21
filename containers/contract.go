@@ -13,7 +13,6 @@ import (
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
-	"github.com/marcuoli/go-oracle-session/diagnostic"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -190,17 +189,13 @@ func sourceFailure(source string, cause error, transport bool) error {
 		return nil
 	}
 	outcome := Failed
-	if transport && !errors.Is(cause, context.Canceled) && !errors.Is(cause, context.DeadlineExceeded) {
-		messages, _ := diagnostic.Oracle(cause)
-		for _, message := range messages {
-			switch message.Code {
-			case "ORA-01031":
-				outcome = Inaccessible
-			case "ORA-00942", "ORA-01109", "ORA-01219":
-				if outcome == Failed {
-					outcome = Unavailable
-				}
-			}
+	if transport {
+		cause = projection.ClassifySourceError(cause)
+		switch {
+		case errors.Is(cause, projection.ErrSourceInaccessible):
+			outcome = Inaccessible
+		case errors.Is(cause, projection.ErrSourceUnavailable):
+			outcome = Unavailable
 		}
 	}
 	return &ReadError{Source: source, Outcome: outcome, cause: cause}

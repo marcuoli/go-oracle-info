@@ -157,6 +157,8 @@ func TestSavedStatesStatusAndInactiveInstance(t *testing.T) {
 	}{
 		{"ORA-00942: object resolution failed in private lookup", Unavailable},
 		{"ORA-01031: private source permission", Inaccessible},
+		{"ORA-1031: unpadded private source permission", Inaccessible},
+		{"ORA-942: unpadded ambiguous object resolution", Unavailable},
 		{"private interrupted transport", Failed},
 	} {
 		cause := errors.New(tc.message)
@@ -224,5 +226,14 @@ func TestInventoryNativeCursorAndAtomicJSON(t *testing.T) {
 	payload, err = InventoryJSON(t.Context(), db, options, rowset.Limits{})
 	if payload != nil || !errors.Is(err, ErrInvalidEvidence) || state.Closed() != 1 {
 		t.Fatal(string(payload), err, state.Closed())
+	}
+}
+
+func TestCombinedSourceFailureKeepsCancellation(t *testing.T) {
+	combined := errors.Join(errors.New("ORA-01031: private source permission"), context.Canceled)
+	err := sourceFailure("GV$CONTAINERS", combined, true)
+	var typed *ReadError
+	if !errors.As(err, &typed) || typed.Outcome != Failed || !errors.Is(err, context.Canceled) {
+		t.Fatalf("combined failure = %v", err)
 	}
 }
