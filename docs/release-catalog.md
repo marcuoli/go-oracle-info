@@ -56,16 +56,19 @@ inventory, release availability on a live system, or patch eligibility.
 ## Refresh before publish
 
 1. Record the selected module version and the exact canonical main commit as
-   `history_base`. On a machine with existing My Oracle Support access, open the
-   current articles and patch search results in the authenticated browser. Check
-   the relevant product, numeric release, platform or model, and patch scope.
-   Save a read-only copy of each supporting page in the release's private V:
-   evidence directory. Record the current identifier, legacy Doc ID when known,
-   visible title, Oracle revision when shown and capture time. Use a stable
-   Oracle URL without session parameters. The historical patch export is already
-   embedded in the baseline.
-2. Verify the public Oracle authorities and capture the ODA index and release
-   pages. Create a private `review.json` for this release. For each document,
+   `history_base`. Review the required Oracle authorities using the available
+   Oracle web materials and verified original Oracle Support captures, including
+   copies retained with the local Harvester catalog. Check the relevant product,
+   numeric release, platform or model, and patch scope. Retain the original
+   capture time, identifier, known legacy Doc ID, title and Oracle revision.
+   Bind a private copy of the supporting evidence to its stable Oracle URL and
+   exact hash. An older capture can establish a historical scoped observation.
+   Current applicability, completeness and latest availability each need
+   supporting evidence. Obtain another Oracle capture when a required finding
+   needs evidence beyond the copies already available.
+2. Review the public Oracle authorities and existing ODA index and release
+   capture, collecting an updated capture if needed. Create a private
+   `review.json` for this release. For each document,
    record the scoped finding and copy verified new or corrected facts into the
    review's `records` array. Cite a release-specific patch article when the
    quarterly overview lacks package details. Record an explicit no-change result
@@ -77,7 +80,7 @@ inventory, release availability on a live system, or patch eligibility.
    observation and its source when the same source-scoped record changes.
 4. On synchronized canonical main, run `publish_module.ps1 -Action Check`.
    The command rebuilds the exact four files from the review and its historical
-   baseline. It rejects missing or stale evidence, changed evidence bytes,
+   baseline. It rejects missing evidence, stale applicability checks, changed evidence bytes,
    intervening catalog changes and mismatches with the committed catalogs.
    Review all required sources for every module version, including when no
    changes are found. See [publication and resume](mirroring.md).
@@ -98,7 +101,7 @@ The private review contains `schema_version: 2`, `version`, `history_base`,
 Include `old_doc_id` and `revision` where known. Evidence filenames are relative to
 the review directory. Times are ISO 8601 with offsets. Each capture precedes or
 equals its review time, which in turn precedes or equals the overall review
-time. The 24-hour release window starts at the oldest bound capture or check.
+time. The 24-hour release window starts at the oldest applicability check or overall review. Keep original capture times unchanged when reviewing an existing snapshot.
 
 | Role | Required evidence | Records |
 | --- | --- | --- |
@@ -119,6 +122,12 @@ the original `source_name`. Include only packages whose number or exact version
 and scope were actually verified. For a correction, use the same source ID and
 record identity, and include the observed group-level fields. Multiple source
 observations for a numeric version may remain in the catalog.
+
+An Oracle support announcement with an explicit MOS patch link can establish
+the patch facts shown publicly. Retain the announcement URL, linked MOS
+reference and exact observed scope in the evidence. A historical announcement
+can corroborate its named patch and scope. Latest availability and broader
+hardware or platform coverage require their own evidence.
 
 The commands validate the review structure and captured bytes. The reviewer
 checks the article content and patch applicability before approving records.

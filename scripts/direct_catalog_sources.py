@@ -41,9 +41,16 @@ ARTIFACT_FIELDS = dict.fromkeys((
 ), str) | dict.fromkeys(("number", "platform_id"), int) | dict.fromkeys(("base_release", "terminal_release"), bool)
 
 
-def recent(value, now, field):
+def evidence_time(value, field):
     parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None or not now - timedelta(hours=24) <= parsed <= now:
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{field} needs a time zone")
+    return parsed
+
+
+def recent(value, now, field):
+    parsed = evidence_time(value, field)
+    if not now - timedelta(hours=24) <= parsed <= now:
         raise ValueError(f"{field} is outside the preceding 24 hours")
     return parsed
 
@@ -141,14 +148,14 @@ def validate_review(review, version, oda, evidence_root, now):
     reviewed = recent(review["reviewed_utc"], now, "review")
     oda_proof = (oda / "sources.json", review["oda_manifest_sha256"], "ODA capture manifest")
     oda_manifest = json.loads(verify_file(*oda_proof))
-    oda_checked = recent(oda_manifest["checked_utc"], now, "ODA capture")
+    oda_checked = evidence_time(oda_manifest["checked_utc"], "ODA capture")
     allowed = {"patch_table", "archive_release_notes", "archive_index_only"}
     if not oda_manifest["releases"] or any(row["status"] not in allowed for row in oda_manifest["releases"]):
         raise ValueError("ODA source capture is incomplete; reconcile unavailable patch pages before publishing")
     if oda_checked > reviewed:
         raise ValueError("ODA capture is newer than its review")
 
-    timestamps = [reviewed, oda_checked]
+    review_times = [reviewed]
     proofs = [oda_proof]
     seen = set()
     evidence_roles = set()
@@ -176,18 +183,20 @@ def validate_review(review, version, oda, evidence_root, now):
             raise ValueError(f"MOS URL must reference the reviewed article for {role}")
         if check.get("status") != "verified":
             raise ValueError(f"source review not verified: {role}")
-        captured = recent(check["captured_utc"], now, role + " capture")
+        captured = evidence_time(check["captured_utc"], role + " capture")
         checked = recent(check["checked_utc"], now, role + " review")
         if not captured <= checked <= reviewed:
             raise ValueError(f"review times are out of order for {role}")
-        timestamps.extend((captured, checked))
+        if role == "oda" and oda_checked > checked:
+            raise ValueError("ODA capture is newer than its review check")
+        review_times.append(checked)
         validate_records(check, field)
         proof = (evidence_path(evidence_root, check["evidence"]), check["evidence_sha256"], f"{role} evidence")
         verify_file(*proof)
         proofs.append(proof)
     if evidence_roles != ROLES.keys():
         raise ValueError("review must cover each required Oracle authority")
-    return min(timestamps) + timedelta(hours=24), proofs
+    return min(review_times) + timedelta(hours=24), proofs
 
 
 def reviewed_catalogs(checks, as_of, previous):

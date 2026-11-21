@@ -166,11 +166,12 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ODA source capture is incomplete"):
             self.verify()
 
-    def test_receipt_expires_at_oldest_capture(self):
-        oldest = self.now - timedelta(hours=5)
-        self.check("supercluster")["captured_utc"] = oldest.isoformat()
+    def test_receipt_expires_at_oldest_current_check(self):
+        oldest_check = self.now - timedelta(hours=5)
+        capture = self.now - timedelta(days=12)
+        self.check("supercluster").update(captured_utc=capture.isoformat(), checked_utc=oldest_check.isoformat())
         expires, _ = self.verify()
-        self.assertEqual(expires, oldest + timedelta(hours=24))
+        self.assertEqual(expires, oldest_check + timedelta(hours=24))
 
     def test_wrong_version(self):
         self.review["version"] = "v0.23.1"
@@ -220,9 +221,34 @@ class ReviewTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "unexpected official source"):
                     self.verify()
 
-    def test_stale_direct_capture_blocks_a_no_change_review(self):
-        self.check("supercluster")["captured_utc"] = (self.now - timedelta(hours=25)).isoformat()
-        with self.assertRaisesRegex(ValueError, "supercluster capture.*preceding 24 hours"):
+    def test_existing_mos_capture_can_be_reviewed(self):
+        self.check("supercluster")["captured_utc"] = (self.now - timedelta(days=12)).isoformat()
+        expires, _ = self.verify()
+        self.assertEqual(expires, self.now + timedelta(hours=24))
+
+    def test_original_capture_still_needs_offset_and_chronology(self):
+        check = self.check("supercluster")
+        check["captured_utc"] = self.now.replace(tzinfo=None).isoformat()
+        with self.assertRaisesRegex(ValueError, "supercluster capture needs a time zone"):
+            self.verify()
+        check["captured_utc"] = (self.now + timedelta(seconds=1)).isoformat()
+        with self.assertRaisesRegex(ValueError, "review times are out of order for supercluster"):
+            self.verify()
+
+    def test_existing_oda_capture_can_be_reviewed(self):
+        capture = self.root / "sources.json"
+        captured = (self.now - timedelta(days=12)).isoformat()
+        capture.write_text(json.dumps({"checked_utc": captured, "releases": [{"status": "patch_table"}]}),
+                           encoding="utf-8")
+        self.review["oda_manifest_sha256"] = sha(capture.read_bytes())
+        self.check("oda")["captured_utc"] = captured
+        expires, _ = self.verify()
+        self.assertEqual(expires, self.now + timedelta(hours=24))
+
+    def test_oda_review_cannot_predate_bound_capture(self):
+        earlier = (self.now - timedelta(minutes=1)).isoformat()
+        self.check("oda").update(captured_utc=earlier, checked_utc=earlier)
+        with self.assertRaisesRegex(ValueError, "ODA capture is newer than its review check"):
             self.verify()
 
     def test_requires_explicit_result_even_without_changes(self):
