@@ -7,7 +7,7 @@ Inventory and saved-state reads remain usable independently. Parameter limits
 come from the [scoped parameter facts](container-system-parameters.md).
 
 `GV$RSRCPDBMETRIC` returns per-member/container observations with `BEGIN_TIME`
-and `END_TIME` as database-local civil DATE values, plus the interval in
+and `END_TIME` as Gregorian database-local civil DATE values using the shared NLS-independent projection, plus the interval in
 centiseconds. CPU utilization, running and waiting session averages, IOPS,
 IOMBPS, plan name, average I/O throttle wait and queued parallel statements
 remain raw observations. The selected rate columns retain Oracle's operations
@@ -55,6 +55,6 @@ two resource samples and three memory-gauge rows. OMLAB returned one row
 from each source. The Windows amd64 harness used Go 1.27.4,
 go-oracle-session v0.15.0 and go-ora/v2 v2.9.0. It checked native cursor
 iteration, column aliases and complete bounded JSON independently. The
-buffered Reader path is covered by fixtures. Other releases, MOUNT, other
+buffered Reader path is covered by fixtures. The existing 12.2.0.1.0 LABPDB profile failed at connection before any SQL. No approved 12.2 root entry was available. Other releases, MOUNT, other
 login privileges, RAC member coverage and other Resource Manager
 configurations have no exact native qualification in this run.

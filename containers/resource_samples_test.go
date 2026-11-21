@@ -33,6 +33,8 @@ func TestResourceViewsAreGatedIndependently(t *testing.T) {
 		}
 		if metricErr != nil || usageErr != nil ||
 			!strings.Contains(metric, "FROM GV$RSRCPDBMETRIC v") || !strings.Contains(usage, "FROM GV$RSRC_PDB v") ||
+			!strings.Contains(metric, "EXTRACT(YEAR FROM CAST(v.BEGIN_TIME AS TIMESTAMP))") ||
+			!strings.Contains(metric, "EXTRACT(SECOND FROM CAST(v.END_TIME AS TIMESTAMP))") ||
 			!strings.Contains(metric, " AS INTSIZE_CSEC") || !strings.Contains(metric, " AS AVG_QUEUED_PARALLEL_STMTS") ||
 			!strings.Contains(usage, " AS SGA_BYTES") || !strings.Contains(usage, " AS PGA_BYTES") {
 			t.Fatalf("%s samples=%q usage=%q errors=%v %v", tc.version, metric, usage, metricErr, usageErr)

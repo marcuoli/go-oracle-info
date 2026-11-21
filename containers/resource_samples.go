@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -16,7 +17,7 @@ import (
 var resourceNumber = regexp.MustCompile("^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$")
 
 func resourceDate(name string) field {
-	return projected(name, "TO_CHAR(v."+name+", 'YYYY-MM-DD\"T\"HH24:MI:SS')", rowset.Text)
+	return projected(name, datetime.GregorianDate("v."+name), rowset.Text)
 }
 
 func resourceCivil(value session.Value) bool {
