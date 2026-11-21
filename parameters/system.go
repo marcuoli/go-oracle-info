@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/marcuoli/go-sqltemplate/reference"
-
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
