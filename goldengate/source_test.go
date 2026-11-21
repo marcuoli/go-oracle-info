@@ -64,10 +64,17 @@ func fixture(p selection) session.Result {
 	}
 	return result
 }
+func processPlanForTest(version string, apply bool) (selection, error) {
+	if apply {
+		return applyCoordinatorsPlan(version)
+	}
+	return capturePlan(version)
+}
+
 func TestVersionProjectionScopeAndExactRows(t *testing.T) {
 	for _, v := range []string{"11.2.0.4.0", "12.1.0.2.0", "19.26.0.0.0", "23.26.1.0.0"} {
 		for _, apply := range []bool{false, true} {
-			p, err := plan(v, apply)
+			p, err := processPlanForTest(v, apply)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -101,7 +108,7 @@ func TestVersionProjectionScopeAndExactRows(t *testing.T) {
 	}
 	for _, v := range []string{"", "11", "11.1.0.7.0", "11.2.0.3.0", "19x.0.0.0.0"} {
 		for _, apply := range []bool{false, true} {
-			if _, e := plan(v, apply); !errors.Is(e, ErrUnsupportedVersion) {
+			if _, e := processPlanForTest(v, apply); !errors.Is(e, ErrUnsupportedVersion) {
 				t.Fatal(v, e)
 			}
 		}
@@ -110,7 +117,7 @@ func TestVersionProjectionScopeAndExactRows(t *testing.T) {
 func TestFailedOrCancelledReadsNeverPublishPrefix(t *testing.T) {
 	for _, mode := range []string{"late-shape", "negative", "bad-null", "zero-instance", "terminal", "cancel", "empty"} {
 		t.Run(mode, func(t *testing.T) {
-			p, _ := plan("19.26.0.0.0", false)
+			p, _ := capturePlan("19.26.0.0.0")
 			r := &readerFixture{result: fixture(p)}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -178,7 +185,7 @@ func TestJSONAtomicityForBothSources(t *testing.T) {
 	for _, apply := range []bool{false, true} {
 		for _, mode := range []string{"ok", "next", "close", "rows", "bytes", "late-id", "cancel"} {
 			t.Run(mode+map[bool]string{false: "capture", true: "apply"}[apply], func(t *testing.T) {
-				p, _ := plan("19.26.0.0.0", apply)
+				p, _ := processPlanForTest("19.26.0.0.0", apply)
 				step := nativeStep(p)
 				limits := rowset.Limits{}
 				ctx, cancel := context.WithCancel(t.Context())
@@ -267,7 +274,7 @@ func TestMessageNumberJSONPreservesTextAndNull(t *testing.T) {
 			{"null", nil, "null"},
 		} {
 			t.Run(name+"/"+tc.name, func(t *testing.T) {
-				p, err := plan("19.26.0.0.0", apply)
+				p, err := processPlanForTest("19.26.0.0.0", apply)
 				if err != nil {
 					t.Fatal(err)
 				}

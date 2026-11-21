@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Organize complete Oracle facts in uniform source files with their SQL, decoding and native APIs together, preserving compatibility symbols and removing superseded files (#76).
+
 - Simplify exact RAC GiB rounding after byte aggregation and share integer-text validation across fact decoders (#77).
 - Share bounded native fact JSON through go-oracle-session/rowset and complete the named fact APIs and options-based forms while retaining existing callers and payloads (#76).
 

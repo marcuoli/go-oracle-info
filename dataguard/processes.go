@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -43,6 +44,7 @@ func ProcessesStatement(version string, filter Filter) (string, []any, error) {
 	p, e := processesPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func processesPlan(version string, filter Filter) (selection, error) {
 	return selectView(version, filter, "GV$DATAGUARD_PROCESS", []field{
 		integer("INST_ID", "v.INST_ID"),
@@ -74,6 +76,7 @@ func DecodeProcesses(result session.Result, version string, filter Filter) (Proc
 	}
 	return decodeProcesses(result, p)
 }
+
 func decodeProcesses(result session.Result, p selection) (ProcessesResult, error) {
 	index, e := columns(result, p)
 	if e != nil {
@@ -140,4 +143,24 @@ func ProcessesJSON(ctx context.Context, q rowset.Queryer, version string, filter
 		return nil, e
 	}
 	return readJSON(ctx, q, p, limits)
+}
+
+// ProcessesStatementWithOptions selects the same source as ProcessesStatement using one options value.
+func ProcessesStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ProcessesStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeProcessesWithOptions selects the same source as DecodeProcesses using one options value.
+func DecodeProcessesWithOptions(result session.Result, options ScopeOptions) (ProcessesResult, error) {
+	return DecodeProcesses(result, options.OracleVersion, options.Filter)
+}
+
+// ProcessesRowsWithOptions selects the same source as ProcessesRows using one options value.
+func ProcessesRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ProcessesRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ProcessesJSONWithOptions selects the same source as ProcessesJSON using one options value.
+func ProcessesJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ProcessesJSON(ctx, q, options.OracleVersion, options.Filter, limits)
 }

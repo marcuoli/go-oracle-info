@@ -68,7 +68,7 @@ func TestAdmittedMemoryStatementEvidence(t *testing.T) {
 			if scope == ConnectedPDB {
 				o.TargetContainerID = id
 			}
-			p, err := sourcePlan(parameter, o, false)
+			p, err := parameterPlan(parameter, o)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -85,12 +85,12 @@ func TestAdmittedMemoryStatementEvidence(t *testing.T) {
 			t.Log(string(b))
 		}
 	}
-	p, err := sourcePlan(SGA, Options{OracleMajor: major, Scope: scope, PDB: PDBOptions{AllowInherited: scope == ConnectedPDB}, TargetContainerID: func() int {
+	p, err := racPlan(Options{OracleMajor: major, Scope: scope, PDB: PDBOptions{AllowInherited: scope == ConnectedPDB}, TargetContainerID: func() int {
 		if scope == ConnectedPDB {
 			return id
 		}
 		return 0
-	}()}, true)
+	}()})
 	if err != nil {
 		t.Fatal(err)
 	}

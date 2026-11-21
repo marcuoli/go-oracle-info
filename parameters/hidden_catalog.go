@@ -172,3 +172,29 @@ func HiddenCatalogJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	}
 	return readJSON(ctx, q, plan, limits)
 }
+
+// HiddenCatalogOptions carries the source selectors for the options-based fact APIs.
+type HiddenCatalogOptions struct {
+	OracleMajor int
+	Filter      HiddenCatalogFilter
+}
+
+// HiddenCatalogStatementWithOptions selects the same source as HiddenCatalogStatement using one options value.
+func HiddenCatalogStatementWithOptions(options HiddenCatalogOptions) (string, []any, error) {
+	return HiddenCatalogStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeHiddenCatalogWithOptions selects the same source as DecodeHiddenCatalog using one options value.
+func DecodeHiddenCatalogWithOptions(result session.Result, options HiddenCatalogOptions) (HiddenCatalogResult, error) {
+	return DecodeHiddenCatalog(result, options.OracleMajor, options.Filter)
+}
+
+// HiddenCatalogRowsWithOptions selects the same source as HiddenCatalogRows using one options value.
+func HiddenCatalogRowsWithOptions(ctx context.Context, q rowset.Queryer, options HiddenCatalogOptions) (*sql.Rows, error) {
+	return HiddenCatalogRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// HiddenCatalogJSONWithOptions selects the same source as HiddenCatalogJSON using one options value.
+func HiddenCatalogJSONWithOptions(ctx context.Context, q rowset.Queryer, options HiddenCatalogOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return HiddenCatalogJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}

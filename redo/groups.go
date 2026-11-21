@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/marcuoli/go-oracle-info/internal/datetime"
 
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -46,6 +46,7 @@ func GroupsStatement(major int, filter Filter) (string, []any, error) {
 	plan, err := groupsPlan(major, filter)
 	return plan.sql, plan.args, err
 }
+
 func groupsPlan(major int, filter Filter) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
@@ -113,6 +114,7 @@ func DecodeGroups(result session.Result, major int, filter Filter) (GroupsResult
 	}
 	return decodeGroups(result, plan)
 }
+
 func decodeGroups(result session.Result, plan selection) (GroupsResult, error) {
 	index, err := columns(result, plan)
 	if err != nil {
@@ -177,4 +179,24 @@ func GroupsJSON(ctx context.Context, q rowset.Queryer, major int, filter Filter,
 		return nil, err
 	}
 	return readJSON(ctx, q, plan, limits, func(result session.Result) error { _, err := decodeGroups(result, plan); return err })
+}
+
+// GroupsStatementWithOptions selects the same source as GroupsStatement using one options value.
+func GroupsStatementWithOptions(options LogOptions) (string, []any, error) {
+	return GroupsStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeGroupsWithOptions selects the same source as DecodeGroups using one options value.
+func DecodeGroupsWithOptions(result session.Result, options LogOptions) (GroupsResult, error) {
+	return DecodeGroups(result, options.OracleMajor, options.Filter)
+}
+
+// GroupsRowsWithOptions selects the same source as GroupsRows using one options value.
+func GroupsRowsWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions) (*sql.Rows, error) {
+	return GroupsRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// GroupsJSONWithOptions selects the same source as GroupsJSON using one options value.
+func GroupsJSONWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return GroupsJSON(ctx, q, options.OracleMajor, options.Filter, limits)
 }

@@ -5,9 +5,30 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
+
+// StandbyLogsStatementWithOptions selects the same source as StandbyLogsStatement using one options value.
+func StandbyLogsStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return StandbyLogsStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeStandbyLogsWithOptions selects the same source as DecodeStandbyLogs using one options value.
+func DecodeStandbyLogsWithOptions(result session.Result, options ScopeOptions) (StandbyLogsResult, error) {
+	return DecodeStandbyLogs(result, options.OracleVersion, options.Filter)
+}
+
+// StandbyLogsRowsWithOptions selects the same source as StandbyLogsRows using one options value.
+func StandbyLogsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return StandbyLogsRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// StandbyLogsJSONWithOptions selects the same source as StandbyLogsJSON using one options value.
+func StandbyLogsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return StandbyLogsJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
 
 // StandbyLog preserves source values and SQL NULL without derived health or topology.
 // Exact SCNs are decimal text; native integer columns retain numeric JSON kinds.
@@ -42,6 +63,7 @@ func StandbyLogsStatement(version string, filter Filter) (string, []any, error) 
 	p, e := standbyLogsPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func standbyLogsPlan(version string, filter Filter) (selection, error) {
 	return selectView(version, filter, "GV$STANDBY_LOG", []field{
 		integer("INST_ID", "v.INST_ID"),
@@ -72,6 +94,7 @@ func DecodeStandbyLogs(result session.Result, version string, filter Filter) (St
 	}
 	return decodeStandbyLogs(result, p)
 }
+
 func decodeStandbyLogs(result session.Result, p selection) (StandbyLogsResult, error) {
 	index, e := columns(result, p)
 	if e != nil {

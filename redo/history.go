@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"strconv"
 
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -41,6 +41,7 @@ func HistoryStatement(major int, filter HistoryFilter) (string, []any, error) {
 	plan, err := historyPlan(major, filter)
 	return plan.sql, plan.args, err
 }
+
 func historyPlan(major int, filter HistoryFilter) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
@@ -113,6 +114,7 @@ func DecodeHistory(result session.Result, major int, filter HistoryFilter) (Hist
 	}
 	return decodeHistory(result, plan)
 }
+
 func decodeHistory(result session.Result, plan selection) (HistoryResult, error) {
 	index, err := columns(result, plan)
 	if err != nil {
@@ -180,4 +182,24 @@ func HistoryJSON(ctx context.Context, q rowset.Queryer, major int, filter Histor
 		return nil, err
 	}
 	return readJSON(ctx, q, plan, limits, func(result session.Result) error { _, err := decodeHistory(result, plan); return err })
+}
+
+// HistoryStatementWithOptions selects the same source as HistoryStatement using one options value.
+func HistoryStatementWithOptions(options HistoryOptions) (string, []any, error) {
+	return HistoryStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeHistoryWithOptions selects the same source as DecodeHistory using one options value.
+func DecodeHistoryWithOptions(result session.Result, options HistoryOptions) (HistoryResult, error) {
+	return DecodeHistory(result, options.OracleMajor, options.Filter)
+}
+
+// HistoryRowsWithOptions selects the same source as HistoryRows using one options value.
+func HistoryRowsWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions) (*sql.Rows, error) {
+	return HistoryRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// HistoryJSONWithOptions selects the same source as HistoryJSON using one options value.
+func HistoryJSONWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return HistoryJSON(ctx, q, options.OracleMajor, options.Filter, limits)
 }

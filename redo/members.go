@@ -35,6 +35,7 @@ func MembersStatement(major int, filter Filter) (string, []any, error) {
 	plan, err := membersPlan(major, filter)
 	return plan.sql, plan.args, err
 }
+
 func membersPlan(major int, filter Filter) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
@@ -82,6 +83,7 @@ func DecodeMembers(result session.Result, major int, filter Filter) (MembersResu
 	}
 	return decodeMembers(result, plan)
 }
+
 func decodeMembers(result session.Result, plan selection) (MembersResult, error) {
 	index, err := columns(result, plan)
 	if err != nil {
@@ -139,4 +141,24 @@ func MembersJSON(ctx context.Context, q rowset.Queryer, major int, filter Filter
 		return nil, err
 	}
 	return readJSON(ctx, q, plan, limits, func(result session.Result) error { _, err := decodeMembers(result, plan); return err })
+}
+
+// MembersStatementWithOptions selects the same source as MembersStatement using one options value.
+func MembersStatementWithOptions(options LogOptions) (string, []any, error) {
+	return MembersStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeMembersWithOptions selects the same source as DecodeMembers using one options value.
+func DecodeMembersWithOptions(result session.Result, options LogOptions) (MembersResult, error) {
+	return DecodeMembers(result, options.OracleMajor, options.Filter)
+}
+
+// MembersRowsWithOptions selects the same source as MembersRows using one options value.
+func MembersRowsWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions) (*sql.Rows, error) {
+	return MembersRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// MembersJSONWithOptions selects the same source as MembersJSON using one options value.
+func MembersJSONWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return MembersJSON(ctx, q, options.OracleMajor, options.Filter, limits)
 }

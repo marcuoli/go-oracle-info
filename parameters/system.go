@@ -10,6 +10,26 @@ import (
 	"github.com/marcuoli/go-oracle-session/session"
 )
 
+// SystemStatementWithOptions selects the same source as SystemStatement using one options value.
+func SystemStatementWithOptions(options SourceOptions) (string, []any, error) {
+	return SystemStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeSystemWithOptions selects the same source as DecodeSystem using one options value.
+func DecodeSystemWithOptions(result session.Result, options SourceOptions) (SystemResult, error) {
+	return DecodeSystem(result, options.OracleMajor, options.Filter)
+}
+
+// SystemRowsWithOptions selects the same source as SystemRows using one options value.
+func SystemRowsWithOptions(ctx context.Context, q rowset.Queryer, options SourceOptions) (*sql.Rows, error) {
+	return SystemRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// SystemJSONWithOptions selects the same source as SystemJSON using one options value.
+func SystemJSONWithOptions(ctx context.Context, q rowset.Queryer, options SourceOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return SystemJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}
+
 // SystemParameter is one GV$SYSTEM_PARAMETER row. VALUE retains the source's
 // complete scalar-row text, even for list parameters; no Ordinal is fabricated.
 // Numeric columns keep exact integer text. Optional nil fields mean unprojected
