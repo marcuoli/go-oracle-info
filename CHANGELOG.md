@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add opt-in direct-object diagnostics for reviewed engineered-system catalog statements (#99).
 - Refresh release catalogs from directly reviewed Oracle Support captures and public Oracle sources before publication (#98).
 
 - Add the SuperCluster QFSDP catalog and require an official-source, history-preserving catalog refresh before each module publish (#91).
