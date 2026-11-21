@@ -1,5 +1,9 @@
 # Instance-wide parameters and qualified instance visibility
 
+For an already-observed numeric version, use the additive
+[version-aware Visibility and ScalarSystem APIs](legacy-instance-parameter-compatibility.md).
+They also support the documented Oracle 9.2 and 10g projections.
+
 Use `parameters.ReadSystem` for scalar-row instance-wide facts from
 `GV$SYSTEM_PARAMETER`. Its `Request` takes `OracleMajor`, `Filter` and an
 application-owned `Reference`, just like the existing buffered parameter readers.
