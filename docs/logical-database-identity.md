@@ -57,4 +57,3 @@ go-ora/v2 v2.9.0. Fixtures cover the buffered Reader path and exact version
 selection. Exact historical, non-CDB, MOUNT, non-privileged login and RAC
 observations remain unqualified. The selected view needs access to the
 database control-file facts under the admitted account and state.
-
