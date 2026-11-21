@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.23.0 (2026-11-21)
+
 - Review verified existing Oracle source captures for publication and retain the original capture dates (#102).
 
 - Add opt-in direct-object diagnostics for reviewed engineered-system catalog statements (#99).
