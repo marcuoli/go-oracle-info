@@ -2,8 +2,12 @@ package instances_test
 
 import (
 	"context"
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"github.com/marcuoli/go-oracle-info/instances"
+	"github.com/marcuoli/go-oracle-info/internal/testsql"
+	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
 	"strings"
@@ -83,5 +87,40 @@ func TestVersionsRejectLateMalformedRowsAndFailedPrefix(t *testing.T) {
 	got, err := instances.ReadVersions(ctx, reader, instances.Request{OracleMajor: 19, Reference: ref})
 	if !errors.Is(err, context.Canceled) || got.Rows != nil {
 		t.Fatal(got, err)
+	}
+}
+
+func TestVersionsJSONRetainsOrderedMetadata(t *testing.T) {
+	for _, tc := range []struct {
+		major     int
+		precision instances.VersionPrecision
+	}{
+		{11, instances.LegacyPrecision},
+		{19, instances.FullPrecision},
+	} {
+		columns := []string{"INST_ID", "INSTANCE_NUMBER", "INSTANCE_NAME", "HOST_NAME", "STATUS", "VERSION", "SESSION_USER", "ISDBA"}
+		row := []driver.Value{int64(7), int64(7), "node7", nil, "MOUNTED", "19.0.0.0.0", "SYSTEM", "FALSE"}
+		if tc.major >= 18 {
+			columns = append(columns, "CON_ID", "CURRENT_CONTAINER_ID", "VERSION_FULL")
+			row = append(row, int64(0), "1", "19.32.0.0.0")
+		}
+		db, state := testsql.New(t, testsql.Step{Columns: columns, Values: [][]driver.Value{row}})
+		payload, err := instances.VersionsJSON(t.Context(), db, tc.major, rowset.Limits{})
+		if err != nil || state.Closed() != 1 {
+			t.Fatalf("Oracle %d versions JSON = %s, error = %v, closed = %d", tc.major, payload, err, state.Closed())
+		}
+		var envelope instances.VersionsJSONEnvelope
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatal(err)
+		}
+		context := "SYS_CONTEXT('USERENV')"
+		if envelope.Provenance.OracleMajor != tc.major || envelope.Provenance.Source != "GV$INSTANCE" ||
+			envelope.ContextSource != context || envelope.Precision != tc.precision || !json.Valid(envelope.Data) {
+			t.Fatalf("Oracle %d versions header = %s", tc.major, payload)
+		}
+		fields := "\"context_source\":\"" + context + "\",\"precision\":\"" + string(tc.precision) + "\",\"data\":"
+		if !strings.Contains(string(payload), fields) {
+			t.Fatalf("Oracle %d versions field order = %s", tc.major, payload)
+		}
 	}
 }

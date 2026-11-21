@@ -177,46 +177,18 @@ func query(ctx context.Context, r Reader, request Request, p selection) (session
 	return result, nil
 }
 func nativeJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
 	p.provenance.Complete = true
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: p.provenance}
-	metadata, _ := json.Marshal(envelope)
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{p.provenance.Source, rowset.ErrCapacity}
-	}
-	rows, err := rowset.Query(ctx, q, p.sql, p.args...)
-	if err != nil {
-		return nil, &Error{p.provenance.Source, err}
-	}
-	table, err := rowset.Read(ctx, rows, p.schema, resolved)
-	if err != nil {
-		return nil, &Error{p.provenance.Source, err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
-	}
-	if _, err = columns(result, p); err != nil {
-		return nil, err
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{p.provenance.Source, err}
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate: projection.ValidateRowset(&Error{p.provenance.Source, ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := columns(result, p)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "budget" || stage == "query" || stage == "consume" || stage == "encode" {
+			return &Error{p.provenance.Source, cause}
+		}
+		return cause
+	})
 }

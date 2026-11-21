@@ -162,55 +162,16 @@ func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, err
 	return rows, nil
 }
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
 	plan.provenance.Complete = true
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: plan.provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{plan.provenance.Source, rowset.ErrCapacity}
-	}
-	rows, err := open(ctx, q, plan)
-	if err != nil {
-		return nil, err
-	}
-	// Shared rowset owns the only cursor consumption and finalization. Domain
-	// admission must pass after complete reading, before encoding any JSON.
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{plan.provenance.Source, ErrInvalidEvidence}
-	}
-	if err = validate(result); err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	// Encode the original native table, preserving its order, scalar kinds and NULL.
-	data, err := json.Marshal(table)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	envelope.Data = data
-	payload, err := json.Marshal(envelope)
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		Provenance: plan.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
+	})
+	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &Error{plan.provenance.Source, cause}
+	}, "limits", "query")
 }
 func instanceClause(ids []int64) (string, []any, error) {
 	if len(ids) > 1000 {
@@ -234,4 +195,96 @@ func instanceClause(ids []int64) (string, []any, error) {
 }
 func exactNumber(expr string) string {
 	return "TO_CHAR(" + expr + ", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')"
+}
+
+// LogOptions carries the source selectors for the options-based fact APIs.
+type LogOptions struct {
+	OracleMajor int
+	Filter      Filter
+}
+
+// GroupsStatementWithOptions selects the same source as GroupsStatement using one options value.
+func GroupsStatementWithOptions(options LogOptions) (string, []any, error) {
+	return GroupsStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeGroupsWithOptions selects the same source as DecodeGroups using one options value.
+func DecodeGroupsWithOptions(result session.Result, options LogOptions) (GroupsResult, error) {
+	return DecodeGroups(result, options.OracleMajor, options.Filter)
+}
+
+// GroupsRowsWithOptions selects the same source as GroupsRows using one options value.
+func GroupsRowsWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions) (*sql.Rows, error) {
+	return GroupsRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// GroupsJSONWithOptions selects the same source as GroupsJSON using one options value.
+func GroupsJSONWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return GroupsJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}
+
+// MembersStatementWithOptions selects the same source as MembersStatement using one options value.
+func MembersStatementWithOptions(options LogOptions) (string, []any, error) {
+	return MembersStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeMembersWithOptions selects the same source as DecodeMembers using one options value.
+func DecodeMembersWithOptions(result session.Result, options LogOptions) (MembersResult, error) {
+	return DecodeMembers(result, options.OracleMajor, options.Filter)
+}
+
+// MembersRowsWithOptions selects the same source as MembersRows using one options value.
+func MembersRowsWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions) (*sql.Rows, error) {
+	return MembersRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// MembersJSONWithOptions selects the same source as MembersJSON using one options value.
+func MembersJSONWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return MembersJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}
+
+// HistoryOptions carries the source selectors for the options-based fact APIs.
+type HistoryOptions struct {
+	OracleMajor int
+	Filter      HistoryFilter
+}
+
+// ArchivedLogsStatementWithOptions selects the same source as ArchivedLogsStatement using one options value.
+func ArchivedLogsStatementWithOptions(options HistoryOptions) (string, []any, error) {
+	return ArchivedLogsStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeArchivedLogsWithOptions selects the same source as DecodeArchivedLogs using one options value.
+func DecodeArchivedLogsWithOptions(result session.Result, options HistoryOptions) (ArchivedLogsResult, error) {
+	return DecodeArchivedLogs(result, options.OracleMajor, options.Filter)
+}
+
+// ArchivedLogsRowsWithOptions selects the same source as ArchivedLogsRows using one options value.
+func ArchivedLogsRowsWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions) (*sql.Rows, error) {
+	return ArchivedLogsRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// ArchivedLogsJSONWithOptions selects the same source as ArchivedLogsJSON using one options value.
+func ArchivedLogsJSONWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchivedLogsJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}
+
+// HistoryStatementWithOptions selects the same source as HistoryStatement using one options value.
+func HistoryStatementWithOptions(options HistoryOptions) (string, []any, error) {
+	return HistoryStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeHistoryWithOptions selects the same source as DecodeHistory using one options value.
+func DecodeHistoryWithOptions(result session.Result, options HistoryOptions) (HistoryResult, error) {
+	return DecodeHistory(result, options.OracleMajor, options.Filter)
+}
+
+// HistoryRowsWithOptions selects the same source as HistoryRows using one options value.
+func HistoryRowsWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions) (*sql.Rows, error) {
+	return HistoryRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// HistoryJSONWithOptions selects the same source as HistoryJSON using one options value.
+func HistoryJSONWithOptions(ctx context.Context, q rowset.Queryer, options HistoryOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return HistoryJSON(ctx, q, options.OracleMajor, options.Filter, limits)
 }

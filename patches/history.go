@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -140,39 +140,15 @@ func HistoryRows(ctx context.Context, q rowset.Queryer, options HistoryOptions) 
 // HistoryJSON independently consumes/finalizes a cursor. It returns no JSON on terminal,
 // scan, close, cancellation or capacity failure; the budget includes provenance.
 func HistoryJSON(ctx context.Context, q rowset.Queryer, options HistoryOptions, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	provenance := historyProvenance(options)
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-
-	cursor, err := HistoryRows(ctx, q, options)
-	if err != nil {
-		return nil, err
-	}
-	envelope.Data, err = rowset.ReadJSON(ctx, cursor, historySchema(options), budget)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return HistoryRows(ctx, q, options)
+	}, historySchema(options), limits, rowset.EnvelopeOptions{
+		Provenance: historyProvenance(options),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
 }

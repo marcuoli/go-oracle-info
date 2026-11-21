@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
+
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
-
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -186,52 +185,20 @@ func DatabaseInfoRows(ctx context.Context, q rowset.Queryer, options DatabaseInf
 // DatabaseInfoJSON independently consumes/finalizes a cursor. It returns no JSON on terminal,
 // scan, close, cancellation or capacity failure; the budget includes provenance.
 func DatabaseInfoJSON(ctx context.Context, q rowset.Queryer, options DatabaseInfoOptions, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	provenance := databaseInfoProvenance(options)
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-	if budget.MaxRows > 1 {
-		budget.MaxRows = 1
-	}
-	cursor, err := DatabaseInfoRows(ctx, q, options)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, cursor, databaseInfoSchema(options), budget)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, ErrInvalidEvidence
-	}
-	if _, err = DecodeDatabaseInfo(result, options); err != nil {
-		return nil, err
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return DatabaseInfoRows(ctx, q, options)
+	}, databaseInfoSchema(options), limits, rowset.EnvelopeOptions{
+		MaxRows:    1,
+		Provenance: databaseInfoProvenance(options),
+		Validate: projection.ValidateRowset(ErrInvalidEvidence, func(result session.Result) error {
+			_, err := DecodeDatabaseInfo(result, options)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
 }

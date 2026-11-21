@@ -37,6 +37,10 @@ func TestMemorySourceOwnedNativeAndJSON(t *testing.T) {
 	cols := []string{"VALUE", "SOURCE_CONTAINER_ID", "CURRENT_CONTAINER_ID", "PARAMETER_NAME", "SOURCE_ROWS", "INSTANCE_ID", "TARGET_CONTAINER_ID"}
 	values := []driver.Value{"3.125", "0", "0", "sga_max_size", "1", "1", "0"}
 	input := session.Result{Columns: cols, Rows: [][]session.Value{{{Text: "3.125"}, {Text: "0"}, {Text: "0"}, {Text: "sga_max_size"}, {Text: "1"}, {Text: "1"}, {Text: "0"}}}}
+	decoded, err := DecodeParameter(input, ParameterOptions{Parameter: SGA, Options: options})
+	if err != nil || decoded.State != Available || decoded.ValueGiB != "3.125" {
+		t.Fatal(decoded, err)
+	}
 	reader := sourceReader(func(context.Context, session.Statement) (session.Result, error) { return input, nil })
 	got, err := Read(t.Context(), reader, SourceRequest{Parameter: SGA, Options: options, Reference: ref})
 	if err != nil || got.State != Available || got.ValueGiB != "3.125" || got.Origin != InstanceParameter {
@@ -158,6 +162,19 @@ func TestReadRACPreservesIndependentMetricAndNoRows(t *testing.T) {
 	reader = func(context.Context, session.Statement) (session.Result, error) { cancel(); return input, nil }
 	got, err = ReadRAC(ctx, reader, o, ref)
 	if !errors.Is(err, context.Canceled) || got.SGA.State == Available || got.PGA.State == Available {
+		t.Fatal(got, err)
+	}
+}
+
+func TestConfiguredMemoryDecodersRequireAdmittedSource(t *testing.T) {
+	options := ParameterOptions{Parameter: SGA, Options: Options{Scope: ConnectedPDB, OracleMajor: 26}}
+	if _, _, err := PDBStatementWithOptions(options); !errors.Is(err, ErrUnsupportedVersion) {
+		t.Fatal(err)
+	}
+	if got, err := DecodeParameter(session.Result{}, options); got.State == Available || !errors.Is(err, ErrUnsupportedVersion) {
+		t.Fatal(got, err)
+	}
+	if got, err := DecodePDBWithOptions(session.Result{}, options); got.State == Available || !errors.Is(err, ErrUnsupportedVersion) {
 		t.Fatal(got, err)
 	}
 }

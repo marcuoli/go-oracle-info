@@ -196,44 +196,14 @@ func query(ctx context.Context, reader Reader, request Request, plan selection) 
 	return result, nil
 }
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	type envelope struct {
-		Provenance Provenance `json:"provenance"`
-		Data       any        `json:"data"`
-	}
-	header, err := json.Marshal(envelope{Provenance: plan.provenance})
-	if err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	original := resolved.MaxBytes
-	resolved.MaxBytes -= len(header) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{Operation: "budget", cause: rowset.ErrCapacity}
-	}
-	rows, err := rowset.Query(ctx, q, plan.sql, plan.args...)
-	if err != nil {
-		return nil, &Error{Operation: "query", cause: err}
-	}
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{Operation: "consume", cause: err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
-	}
-	if _, err = columns(result, plan); err != nil {
-		return nil, &Error{Operation: "decode", cause: err}
-	}
-	payload, err := json.Marshal(envelope{Provenance: plan.provenance, Data: table})
-	if len(payload) > original {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
+		Provenance: plan.provenance,
+		Validate: projection.ValidateRowset(ErrInvalidEvidence, func(result session.Result) error {
+			_, err := columns(result, plan)
+			return err
+		}),
+	})
+	return payload, projection.WrapColumnEnvelopeError(err, func(operation string, cause error) error {
+		return &Error{Operation: operation, cause: cause}
+	})
 }

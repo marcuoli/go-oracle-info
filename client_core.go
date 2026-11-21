@@ -77,7 +77,7 @@ func (c *Client) Components(ctx context.Context) (*sql.Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	return registry.Rows(ctx, c.native(), major)
+	return registry.ComponentsRows(ctx, c.native(), registry.ComponentsOptions{OracleMajor: major})
 }
 
 // ComponentsJSON independently consumes Components's source into bounded complete JSON.
@@ -91,7 +91,7 @@ func (c *Client) ComponentsJSON(ctx context.Context, limits ...JSONLimits) (json
 	if err != nil {
 		return nil, err
 	}
-	return registry.JSON(ctx, c.native(), major, resolved)
+	return registry.ComponentsJSON(ctx, c.native(), registry.ComponentsOptions{OracleMajor: major}, resolved)
 }
 
 // Services returns the caller-native cursor for detailed dictionary service metadata, without reachability inference.

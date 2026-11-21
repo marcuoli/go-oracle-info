@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"strconv"
 	"strings"
@@ -130,48 +129,19 @@ func InvalidDetailsRows(ctx context.Context, q rowset.Queryer, major int, owners
 // InvalidDetailsJSON independently finalizes its cursor before publishing bounded
 // JSON. Native numeric/date meaning is not inferred from object-name strings.
 func InvalidDetailsJSON(ctx context.Context, q rowset.Queryer, major int, owners []string, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: invalidDetailsProvenance(major, owners)}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-	cursor, err := InvalidDetailsRows(ctx, q, major, owners...)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, cursor, invalidDetailsSchema(), budget)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, ErrInvalidEvidence
-	}
-	if _, err = DecodeInvalidDetails(result, major, owners...); err != nil {
-		return nil, err
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return InvalidDetailsRows(ctx, q, major, owners...)
+	}, invalidDetailsSchema(), limits, rowset.EnvelopeOptions{
+		Provenance: invalidDetailsProvenance(major, owners),
+		Validate: projection.ValidateRowset(ErrInvalidEvidence, func(result session.Result) error {
+			_, err := DecodeInvalidDetails(result, major, owners...)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
 }

@@ -201,50 +201,28 @@ func VersionsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowse
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
 	precision := LegacyPrecision
 	if major >= 18 {
 		precision = FullPrecision
 	}
-	envelope := VersionsJSONEnvelope{Provenance: plan.provenance, ContextSource: "SYS_CONTEXT('USERENV')", Precision: precision}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{Operation: "budget versions", cause: rowset.ErrCapacity}
-	}
-	rows, err := open(ctx, q, plan)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{Operation: "consume versions", cause: err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{Operation: "validate versions", cause: ErrInvalidEvidence}
-	}
-	if _, err := DecodeVersions(result, major); err != nil {
-		return nil, err
-	}
-	data, err := json.Marshal(table)
-	if err != nil {
-		return nil, &Error{Operation: "encode versions", cause: err}
-	}
-	envelope.Data = data
-	payload, err := json.Marshal(envelope)
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{Operation: "encode versions", cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		Header: struct {
+			Provenance    Provenance       `json:"provenance"`
+			ContextSource string           `json:"context_source"`
+			Precision     VersionPrecision `json:"precision"`
+		}{Provenance: plan.provenance, ContextSource: "SYS_CONTEXT('USERENV')", Precision: precision},
+		Validate: projection.ValidateRowset(&Error{Operation: "validate versions", cause: ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := DecodeVersions(result, major)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		switch stage {
+		case "encode", "budget", "consume":
+			return &Error{Operation: stage + " versions", cause: cause}
+		}
+		return cause
+	})
 }

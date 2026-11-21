@@ -113,3 +113,19 @@ func TestJobsCompleteAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestJobsJSONRejectsLateOwnerMismatch(t *testing.T) {
+	db, state := testsql.New(t, testsql.Step{
+		Columns: []string{"OWNER", "JOB_NAME", "ENABLED", "STATE", "FAILURE_COUNT", "NEXT_RUN_DATE"},
+		Values: [][]driver.Value{
+			{"CaseOwner", "first_job", "TRUE", "SCHEDULED", "0", nil},
+			{"CASEOWNER", "other_job", "TRUE", "SCHEDULED", "0", nil},
+		},
+	})
+	payload, err := JobsJSON(t.Context(), db, JobsOptions{OracleMajor: 19, Owner: "CaseOwner"}, rowset.Limits{})
+	var failure *Error
+	if payload != nil || !errors.Is(err, ErrInvalidEvidence) ||
+		!errors.As(err, &failure) || failure.Source != "DBA_SCHEDULER_JOBS" || state.Closed() != 1 {
+		t.Fatalf("jobs JSON = %s, err = %v, closed = %d", payload, err, state.Closed())
+	}
+}

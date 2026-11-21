@@ -36,10 +36,14 @@ A fact has one deterministic source selection shared by all supported paths:
 4. `...Rows`: return the actual caller-native `*sql.Rows`. Caller owns
    Next/Scan/Err/Close, handle affinity, deadlines and finite stream budgets.
    Do not wrap/fabricate rows or create return-time cancellation.
-5. `...JSON`: independently query the same selection, delegate its complete
-   consumption to shared rowset, validate domain admission, then encode standard
-   JSON. Query, scan, terminal, close, cancellation, decoding or capacity errors
-   return no bytes. The final encoded-byte limit includes metadata/envelope.
+5. `...JSON` independently queries the same selection through
+   `rowset.QueryEnvelopeJSON`. Supply the schema, provenance and optional
+   domain validator. The shared helper opens and finalizes the cursor, checks
+   the encoded envelope against the byte budget, and returns nil JSON on query,
+   scan, terminal, close, validation, cancellation or capacity failure. Fact
+   packages retain their historical error wrapping and any source row limit.
+   Typed object serialization, such as metadata's result, encodes the typed
+   domain model after shared rowset consumption.
 6. A useful punctual root `Client` method hides source/version/reference wiring
    without caching or owning the borrowed handle. Do not require a native handle
    from callers that already own an admitted buffered reader.
@@ -50,8 +54,14 @@ inputs; a new struct is not mandatory merely for uniform spelling. SQL aliases,
 column order/kinds, source and version selection must not drift between paths.
 
 `redo.GroupsStatement`, `DecodeGroups`, `ReadGroups`, `GroupsRows` and `GroupsJSON`
-are a complete dataset example. Existing names such as package-level `Statement`,
-`Read`, `Rows`, `JSON`, and scalar observation methods remain compatible.
+are a complete dataset example. Use one admitted options value for a canonical
+family. Statement takes options. Decode takes result then options. Read takes
+context, reader and request. Rows takes context, queryer and options. JSON takes
+context, queryer, options and limits. A single version argument already has the
+same position. Group multiple existing selectors in options-based forms with
+the `WithOptions` suffix where the original names already carry another
+signature. Preserve existing generic names and scalar observations as
+compatibility APIs.
 
 ## Values, scope and completion
 

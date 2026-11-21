@@ -125,47 +125,24 @@ func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	metadata, err := json.Marshal(JSONEnvelope{Provenance: plan.provenance})
-	if err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{Operation: "budget", cause: rowset.ErrCapacity}
-	}
-	rows, err := open(ctx, q, plan)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{Operation: "consume", cause: err}
-	}
-	// A typed rowset is complete transport evidence, not domain admission.
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
-	}
-	if _, err = columns(result, plan.schema); err != nil {
-		return nil, err
-	}
-	data, err := json.Marshal(table)
-	if err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	payload, err := json.Marshal(JSONEnvelope{Provenance: plan.provenance, Data: data})
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		Provenance: plan.provenance,
+		Validate: projection.ValidateRowset(&Error{Operation: "decode", cause: ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := columns(result, plan.schema)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		switch stage {
+		case "header", "encode":
+			return &Error{Operation: "encode", cause: cause}
+		case "budget", "consume":
+			return &Error{Operation: stage, cause: cause}
+		}
+		return cause
+	})
 }
 
 func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, error) {
@@ -197,4 +174,40 @@ func decode(result session.Result, plan selection) (Result, error) {
 		state = NoRows
 	}
 	return Result{State: state, Provenance: plan.provenance, Rows: rows}, nil
+}
+
+// InventoryOptions admits the Oracle projection for visible instances.
+type InventoryOptions struct {
+	OracleMajor int
+}
+
+// InventoryRequest adds the caller's SQL reference to the source options.
+type InventoryRequest struct {
+	Options   InventoryOptions
+	Reference reference.Reference
+}
+
+// InventoryStatement is the named form of Statement.
+func InventoryStatement(options InventoryOptions) (string, error) {
+	return Statement(options.OracleMajor)
+}
+
+// DecodeInventory is the named form of Decode.
+func DecodeInventory(result session.Result, options InventoryOptions) (Result, error) {
+	return Decode(result, options.OracleMajor)
+}
+
+// ReadInventory is the named form of Read.
+func ReadInventory(ctx context.Context, reader Reader, request InventoryRequest) (Result, error) {
+	return Read(ctx, reader, Request{OracleMajor: request.Options.OracleMajor, Reference: request.Reference})
+}
+
+// InventoryRows is the named form of Rows.
+func InventoryRows(ctx context.Context, q rowset.Queryer, options InventoryOptions) (*sql.Rows, error) {
+	return Rows(ctx, q, options.OracleMajor)
+}
+
+// InventoryJSON is the named form of JSON.
+func InventoryJSON(ctx context.Context, q rowset.Queryer, options InventoryOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options.OracleMajor, limits)
 }

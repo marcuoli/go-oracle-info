@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Simplify exact RAC GiB rounding after byte aggregation and share integer-text validation across fact decoders (#77).
+- Share bounded native fact JSON through go-oracle-session/rowset and complete the named fact APIs and options-based forms while retaining existing callers and payloads (#76).
 
 ## v0.22.0 (2026-11-20)
 

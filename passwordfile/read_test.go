@@ -236,10 +236,17 @@ func TestMetadataJSONIsAtomicAndByteBounded(t *testing.T) {
 		step testsql.Step
 	}{{"terminal", func() testsql.Step { s := step; s.NextErr = failure; return s }()}, {"close", func() testsql.Step { s := step; s.CloseErr = failure; return s }()}, {"two-rows", func() testsql.Step { s := step; s.Values = append(s.Values, s.Values[0]); return s }()}} {
 		t.Run(tc.name, func(t *testing.T) {
-			db, _ := testsql.New(t, tc.step)
+			db, state := testsql.New(t, tc.step)
 			got, err := passwordfile.JSON(t.Context(), db, baseOptions, rowset.Limits{})
 			if err == nil || got != nil || strings.Contains(err.Error(), failure.Error()) {
 				t.Fatal("failed metadata escaped", string(got), err)
+			}
+			if tc.name == "two-rows" {
+				var domain *passwordfile.Error
+				if !errors.As(err, &domain) || domain.Operation != "consume" ||
+					!errors.Is(err, rowset.ErrCapacity) || state.Closed() != 1 {
+					t.Fatalf("metadata row cap = %v, closed = %d", err, state.Closed())
+				}
 			}
 		})
 	}

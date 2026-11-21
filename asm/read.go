@@ -152,55 +152,16 @@ func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, err
 	return rows, nil
 }
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
 	plan.provenance.Complete = true
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: plan.provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{plan.provenance.Source, rowset.ErrCapacity}
-	}
-	rows, err := open(ctx, q, plan)
-	if err != nil {
-		return nil, err
-	}
-	// Shared rowset owns the only cursor consumption and finalization. Domain
-	// admission must pass after complete reading, before encoding any JSON.
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{plan.provenance.Source, ErrInvalidEvidence}
-	}
-	if err = validate(result); err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	// Encode the original native table, preserving its order, scalar kinds and NULL.
-	data, err := json.Marshal(table)
-	if err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	envelope.Data = data
-	payload, err := json.Marshal(envelope)
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{plan.provenance.Source, err}
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		Provenance: plan.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
+	})
+	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &Error{plan.provenance.Source, cause}
+	}, "limits", "query")
 }
 func instanceClause(ids []int64) (string, []any, error) {
 	if len(ids) > 1000 {

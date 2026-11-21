@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"strconv"
 
 	"github.com/marcuoli/go-oracle-info/internal/projection"
@@ -140,48 +139,43 @@ func EncryptionJSON(ctx context.Context, q rowset.Queryer, major int, root bool,
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, &ReadError{cause: rowset.ErrCapacity}
-	}
-	cursor, err := EncryptionRows(ctx, q, major, root, kind)
-	if err != nil {
-		return nil, &ReadError{cause: err}
-	}
-	table, err := rowset.Read(ctx, cursor, encryptionSchema(), budget)
-	if err != nil {
-		return nil, &ReadError{cause: err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &ReadError{cause: ErrInvalidEvidence}
-	}
-	if _, err = DecodeEncryption(result, major, root, kind); err != nil {
-		return nil, &ReadError{cause: err}
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, &ReadError{cause: err}
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return EncryptionRows(ctx, q, major, root, kind)
+	}, encryptionSchema(), limits, rowset.EnvelopeOptions{
+		Provenance: provenance,
+		Validate: projection.ValidateRowset(ErrInvalidEvidence, func(result session.Result) error {
+			_, err := DecodeEncryption(result, major, root, kind)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &ReadError{cause: cause}
+	}, "limits", "header")
+}
+
+// EncryptionOptions carries the source selectors for the options-based fact APIs.
+type EncryptionOptions struct {
+	OracleMajor int
+	Root        bool
+	Kind        EncryptionKind
+}
+
+// EncryptionStatementWithOptions selects the same source as EncryptionStatement using one options value.
+func EncryptionStatementWithOptions(options EncryptionOptions) (string, error) {
+	return EncryptionStatement(options.OracleMajor, options.Root, options.Kind)
+}
+
+// DecodeEncryptionWithOptions selects the same source as DecodeEncryption using one options value.
+func DecodeEncryptionWithOptions(result session.Result, options EncryptionOptions) (EncryptionResult, error) {
+	return DecodeEncryption(result, options.OracleMajor, options.Root, options.Kind)
+}
+
+// EncryptionRowsWithOptions selects the same source as EncryptionRows using one options value.
+func EncryptionRowsWithOptions(ctx context.Context, q rowset.Queryer, options EncryptionOptions) (*sql.Rows, error) {
+	return EncryptionRows(ctx, q, options.OracleMajor, options.Root, options.Kind)
+}
+
+// EncryptionJSONWithOptions selects the same source as EncryptionJSON using one options value.
+func EncryptionJSONWithOptions(ctx context.Context, q rowset.Queryer, options EncryptionOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return EncryptionJSON(ctx, q, options.OracleMajor, options.Root, options.Kind, limits)
 }

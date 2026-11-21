@@ -7,6 +7,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -97,37 +98,51 @@ func Rows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error) {
 // JSON independently consumes/finalizes Rows' projection into bounded JSON.
 // No prefix survives terminal, close, cancellation, conversion or capacity failure.
 func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: source(major)}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-	cursor, err := Rows(ctx, q, major)
-	if err != nil {
-		return nil, err
-	}
-	envelope.Data, err = rowset.ReadJSON(ctx, cursor, schema(major), budget)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &ReadError{cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return Rows(ctx, q, major)
+	}, schema(major), limits, rowset.EnvelopeOptions{
+		Provenance: source(major),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
+}
+
+// ComponentsOptions admits the Oracle projection for registered components.
+type ComponentsOptions struct {
+	OracleMajor int
+}
+
+// ComponentsRequest adds the caller's SQL reference to the source options.
+type ComponentsRequest struct {
+	Options   ComponentsOptions
+	Reference reference.Reference
+}
+
+// ComponentsStatement is the named form of Statement.
+func ComponentsStatement(options ComponentsOptions) (string, error) {
+	return Statement(options.OracleMajor)
+}
+
+// DecodeComponents is the named form of Decode.
+func DecodeComponents(result session.Result, options ComponentsOptions) ([]Component, error) {
+	return Decode(result, options.OracleMajor)
+}
+
+// ReadComponents is the named form of Read.
+func ReadComponents(ctx context.Context, reader Reader, request ComponentsRequest) (Result, error) {
+	return Read(ctx, reader, Request{OracleMajor: request.Options.OracleMajor, Reference: request.Reference})
+}
+
+// ComponentsRows is the named form of Rows.
+func ComponentsRows(ctx context.Context, q rowset.Queryer, options ComponentsOptions) (*sql.Rows, error) {
+	return Rows(ctx, q, options.OracleMajor)
+}
+
+// ComponentsJSON is the named form of JSON.
+func ComponentsJSON(ctx context.Context, q rowset.Queryer, options ComponentsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options.OracleMajor, limits)
 }

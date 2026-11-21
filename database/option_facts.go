@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -115,39 +115,15 @@ func OptionsRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, e
 // OptionsJSON independently consumes/finalizes a cursor. It returns no JSON on terminal,
 // scan, close, cancellation or capacity failure; the budget includes provenance.
 func OptionsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	provenance := optionsProvenance(major)
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-
-	cursor, err := OptionsRows(ctx, q, major)
-	if err != nil {
-		return nil, err
-	}
-	envelope.Data, err = rowset.ReadJSON(ctx, cursor, optionsSchema(major), budget)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return OptionsRows(ctx, q, major)
+	}, optionsSchema(major), limits, rowset.EnvelopeOptions{
+		Provenance: optionsProvenance(major),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
 }
