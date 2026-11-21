@@ -48,7 +48,11 @@ func queryParameters(ctx context.Context, reader Reader, ref reference.Reference
 	}
 	result, err := reader.Query(ctx, session.Statement{Reference: ref, Text: plan.sql, Args: plan.args})
 	if err = errors.Join(err, ctx.Err()); err != nil {
-		return session.Result{}, &Error{Source: plan.provenance.Source, cause: err}
+		failure := &Error{Source: plan.provenance.Source, cause: err}
+		if plan.classifyAccess {
+			return session.Result{}, projection.ClassifySourceError(failure)
+		}
+		return session.Result{}, failure
 	}
 	return result, nil
 }
@@ -84,6 +88,13 @@ func parameterColumns(result session.Result, plan selection) (map[string]int, er
 				if _, err := strconv.ParseInt(value.Text, 10, 64); err != nil {
 					return fail()
 				}
+			}
+		}
+		if plan.provenance.Scope == scalarDatabaseRows {
+			id := row[index["CON_ID"]]
+			number, err := strconv.ParseInt(id.Text, 10, 64)
+			if id.Null || err != nil || number != 0 {
+				return fail()
 			}
 		}
 		name := row[index["NAME"]]
@@ -151,22 +162,37 @@ func (e *Error) Unwrap() error { return e.cause }
 func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, error) {
 	rows, err := rowset.Query(ctx, q, plan.sql, plan.args...)
 	if err != nil {
-		return nil, &Error{Source: plan.provenance.Source, cause: err}
+		failure := &Error{Source: plan.provenance.Source, cause: err}
+		if plan.classifyAccess {
+			return nil, projection.ClassifySourceError(failure)
+		}
+		return nil, failure
 	}
 	return rows, nil
 }
 
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits) (json.RawMessage, error) {
+	return readParameterJSON(ctx, q, plan, plan.provenance, limits)
+}
+
+func readParameterJSON(ctx context.Context, q rowset.Queryer, plan selection, provenance any, limits rowset.Limits) (json.RawMessage, error) {
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
-		Provenance: plan.provenance,
+		Provenance: provenance,
 		Validate: projection.ValidateRowset(&Error{Source: plan.provenance.Source, cause: ErrInvalidEvidence}, func(result session.Result) error {
 			_, err := parameterColumns(result, plan)
 			return err
 		}),
 	})
-	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
-		return &Error{Source: plan.provenance.Source, cause: cause}
-	}, "limits", "validate")
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "limits" || stage == "validate" {
+			return cause
+		}
+		failure := &Error{Source: plan.provenance.Source, cause: cause}
+		if stage == "query" && plan.classifyAccess {
+			return projection.ClassifySourceError(failure)
+		}
+		return failure
+	})
 }
 
 // SourceOptions carries the source selectors for the options-based fact APIs.
@@ -188,7 +214,7 @@ const MaxFilterValues = 1000
 var (
 	// ErrInvalidFilter rejects invalid strings/IDs or an Oracle IN-list budget overflow.
 	ErrInvalidFilter = errors.New("invalid parameter filter")
-	// ErrUnsupportedVersion rejects a major below the reviewed11g source floor.
+	// ErrUnsupportedVersion rejects a release outside the selector's reviewed range.
 	ErrUnsupportedVersion = errors.New("unsupported Oracle parameter source version")
 )
 
@@ -207,10 +233,11 @@ type Provenance struct {
 }
 
 type selection struct {
-	sql        string
-	args       []any
-	schema     []rowset.Column
-	provenance Provenance
+	sql            string
+	args           []any
+	schema         []rowset.Column
+	provenance     Provenance
+	classifyAccess bool
 }
 
 func source(view string, major int, names []string, instances []int64) Provenance {
@@ -251,7 +278,9 @@ func build(major int, provenance Provenance, columns []rowset.Column, sids []str
 		clauses = append(clauses, `NLSSORT(SUBSTR(p.NAME,1,1), 'NLS_SORT=BINARY') = NLSSORT('_', 'NLS_SORT=BINARY')`)
 	}
 	args := make([]any, 0, len(provenance.Names)+len(provenance.Instances)+len(sids))
-	if major >= 12 {
+	if provenance.Scope == scalarDatabaseRows {
+		clauses = append(clauses, "p.CON_ID = 0")
+	} else if major >= 12 {
 		clauses = append(clauses, "p.CON_ID IN (0,TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID')))")
 	}
 	if len(provenance.Instances) > 0 {

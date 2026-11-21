@@ -53,6 +53,8 @@ private native cursors from a Session lease.
 | dataguard | Status, Lag |
 | engineeredsystem/catalog | Metadata, Configuration, VisibleCellCount, Cells, Alerts, ConnectedCells |
 | identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap |
+| instances | Visibility |
+| parameters | ScalarSystem |
 | objects | InvalidObjects, ObjectInventory, Schema, ObjectTotals, Tables, Table, TableCount, TablesStatistics, TableStatistics, OldestStatistics |
 | performance | Blockers, ResourceLimits |
 | scheduler | Jobs |

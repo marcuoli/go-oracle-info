@@ -63,15 +63,9 @@ func Read(ctx context.Context, reader Reader, request Request) (Result, error) {
 		return Result{State: Unavailable}, err
 	}
 	unavailable := Result{State: Unavailable, Provenance: plan.provenance}
-	if reader == nil || (reflect.ValueOf(reader).Kind() == reflect.Pointer && reflect.ValueOf(reader).IsNil()) || request.Reference.Validate() != nil {
-		return unavailable, ErrInvalidRequest
-	}
-	if err := ctx.Err(); err != nil {
-		return unavailable, &Error{Operation: "query", cause: err}
-	}
-	result, err := reader.Query(ctx, session.Statement{Reference: request.Reference, Text: plan.sql})
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return unavailable, &Error{Operation: "query", cause: err}
+	result, err := queryInventory(ctx, reader, request.Reference, plan)
+	if err != nil {
+		return unavailable, err
 	}
 	facts, decodeErr := decode(result, plan)
 	if err := errors.Join(decodeErr, ctx.Err()); err != nil {
@@ -97,8 +91,12 @@ func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits
 	if err != nil {
 		return nil, err
 	}
+	return inventoryJSON(ctx, q, plan, plan.provenance, limits)
+}
+
+func inventoryJSON(ctx context.Context, q rowset.Queryer, plan selection, provenance any, limits rowset.Limits) (json.RawMessage, error) {
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql), plan.schema, limits, rowset.EnvelopeOptions{
-		Provenance: plan.provenance,
+		Provenance: provenance,
 		Validate: projection.ValidateRowset(&Error{Operation: "decode", cause: ErrInvalidEvidence}, func(result session.Result) error {
 			_, err := columns(result, plan.schema)
 			return err
@@ -108,7 +106,13 @@ func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits
 		switch stage {
 		case "header", "encode":
 			return &Error{Operation: "encode", cause: cause}
-		case "query", "budget", "consume":
+		case "query":
+			failure := &Error{Operation: stage, cause: cause}
+			if plan.classifyAccess {
+				return projection.ClassifySourceError(failure)
+			}
+			return failure
+		case "budget", "consume":
 			return &Error{Operation: stage, cause: cause}
 		}
 		return cause
@@ -186,6 +190,10 @@ func instancePlan(major int) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
 	}
+	return selectInventory(major), nil
+}
+
+func selectInventory(major int) selection {
 	columns := []rowset.Column{{Name: "INST_ID", Kind: rowset.Integer}}
 	scope := "visible_qualified_instances"
 	if major >= 12 {
@@ -193,8 +201,11 @@ func instancePlan(major int) (selection, error) {
 		scope = "current_container_and_whole_database_qualified_instances"
 	}
 	columns = append(columns, rowset.Column{Name: "INSTANCE_NUMBER", Kind: rowset.Integer})
-	for _, name := range []string{"INSTANCE_NAME", "HOST_NAME", "STATUS", "DATABASE_STATUS", "PARALLEL", "BLOCKED"} {
+	for _, name := range []string{"INSTANCE_NAME", "HOST_NAME", "STATUS", "DATABASE_STATUS", "PARALLEL"} {
 		columns = append(columns, rowset.Column{Name: name, Kind: rowset.Text})
+	}
+	if major >= 11 {
+		columns = append(columns, rowset.Column{Name: "BLOCKED", Kind: rowset.Text})
 	}
 	aliases := make([]string, len(columns))
 	for i, column := range columns {
@@ -209,5 +220,23 @@ func instancePlan(major int) (selection, error) {
 		text += ", i.CON_ID"
 	}
 	text += ", i.INSTANCE_NUMBER"
-	return selection{sql: text, schema: columns, provenance: Provenance{Source: "GV$INSTANCE", OracleMajor: major, Scope: scope}}, nil
+	return selection{sql: text, schema: columns, provenance: Provenance{Source: "GV$INSTANCE", OracleMajor: major, Scope: scope}}
+}
+
+func queryInventory(ctx context.Context, reader Reader, ref reference.Reference, plan selection) (session.Result, error) {
+	if reader == nil || (reflect.ValueOf(reader).Kind() == reflect.Pointer && reflect.ValueOf(reader).IsNil()) || ref.Validate() != nil {
+		return session.Result{}, ErrInvalidRequest
+	}
+	if err := ctx.Err(); err != nil {
+		return session.Result{}, &Error{Operation: "query", cause: err}
+	}
+	result, err := reader.Query(ctx, session.Statement{Reference: ref, Text: plan.sql})
+	if err = errors.Join(err, ctx.Err()); err != nil {
+		failure := &Error{Operation: "query", cause: err}
+		if plan.classifyAccess {
+			return session.Result{}, projection.ClassifySourceError(failure)
+		}
+		return session.Result{}, failure
+	}
+	return result, nil
 }

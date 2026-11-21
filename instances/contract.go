@@ -58,13 +58,16 @@ type Request struct {
 	Reference   reference.Reference
 }
 
-// State separates an observed visible set, successful empty set and failed read.
+// State separates observed rows, successful empty results and rejected reads.
 type State string
 
 const (
-	Available   State = "available"
-	NoRows      State = "no_rows"
-	Unavailable State = "unavailable"
+	Available    State = "available"
+	NoRows       State = "no_rows"
+	Inaccessible State = "inaccessible"
+	Unavailable  State = "unavailable"
+	Failed       State = "failed"
+	Unsupported  State = "unsupported"
 )
 
 // Error prints a static operation, retaining original causes for deliberate
@@ -81,7 +84,11 @@ func (e *Error) Unwrap() error { return e.cause }
 func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, error) {
 	rows, err := rowset.Query(ctx, q, plan.sql)
 	if err != nil {
-		return nil, &Error{Operation: "query", cause: err}
+		failure := &Error{Operation: "query", cause: err}
+		if plan.classifyAccess {
+			return nil, projection.ClassifySourceError(failure)
+		}
+		return nil, failure
 	}
 	return rows, nil
 }
@@ -95,8 +102,13 @@ type Provenance struct {
 }
 
 var (
-	// ErrUnsupportedVersion rejects a source below the reviewed 11g floor.
+	// ErrUnsupportedVersion rejects a release outside the selector's reviewed range.
 	ErrUnsupportedVersion = errors.New("unsupported Oracle instance visibility version")
+	// ErrSourceInaccessible identifies a query rejected for insufficient privilege.
+	ErrSourceInaccessible = projection.ErrSourceInaccessible
+	// ErrSourceUnavailable identifies an unresolved source or unavailable database
+	// state. The original query diagnostic remains in the error chain.
+	ErrSourceUnavailable = projection.ErrSourceUnavailable
 	// ErrInvalidRequest rejects an absent reader or invalid SQL reference.
 	ErrInvalidRequest = errors.New("instance reader and valid reference are required")
 	// ErrInvalidEvidence rejects malformed source metadata, IDs or values.
@@ -104,7 +116,8 @@ var (
 )
 
 type selection struct {
-	sql        string
-	schema     []rowset.Column
-	provenance Provenance
+	sql            string
+	schema         []rowset.Column
+	provenance     Provenance
+	classifyAccess bool
 }
