@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add an offline Oracle Database, Exadata and ODA release catalog seeded from verified Harvester and Oracle records (#86).
 - Add independent PDB-scoped scalar parameter, Resource Manager sample and memory gauge facts (#82).
 - Add version-aware per-member container inventory and independently readable PDB saved states (#81).
 - Organize complete Oracle facts in uniform source files with their SQL, decoding and native APIs together, preserving compatibility symbols and removing superseded files (#76).
