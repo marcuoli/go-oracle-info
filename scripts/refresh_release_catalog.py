@@ -11,7 +11,9 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
-from seed_release_catalog import build_catalogs, oracle_url, read_json, sha, write_catalogs
+from seed_release_catalog import (
+    LOCAL_PATCH_EXPORT, LOCAL_PATCH_EXPORT_TITLE, build_catalogs, oracle_url, read_json, sha, write_catalogs,
+)
 
 PRODUCTS = ("database", "exadata", "oda", "supercluster")
 ROLES = {
@@ -173,9 +175,44 @@ def used_sources(catalog):
             yield from artifact.get("corroborated_by", [])
 
 
+def migrate_patch_export_source(catalog):
+    # Main snapshots created before #96 used the previous export ID. Reconcile
+    # those rows with the same source identity and retain archived evidence.
+    legacy = "harvester-patch-export"
+    sources = []
+    aliases = {}
+    for source in catalog["sources"]:
+        id_ = source["id"]
+        if original_id(id_) == legacy:
+            renamed = LOCAL_PATCH_EXPORT + id_[len(legacy):]
+            sources.append(dict(source, id=renamed, title=LOCAL_PATCH_EXPORT_TITLE))
+            aliases[id_] = renamed
+        else:
+            sources.append(source)
+            aliases[id_] = id_
+    if all(old == new for old, new in aliases.items()):
+        return catalog
+
+    migrated = dict(catalog, sources=sources)
+    for field in ("releases", "patches", "coverage"):
+        migrated[field] = [remap_row(row, aliases) for row in catalog[field]]
+    statuses = {
+        "harvester_snapshot": "local_patch_snapshot",
+        "harvester_qfsdp_snapshot": "local_qfsdp_snapshot",
+    }
+    for row in migrated["coverage"]:
+        if original_id(row["source"]) == LOCAL_PATCH_EXPORT and row["status"] in statuses:
+            row["status"] = statuses[row["status"]]
+    if "history" in catalog:
+        migrated["history"] = {field: [remap_row(row, aliases) for row in rows]
+                               for field, rows in catalog["history"].items()}
+    return migrated
+
+
 def merge_catalog(old, fresh):
     if old["product"] != fresh["product"] or old["schema_version"] != fresh["schema_version"]:
         raise ValueError("cannot reconcile different products or schemas")
+    old = migrate_patch_export_source(old)
     sources, aliases = prior_aliases(old, fresh)
     result = dict(fresh)
     release_history, patch_history = [], []
@@ -223,16 +260,16 @@ def recent(value, now, field):
 def validate_review(review, version, docs, oda, evidence_root, now):
     if review.get("schema_version") != 1 or review.get("version") != version:
         raise ValueError("review does not match the requested version or schema")
-    for field in ("history_base", "harvester_revision"):
+    for field in ("history_base", "input_revision"):
         if not COMMIT.fullmatch(review.get(field, "")):
             raise ValueError(f"review needs a full commit ID for {field}")
     if not review.get("reviewed_by", "").strip():
         raise ValueError("reviewer is required")
     timestamps = [recent(review["reviewed_utc"], now, "review")]
     captured = (docs / "patch-catalog.json").read_bytes()
-    if sha(captured) != review.get("harvester_export_sha256"):
-        raise ValueError("Harvester export hash differs from the reviewed input")
-    timestamps.append(recent(json.loads(captured)["generated_at"], now, "Harvester export"))
+    if sha(captured) != review.get("patch_export_sha256"):
+        raise ValueError("patch export hash differs from the reviewed input")
+    timestamps.append(recent(json.loads(captured)["generated_at"], now, "patch export"))
     oda_input = (oda / "sources.json").read_bytes()
     if sha(oda_input) != review.get("oda_manifest_sha256"):
         raise ValueError("ODA capture manifest differs from the reviewed input")
@@ -242,9 +279,9 @@ def validate_review(review, version, docs, oda, evidence_root, now):
            for row in oda_manifest["releases"]):
         raise ValueError("ODA source capture is incomplete; reconcile the unavailable patch pages before publishing")
     manifest = (docs / "mos-capture-manifest.json").read_bytes()
-    if sha(manifest) != review.get("harvester_manifest_sha256"):
-        raise ValueError("Harvester capture manifest differs from the reviewed input")
-    captures = index(json.loads(manifest)["articles"], lambda r: r["current_id"], "Harvester capture")
+    if sha(manifest) != review.get("mos_manifest_sha256"):
+        raise ValueError("MOS capture manifest differs from the reviewed input")
+    captures = index(json.loads(manifest)["articles"], lambda r: r["current_id"], "MOS capture")
     checks = review["checks"]
     if Counter(x["role"] for x in checks) != Counter(ROLES.keys()):
         raise ValueError("review must cover each Oracle authority exactly once")
@@ -263,7 +300,7 @@ def validate_review(review, version, docs, oda, evidence_root, now):
             if (check["identifier"] != article or check["title"] != capture.get("title")
                     or check.get("old_doc_id") != capture.get("old_doc_id")
                     or check["evidence_sha256"] != capture.get("sha256")):
-                raise ValueError(f"review must match the current Harvester MOS capture for {role}")
+                raise ValueError(f"review must match the current MOS capture for {role}")
             timestamps.append(recent(capture["checked_utc"], now, role + " capture"))
         pathname = Path(check["evidence"])
         if pathname.is_absolute() or ".." in pathname.parts:
@@ -300,7 +337,7 @@ def main():
     ap.add_argument("mode", choices=("refresh", "verify", "resume"))
     ap.add_argument("--version", required=True)
     ap.add_argument("--review", type=Path)
-    ap.add_argument("--harvester-docs", type=Path)
+    ap.add_argument("--patch-inputs", type=Path)
     ap.add_argument("--oda-captures", type=Path)
     ap.add_argument("--output-dir", type=Path)
     ap.add_argument("--transaction", type=Path)
@@ -312,13 +349,13 @@ def main():
             ap.error("the original release transaction is required")
         verify_transaction(read_json(args.transaction), args.version)
         return
-    if not all((args.review, args.harvester_docs, args.oda_captures, args.output_dir)):
-        ap.error("review, Harvester source, ODA capture and output paths are required")
+    if not all((args.review, args.patch_inputs, args.oda_captures, args.output_dir)):
+        ap.error("review, patch input, ODA capture and output paths are required")
     review_file = args.review.resolve(strict=True)
     raw_review = review_file.read_bytes()
     review = json.loads(raw_review)
     now = datetime.now(timezone.utc)
-    valid_until = validate_review(review, args.version, args.harvester_docs, args.oda_captures, review_file.parent, now)
+    valid_until = validate_review(review, args.version, args.patch_inputs, args.oda_captures, review_file.parent, now)
     base = review["history_base"]
     git("merge-base", "--is-ancestor", base, "HEAD")
     # All tagged history already shipped must be within the selected baseline.
@@ -329,7 +366,7 @@ def main():
         git("merge-base", "--is-ancestor", f"refs/tags/{latest}^{{commit}}", base)
     results = []
     as_of = datetime.fromisoformat(review["reviewed_utc"]).astimezone(timezone.utc).date().isoformat()
-    for candidate in build_catalogs(args.harvester_docs, review["harvester_revision"], args.oda_captures,
+    for candidate in build_catalogs(args.patch_inputs, review["input_revision"], args.oda_captures,
                                     as_of, "2026-11-21"):
         product = candidate["product"]
         previous = committed(base, product, missing_ok=product == "supercluster")
@@ -337,8 +374,8 @@ def main():
     # The reviewer commits to exact inputs; a background refresh may not
     # exchange manifests or the export while the preview is being produced.
     for path, field in (
-        (args.harvester_docs / "patch-catalog.json", "harvester_export_sha256"),
-        (args.harvester_docs / "mos-capture-manifest.json", "harvester_manifest_sha256"),
+        (args.patch_inputs / "patch-catalog.json", "patch_export_sha256"),
+        (args.patch_inputs / "mos-capture-manifest.json", "mos_manifest_sha256"),
         (args.oda_captures / "sources.json", "oda_manifest_sha256"),
     ):
         if sha(path.read_bytes()) != review[field]:

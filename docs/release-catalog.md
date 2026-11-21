@@ -8,9 +8,7 @@ connection, query Oracle Support, or select an upgrade target.
 
 ## Evidence and scope
 
-- **Database and Grid Infrastructure:** the Harvester portable catalog from
-  Django revision `8df730c03b3ddd86757e98371319172acad24def` (exported November 9,
-  2026), the independently published
+- **Database and Grid Infrastructure:** the local patch metadata export (generated November 9, 2026), the independently published
   [Lifetime Support policy](https://www.oracle.com/assets/lsp-tech-chart-069290.pdf),
   and the saved Oracle roadmap (PNEWS1360, old Doc ID 742060.1). Product
   branding and numeric patch levels remain separate. The export covers
@@ -30,12 +28,24 @@ connection, query Oracle Support, or select an upgrade target.
   source row lists multiple versions without one explicit package version,
   the original label is retained and the exact version field is empty.
 
-- **SuperCluster:** Harvester records explicitly labeled QFSDP_SUPERCLUSTER
+- **SuperCluster:** Local patch export records explicitly labeled QFSDP_SUPERCLUSTER
   seed the distinct catalog. Line and version values describe associated
   database releases. The Oracle [SuperCluster M8/M7 guide](https://docs.oracle.com/cd/E58626_01/html/E58636/z400034a1004245704.html)
   establishes the patch family. Selected Oracle announcements corroborate
   package numbers; the seed does not establish the latest applicable bundle
   for every model.
+
+A record's `source` references an entry in `sources`. Use that entry to identify
+the input or cite the Oracle document. `local-patch-export` identifies the imported
+snapshot by its input revision and SHA-256 digest. The loader returns these fields
+as data for callers. The release refresh also uses the source ID to reconcile
+records and retain their historical provenance.
+
+An empty `artifacts` array means the source provides no platform-specific package
+records for that patch group. This includes the imported 11.2.0.4 Grid Infrastructure
+PSU entries. Use the matching Oracle patch documentation to verify package details
+for a specific platform.
+
 The top-level snapshot date records when the seed was prepared. A source's
 check date, article revision, and artifact release date are separate fields.
 An absent date or package number is unresolved. A published `tbd`,
@@ -47,8 +57,9 @@ inventory, release availability on a live system, or patch eligibility.
 
 1. Select the new module version and record the exact current canonical main
    commit as `history_base` before starting the refresh. Review the applicable
-   sources and applicability. Use the [Harvester patch metadata refresh workflow](https://github.com/marcuoli/django_sites/blob/main/docs/PATCH_METADATA_REFRESH.md)
-   to obtain the portable export and matching captured articles, including the
+   sources and applicability. Obtain a fresh `patch-catalog.json` and the
+   corresponding `mos-capture-manifest.json` and article files in the patch input
+   directory. Verify the captured articles, including the
    Database quarterly patch note (KB106822 / 888.1), release schedule
    (PNEWS1360 / 742060.1), and Exadata supported versions article
    (KB153930 / 888828.1). Use authenticated MOS to verify SuperCluster QFSDP
@@ -57,7 +68,7 @@ inventory, release availability on a live system, or patch eligibility.
    IDs and exact scope, and investigate source conflicts before approving inputs.
 2. Capture the ODA index and release pages in a fresh V: evidence directory.
    Make a private `review.json` for the selected version in that release's
-   evidence directory. Bind it to the exact Harvester export, capture manifest,
+   evidence directory. Bind it to the exact local patch export, MOS capture manifest,
    ODA manifest and actual Oracle evidence. A reviewer checks document contents,
    patches, versions, platform/model scope, and dates. The script checks the
    evidence files and hashes and cannot replace that review.
@@ -77,19 +88,19 @@ inventory, release availability on a live system, or patch eligibility.
 
 ```powershell
 python -B scripts/capture_oda_release_sources.py --output-dir <V-oda-evidence-dir>
-python -B scripts/refresh_release_catalog.py refresh --version v0.X.Y --review <V-review.json> --harvester-docs <harvester-assets-docs> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir>
-./scripts/publish_module.ps1 -Action Check -Version v0.X.Y -Review <V-review.json> -HarvesterDocs <harvester-assets-docs> -OdaCaptures <V-oda-evidence-dir> -EvidenceDirectory <V-release-evidence-dir>
+python -B scripts/refresh_release_catalog.py refresh --version v0.X.Y --review <V-review.json> --patch-inputs <patch-input-directory> --oda-captures <V-oda-evidence-dir> --output-dir <V-preview-dir>
+./scripts/publish_module.ps1 -Action Check -Version v0.X.Y -Review <V-review.json> -PatchInputs <patch-input-directory> -OdaCaptures <V-oda-evidence-dir> -EvidenceDirectory <V-release-evidence-dir>
 ```
 
 The review JSON is a private receipt input using `schema_version: 1`, `version`,
-`history_base`, `harvester_revision`, `reviewed_by`, `reviewed_utc`,
-`harvester_export_sha256`, `harvester_manifest_sha256`, `oda_manifest_sha256`
+`history_base`, `input_revision`, `reviewed_by`, `reviewed_utc`,
+`patch_export_sha256`, `mos_manifest_sha256`, `oda_manifest_sha256`
 and a `checks` array. Use full Git commit IDs and ISO 8601 timestamps with offsets.
 Each check has `role`, `status: "verified"`, `title`, `identifier`,
 `old_doc_id` when proven, `url`, `scope`, `finding`, `checked_utc`, `evidence`
 and `evidence_sha256`. Evidence filenames are relative to the review JSON
 directory and their bytes must match the reviewed hash. For the three MOS
-articles owned by Harvester, the current/old IDs, title and evidence bytes must
+articles in the patch input directory, the current/old IDs, title and evidence bytes must
 match the capture manifest.
 
 | Role | Evidence for the check |
