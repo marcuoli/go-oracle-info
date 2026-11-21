@@ -94,7 +94,7 @@ and [9.2 globalization guide](https://docs.oracle.com/cd/B10501_01/server.920/a9
 | 19c 19.32.0.0.0 | 12.1 projection. [19 reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-INSTANCE.html) | 12.1 projection. [19 reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-SYSTEM_PARAMETER.html) | Pass | Unexecuted | Unqualified |
 | 21c 21.3.0.0.0 | 12.1 projection. [21 reference](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-INSTANCE.html) | 12.1 projection. [21 reference](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-SYSTEM_PARAMETER.html) | Pass | Unexecuted | Unqualified |
 | 23c/23ai 23.2.0.0.0, 23.9.0.0.0 | 12.1 projection inferred from the current Oracle reference. [23 reference redirects to 26ai](https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/V-INSTANCE.html) | 12.1 projection inferred from the same source lineage. [23 reference redirects to 26ai](https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/V-SYSTEM_PARAMETER.html) | Pass | Unexecuted | Unqualified |
-| 26ai 23.26.1.0.0, 23.26.4.0.0 | 12.1 projection. [26 reference](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-INSTANCE.html) | 12.1 projection. [26 reference](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SYSTEM_PARAMETER.html) | Pass | Unexecuted | Unqualified |
+| 26ai 23.26.1.0.0, 23.26.4.0.0 | 12.1 projection. [26 reference](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-INSTANCE.html) | 12.1 projection. [26 reference](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SYSTEM_PARAMETER.html) | Pass | 23.26.1.0.0 root and PDB | Both Rows and JSON via go-ora v2.9.0 |
 | Outside reviewed numeric release families | Unsupported without execution | Unsupported without execution | Pass | Not applicable | Not applicable |
 
 The current 26ai release references were checked through October 2026 RU
@@ -106,8 +106,14 @@ and [database reference change history](https://docs.oracle.com/en/database/orac
 
 The tests exercise complete buffered transport and database/sql fixtures,
 including raw text, SQL NULL, unprojected columns, terminal failures, cursor
-ownership, exact SQL and bind contracts, and atomic JSON. Earlier native
-evidence for 9.2 driver admission, the original 12.2 consumer collectors and
-different 19c/26ai collector combinations does not qualify these new API
-paths. Pending cases include the exact selected SQL on admitted accounts,
-OPEN/MOUNT, non-CDB/root/PDB, RAC reporting members and actual driver/adapters.
+ownership, exact SQL and bind contracts, and atomic JSON. Both exact selectors completed native Rows and bounded JSON on 23.26.1.0.0
+as SYSTEM without SYSDBA on the approved READ WRITE primary. CDB$ROOT had
+one visibility row, 557 whole-database scalar rows and 557 current/database
+rows. OMLAB had one visibility row, 510 whole-database scalar rows and 557
+current/database rows. The harness used Windows amd64, Go 1.27.4,
+go-oracle-session v0.15.0 and go-ora/v2 v2.9.0. The earlier 9.2 driver
+admission, original 12.2 application collectors and 19c parity receipts
+used different SQL. The existing 12.2 PDB login failed before query
+execution and no approved 12.2 root profile was available. Legacy exact
+SQL and driver execution, other modern releases, MOUNT, other account
+privileges and RAC coverage remain unqualified.
