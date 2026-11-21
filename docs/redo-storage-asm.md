@@ -167,3 +167,6 @@ JSON tests. It does not qualify the Oracle Go driver, alternate-calendar native
 sessions, PDB scopes, restricted grants, multi-node RAC, every RU/platform or the
 other redo/storage datasets. Raw source labels and independent host collection
 UTC observations remain separate in the private qualification evidence.
+
+[Temporary tablespace free space](temp-free-space.md) is a separate observed
+dataset. Tempfile allocation and growth limits remain file metadata.

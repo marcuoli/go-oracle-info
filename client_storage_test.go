@@ -31,6 +31,7 @@ func TestStorageFacadeReturnsActualNativeRows(t *testing.T) {
 		{"tempfiles", "DBA_TEMP_FILES", func(c *info.Client) (*sql.Rows, error) {
 			return c.Tempfiles(t.Context(), info.TempfileOptions{IncludeLocal: true})
 		}},
+		{"temp-free", "DBA_TEMP_FREE_SPACE", func(c *info.Client) (*sql.Rows, error) { return c.TempFreeSpace(t.Context()) }},
 		{"free", "DBA_FREE_SPACE", func(c *info.Client) (*sql.Rows, error) { return c.FreeExtents(t.Context()) }},
 		{"segments", "DBA_SEGMENTS", func(c *info.Client) (*sql.Rows, error) { return c.Segments(t.Context()) }},
 		{"long", "DBA_TAB_COLUMNS", func(c *info.Client) (*sql.Rows, error) { return c.LongColumns(t.Context()) }},
