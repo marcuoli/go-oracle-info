@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -48,7 +49,7 @@ func ArchiveProgressStatement(version string, filter ArchiveProgressOptions) (st
 	return p.sql, p.args, e
 }
 func archiveProgressPlan(version string, filter ArchiveProgressOptions) (selection, error) {
-	if !unsigned(filter.ResetlogsChange) || len(filter.ResetlogsChange) > 38 {
+	if !numtext.IsUnsignedInteger(filter.ResetlogsChange) || len(filter.ResetlogsChange) > 38 {
 		return selection{}, ErrInvalidRequest
 	}
 	p, err := selectView(version, Filter{Instances: filter.Instances}, "GV$ARCHIVED_LOG", []field{

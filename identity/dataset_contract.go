@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
-	"strings"
 
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -64,15 +64,15 @@ func datasetReadError(ctx context.Context, p datasetSelection, err error) error 
 	}
 	return nil
 }
-func datasetColumns(result session.Result, p datasetSelection, numeric ...string) (map[string]int, error) {
+func datasetColumns(result session.Result, p datasetSelection, integerFields ...string) (map[string]int, error) {
 	index, ok := projection.TypedColumns(result, p.schema)
 	if !ok {
 		return nil, ErrInvalidEvidence
 	}
 	for _, row := range result.Rows {
-		for _, name := range numeric {
+		for _, name := range integerFields {
 			v := row[index[name]]
-			if !v.Null && (v.Text == "" || strings.IndexFunc(v.Text, func(r rune) bool { return r < '0' || r > '9' }) >= 0) {
+			if !v.Null && !numeric.IsUnsignedInteger(v.Text) {
 				return nil, ErrInvalidEvidence
 			}
 		}

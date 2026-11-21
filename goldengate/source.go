@@ -6,11 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -143,11 +143,8 @@ func columns(result session.Result, p selection) (map[string]int, error) {
 				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
 			}
 			integer := c.Kind == rowset.Integer || strings.HasSuffix(c.Name, "MESSAGE_NUMBER")
-			if !v.Null && integer {
-				n, ok := new(big.Int).SetString(v.Text, 10)
-				if !ok || n.Sign() < 0 || n.String() != v.Text {
-					return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
-				}
+			if !v.Null && integer && (!numeric.IsUnsignedInteger(v.Text) || (len(v.Text) > 1 && v.Text[0] == '0')) {
+				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
 			}
 			if c.Name == "INST_ID" && (v.Null || v.Text == "0") {
 				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}

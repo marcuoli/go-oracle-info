@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Simplify exact RAC GiB rounding after byte aggregation and share integer-text validation across fact decoders (#77).
+
 ## v0.22.0 (2026-11-20)
 
 - Add exact temporary tablespace free-space observations with separate session and owning-instance scope (#74).

@@ -1,6 +1,7 @@
 package parameters
 
 import (
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"math/big"
 	"strconv"
 	"strings"
@@ -91,7 +92,7 @@ func persistenceInteger(text string, units bool) (*big.Int, bool) {
 	return value.Mul(value, new(big.Int).Lsh(big.NewInt(1), uint(power*10))), true
 }
 func persistenceOrdinal(text string) (int64, bool) {
-	if text == "" || strings.IndexFunc(text, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+	if !numeric.IsUnsignedInteger(text) {
 		return 0, false
 	}
 	n, err := strconv.ParseInt(text, 10, 64)

@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -109,10 +109,7 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 			}
 			if !v.Null && integers[c.Name] {
 				// Preserve exact nonnegative Oracle NUMBER text without float rounding.
-				if v.Text == "" || strings.IndexFunc(v.Text, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
-					return nil, &Error{plan.provenance.Source, ErrInvalidEvidence}
-				}
-				if _, ok := new(big.Int).SetString(v.Text, 10); !ok {
+				if !numeric.IsUnsignedInteger(v.Text) {
 					return nil, &Error{plan.provenance.Source, ErrInvalidEvidence}
 				}
 			}

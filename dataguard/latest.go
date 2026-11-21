@@ -1,6 +1,7 @@
 package dataguard
 
 import (
+	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-session/session"
 	"strconv"
 )
@@ -75,7 +76,7 @@ func ArchiveProgressIdentities(result ArchiveProgressResult) ([]ArchiveProgressI
 	out := []ArchiveProgressIdentity{}
 	groups := map[[7]session.Value]int{}
 	for _, row := range result.Rows {
-		if !reporter(row.InstanceID, row.ContainerID) || row.Kind.Null || (row.Kind.Text != "RECEIVED" && row.Kind.Text != "APPLIED") || row.ThreadNumber.Null || !unsigned(row.ThreadNumber.Text) || row.SequenceNumber.Null || !unsigned(row.SequenceNumber.Text) || row.ResetlogsChange.Null || !unsigned(row.ResetlogsChange.Text) || row.ResetlogsTime.Null {
+		if !reporter(row.InstanceID, row.ContainerID) || row.Kind.Null || (row.Kind.Text != "RECEIVED" && row.Kind.Text != "APPLIED") || row.ThreadNumber.Null || !numtext.IsUnsignedInteger(row.ThreadNumber.Text) || row.SequenceNumber.Null || !numtext.IsUnsignedInteger(row.SequenceNumber.Text) || row.ResetlogsChange.Null || !numtext.IsUnsignedInteger(row.ResetlogsChange.Text) || row.ResetlogsTime.Null {
 			return nil, ErrInvalidEvidence
 		}
 		if _, err := civilTime(row.ResetlogsTime.Text); err != nil {

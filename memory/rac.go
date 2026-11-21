@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
-	"strconv"
 	"strings"
 
+	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-session/session"
 )
 
@@ -233,7 +233,7 @@ func effectiveMember(rows []parameterRow, instance, container int, parameter Par
 		if cell.Null {
 			return MemberValue{}, fmt.Errorf("%w: NULL effective parameter", ErrInvalidEvidence)
 		}
-		if len(cell.Text) > 128 || cell.Text == "" || strings.IndexFunc(cell.Text, func(r rune) bool { return r < '0' || r > '9' }) >= 0 {
+		if len(cell.Text) > 128 || !numtext.IsUnsignedInteger(cell.Text) {
 			return MemberValue{}, fmt.Errorf("%w: invalid byte value", ErrInvalidEvidence)
 		}
 		number, ok := new(big.Int).SetString(cell.Text, 10)
@@ -256,21 +256,8 @@ func effectiveMember(rows []parameterRow, instance, container int, parameter Par
 }
 
 func formatGiB(bytes *big.Int) string {
-	// Round only once after exact byte aggregation. No binary float can discard a
-	// member's low bits or round each small member to zero before summation.
-	scaled := new(big.Int).Mul(bytes, big.NewInt(1000))
-	divisor := big.NewInt(1 << 30)
-	quotient, remainder := new(big.Int), new(big.Int)
-	quotient.QuoRem(scaled, divisor, remainder)
-	if new(big.Int).Lsh(remainder, 1).Cmp(divisor) >= 0 {
-		quotient.Add(quotient, big.NewInt(1))
-	}
-	whole, fraction := new(big.Int), new(big.Int)
-	whole.QuoRem(quotient, big.NewInt(1000), fraction)
-	if fraction.Sign() == 0 {
-		return whole.String()
-	}
-	text := strconv.FormatInt(fraction.Int64(), 10)
-	text = strings.Repeat("0", 3-len(text)) + text
-	return whole.String() + "." + strings.TrimRight(text, "0")
+	// Convert the exact byte total, rounding once after aggregation.
+	gib := new(big.Rat).SetFrac(bytes, big.NewInt(1<<30))
+	decimal := gib.FloatString(3)
+	return strings.TrimSuffix(strings.TrimRight(decimal, "0"), ".")
 }
