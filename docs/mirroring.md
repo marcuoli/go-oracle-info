@@ -6,13 +6,12 @@ The private Gitea repository owns implementation history. The public mirror is
 Private validation inputs remain outside Git.
 
 Use [the catalog refresh and review](release-catalog.md#refresh-before-publish)
-for every new module version. Capture MOS evidence directly on a machine with
-existing authenticated access, including when Oracle has no changes to report. Run
+for every new module version. Review the required scoped Oracle evidence using
+available web sources and previously captured Oracle Support documents. Run
 [`scripts/publish_module.ps1`](../scripts/publish_module.ps1) with PowerShell 7,
 Git, Python, and the existing authenticated Tea and GitHub CLI clients. The
 default `Check` action verifies the exact committed catalogs and writes a
-version-, commit- and review-bound receipt before any mutation. An approaching
-release requires a fresh review; repository-side tag permissions are unchanged.
+version-, commit- and review-bound receipt before any mutation. Each version requires a fresh applicability review tied to the exact evidence bytes.
 
 Use the same evidence directory and version for each authorized action in
 order. Check and Tag require the current reviewed input paths. Tag validates
@@ -28,8 +27,8 @@ and catalog hashes. Subsequent actions require that saved transaction.
 | `PrivateRelease` | Create or verify the private release page with reviewed notes. |
 | `PublicRelease` | Create or verify the public release page with reviewed notes. |
 
-The first private tag push must occur before the earliest review input
-expires. After the exact private tag exists, resume remaining actions from
+The first private tag push must occur before the version-bound applicability
+review expires. After the exact private tag exists, resume remaining actions from
 the saved transaction, even when the original review has expired. The
 publisher verifies the exact tag object, committed catalogs, and containment
 in private main. If public main already contains the release, it publishes

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Review verified existing Oracle source captures for publication and retain the original capture dates (#102).
+
 - Add opt-in direct-object diagnostics for reviewed engineered-system catalog statements (#99).
 - Refresh release catalogs from directly reviewed Oracle Support captures and public Oracle sources before publication (#98).
 
