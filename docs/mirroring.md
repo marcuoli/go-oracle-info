@@ -6,7 +6,8 @@ The private Gitea repository owns implementation history. The public mirror is
 Private validation inputs remain outside Git.
 
 Use [the catalog refresh and review](release-catalog.md#refresh-before-publish)
-for every new module version, even when Oracle has no changes to report. Run
+for every new module version. Capture MOS evidence directly on a machine with
+existing authenticated access, including when Oracle has no changes to report. Run
 [`scripts/publish_module.ps1`](../scripts/publish_module.ps1) with PowerShell 7,
 Git, Python, and the existing authenticated Tea and GitHub CLI clients. The
 default `Check` action verifies the exact committed catalogs and writes a
