@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -30,6 +31,7 @@ func ArchiveGapsStatement(version string, filter Filter) (string, []any, error) 
 	p, e := archiveGapsPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func archiveGapsPlan(version string, filter Filter) (selection, error) {
 	return selectView(version, filter, "GV$ARCHIVE_GAP", []field{
 		integer("INST_ID", "v.INST_ID"),
@@ -48,6 +50,7 @@ func DecodeArchiveGaps(result session.Result, version string, filter Filter) (Ar
 	}
 	return decodeArchiveGaps(result, p)
 }
+
 func decodeArchiveGaps(result session.Result, p selection) (ArchiveGapsResult, error) {
 	index, e := columns(result, p)
 	if e != nil {
@@ -101,4 +104,24 @@ func ArchiveGapsJSON(ctx context.Context, q rowset.Queryer, version string, filt
 		return nil, e
 	}
 	return readJSON(ctx, q, p, limits)
+}
+
+// ArchiveGapsStatementWithOptions selects the same source as ArchiveGapsStatement using one options value.
+func ArchiveGapsStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ArchiveGapsStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveGapsWithOptions selects the same source as DecodeArchiveGaps using one options value.
+func DecodeArchiveGapsWithOptions(result session.Result, options ScopeOptions) (ArchiveGapsResult, error) {
+	return DecodeArchiveGaps(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveGapsRowsWithOptions selects the same source as ArchiveGapsRows using one options value.
+func ArchiveGapsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ArchiveGapsRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveGapsJSONWithOptions selects the same source as ArchiveGapsJSON using one options value.
+func ArchiveGapsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveGapsJSON(ctx, q, options.OracleVersion, options.Filter, limits)
 }

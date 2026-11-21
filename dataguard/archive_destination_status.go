@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
@@ -47,6 +48,7 @@ func ArchiveDestinationStatusStatement(version string, filter Filter) (string, [
 	p, e := archiveDestinationStatusPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func archiveDestinationStatusPlan(version string, filter Filter) (selection, error) {
 	return selectView(version, filter, "GV$ARCHIVE_DEST_STATUS", []field{
 		integer("INST_ID", "v.INST_ID"),
@@ -82,6 +84,7 @@ func DecodeArchiveDestinationStatus(result session.Result, version string, filte
 	}
 	return decodeArchiveDestinationStatus(result, p)
 }
+
 func decodeArchiveDestinationStatus(result session.Result, p selection) (ArchiveDestinationStatusResult, error) {
 	index, e := columns(result, p)
 	if e != nil {
@@ -152,4 +155,24 @@ func ArchiveDestinationStatusJSON(ctx context.Context, q rowset.Queryer, version
 		return nil, e
 	}
 	return readJSON(ctx, q, p, limits)
+}
+
+// ArchiveDestinationStatusStatementWithOptions selects the same source as ArchiveDestinationStatusStatement using one options value.
+func ArchiveDestinationStatusStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ArchiveDestinationStatusStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveDestinationStatusWithOptions selects the same source as DecodeArchiveDestinationStatus using one options value.
+func DecodeArchiveDestinationStatusWithOptions(result session.Result, options ScopeOptions) (ArchiveDestinationStatusResult, error) {
+	return DecodeArchiveDestinationStatus(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationStatusRowsWithOptions selects the same source as ArchiveDestinationStatusRows using one options value.
+func ArchiveDestinationStatusRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ArchiveDestinationStatusRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationStatusJSONWithOptions selects the same source as ArchiveDestinationStatusJSON using one options value.
+func ArchiveDestinationStatusJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveDestinationStatusJSON(ctx, q, options.OracleVersion, options.Filter, limits)
 }

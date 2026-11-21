@@ -5,9 +5,30 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
+
+// RecoveryProgressStatementWithOptions selects the same source as RecoveryProgressStatement using one options value.
+func RecoveryProgressStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return RecoveryProgressStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeRecoveryProgressWithOptions selects the same source as DecodeRecoveryProgress using one options value.
+func DecodeRecoveryProgressWithOptions(result session.Result, options ScopeOptions) (RecoveryProgressResult, error) {
+	return DecodeRecoveryProgress(result, options.OracleVersion, options.Filter)
+}
+
+// RecoveryProgressRowsWithOptions selects the same source as RecoveryProgressRows using one options value.
+func RecoveryProgressRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return RecoveryProgressRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// RecoveryProgressJSONWithOptions selects the same source as RecoveryProgressJSON using one options value.
+func RecoveryProgressJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return RecoveryProgressJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
 
 // RecoveryProgress preserves source values and SQL NULL without derived health or topology.
 // Exact SCNs are decimal text; native integer columns retain numeric JSON kinds.
@@ -35,6 +56,7 @@ func RecoveryProgressStatement(version string, filter Filter) (string, []any, er
 	p, e := recoveryProgressPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func recoveryProgressPlan(version string, filter Filter) (selection, error) {
 	return selectView(version, filter, "GV$RECOVERY_PROGRESS", []field{
 		integer("INST_ID", "v.INST_ID"),
@@ -58,6 +80,7 @@ func DecodeRecoveryProgress(result session.Result, version string, filter Filter
 	}
 	return decodeRecoveryProgress(result, p)
 }
+
 func decodeRecoveryProgress(result session.Result, p selection) (RecoveryProgressResult, error) {
 	index, e := columns(result, p)
 	if e != nil {

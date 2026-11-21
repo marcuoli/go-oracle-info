@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
+	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
 // DatabaseContext preserves source values and SQL NULL without derived health or topology.
@@ -35,6 +37,7 @@ func DatabaseContextStatement(version string) (string, []any, error) {
 	p, e := databaseContextPlan(version)
 	return p.sql, p.args, e
 }
+
 func databaseContextPlan(version string) (selection, error) {
 	p, err := selectView(version, Filter{}, "V$DATABASE", []field{
 		exact("DBID", "v.DBID"),
@@ -62,6 +65,7 @@ func DecodeDatabaseContext(result session.Result, version string) (DatabaseConte
 	}
 	return decodeDatabaseContext(result, p)
 }
+
 func decodeDatabaseContext(result session.Result, p selection) (DatabaseContextResult, error) {
 	index, e := columns(result, p)
 	if e != nil {
@@ -120,4 +124,10 @@ func DatabaseContextJSON(ctx context.Context, q rowset.Queryer, version string, 
 		return nil, e
 	}
 	return readJSON(ctx, q, p, limits)
+}
+
+// DatabaseContextRequest admits a database singleton separately from GV reporter rows.
+type DatabaseContextRequest struct {
+	OracleVersion string
+	Reference     reference.Reference
 }

@@ -1,6 +1,9 @@
 package memory
 
 import (
+	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -8,7 +11,9 @@ import (
 	"strings"
 
 	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
+	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
+	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
 // MemberValue retains an effective member setting in raw bytes before rounding.
@@ -260,4 +265,125 @@ func formatGiB(bytes *big.Int) string {
 	gib := new(big.Rat).SetFrac(bytes, big.NewInt(1<<30))
 	decimal := gib.FloatString(3)
 	return strings.TrimSuffix(strings.TrimRight(decimal, "0"), ".")
+}
+
+// CollectRAC reads a previously admitted non-ADB RAC scope through the owned
+// reader. It does not discover or admit a backing cluster, retry errors or change
+// sessions. The reader must retain complete results and enforce its row budget.
+func CollectRAC(ctx context.Context, reader Reader, options Options, ref reference.Reference) (RACObservation, error) {
+	unavailable := RACObservation{SGA: Total{State: Unavailable}, PGA: Total{State: Unavailable}}
+	if reader == nil || ref.Namespace() == "" {
+		return unavailable, errors.New("RAC reader and execution reference are required")
+	}
+	if err := ctx.Err(); err != nil {
+		return unavailable, err
+	}
+	text, err := RACStatement(options)
+	if err != nil {
+		return unavailable, err
+	}
+	var args []any
+	if options.Scope == DiscoveredPDB {
+		args = []any{sql.Named("target_container_id", options.TargetContainerID)}
+	}
+	result, err := reader.Query(ctx, session.Statement{Reference: ref, Text: text, Args: args})
+	missing := onlyNoRows(err)
+	if missing {
+		err = nil
+	}
+	if err = errors.Join(err, ctx.Err()); err != nil {
+		return unavailable, &ReadError{cause: err}
+	}
+	if missing {
+		return RACObservation{SGA: Total{State: NoRows}, PGA: Total{State: NoRows}}, nil
+	}
+	observation, err := DecodeRAC(result, options)
+	if cancelled := ctx.Err(); cancelled != nil {
+		return unavailable, errors.Join(err, cancelled)
+	}
+	return observation, err
+}
+
+func racPlan(options Options) (datasetSelection, error) {
+	if err := datasetMajor(options.OracleMajor); err != nil {
+		return datasetSelection{}, err
+	}
+	text, err := RACStatement(options)
+	if err != nil {
+		return datasetSelection{}, err
+	}
+	source := "GV$INSTANCE+GV$SYSTEM_PARAMETER"
+	if options.Scope == ConnectedPDB || options.Scope == DiscoveredPDB {
+		source = "GV$PDBS+GV$SYSTEM_PARAMETER"
+	}
+	names := []string{"PARAMETER_NAME", "PARAMETER_VALUE", "INSTANCE_ID", "SOURCE_CONTAINER_ID", "TARGET_CONTAINER_ID"}
+	return memorySelection(text, source, "", options, names), nil
+}
+
+// ReadRAC retains CollectRAC's independently valid metric evidence alongside
+// errors. This is aggregate evidence, never a failed cursor prefix or new retry.
+func ReadRAC(ctx context.Context, reader Reader, options Options, ref reference.Reference) (RACObservation, error) {
+	unavailable := RACObservation{SGA: Total{State: Unavailable}, PGA: Total{State: Unavailable}}
+	p, err := racPlan(options)
+	if err != nil {
+		return unavailable, err
+	}
+	if !validDatasetReader(reader) || ref.Validate() != nil {
+		return unavailable, ErrInvalidRequest
+	}
+	if err = datasetReadError(ctx, p, nil); err != nil {
+		return unavailable, err
+	}
+	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: ref})
+	missing := onlyNoRows(err)
+	if missing {
+		err = nil
+	}
+	if err = datasetReadError(ctx, p, err); err != nil {
+		return unavailable, err
+	}
+	if missing {
+		return RACObservation{SGA: Total{State: NoRows}, PGA: Total{State: NoRows}}, nil
+	}
+	// Validate the entire transport before the legacy aggregate decoder can skip
+	// an absent metric name. A contradictory NULL scalar is not partial evidence.
+	// Valid independently available metrics still survive domain decoding errors.
+	if _, err = datasetColumns(result, p); err != nil {
+		return unavailable, err
+	}
+	observation, err := DecodeRAC(result, options)
+	if ctx.Err() != nil {
+		return unavailable, datasetReadError(ctx, p, err)
+	}
+	return observation, err
+}
+
+// RACRows returns the actual native RACStatement cursor, not a fabricated total.
+func RACRows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error) {
+	p, err := racPlan(options)
+	if err != nil {
+		return nil, err
+	}
+	return rowset.Query(ctx, q, p.sql, p.args...)
+}
+
+// RACJSON preserves complete source rows; it does not infer physical membership
+// or certify both totals. Domain/transport/cancellation/budget failures return nil.
+func RACJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error) {
+	p, err := racPlan(options)
+	if err != nil {
+		return nil, err
+	}
+	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := DecodeRAC(r, options); return err })
+}
+
+// RACRequest adds the caller's SQL reference to one admitted RAC selection.
+type RACRequest struct {
+	Options   Options
+	Reference reference.Reference
+}
+
+// ReadRACWithOptions reads RAC memory using a single caller request.
+func ReadRACWithOptions(ctx context.Context, reader Reader, request RACRequest) (RACObservation, error) {
+	return ReadRAC(ctx, reader, request.Options, request.Reference)
 }

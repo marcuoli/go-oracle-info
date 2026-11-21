@@ -113,11 +113,25 @@ See [complete source fact APIs](fact-apis.md) for all Statement/Decode/Read/Rows
 
 ## Code organization and extension
 
-Keep one cohesive fact in `<fact>.go`, including its selector, schema, decoder
-and adapters. Package-local shared Reader/errors/provenance/bridges may stay in
-`read.go` or an existing cohesive contract file. Share options only when they
-represent the same admitted source semantics. Compatibility `statements.go`
-files may remain; callers do not depend on the filename.
+Use one lowercase snake_case `<fact>.go` file per complete source fact.
+Keep the SQL selector, schema, provenance, decoder, and named Statement,
+Decode, Read, Rows and JSON entry points together. The argument order and
+ownership rules above apply to every complete family.
+
+Use `contract.go` for package-wide reader, error, provenance and selection
+helpers when several facts share them. Keep shared options there when they
+represent the same admitted source semantics. Single-fact packages can keep
+their contract in the fact file. Give pure models, evaluators, procedural
+operations, facade wiring and internal helpers files named for their
+responsibility.
+
+Keep published compatibility names and signatures beside the fact they
+represent. If a compatibility selector has a distinct contract, give it a
+responsibility-based home and record the mapping. Preserve its SQL and
+result contract, routing through the same implementation where contracts
+coincide. Remove superseded files and private duplicate paths. Retire the
+old `statements.go`, `read.go` and `*_dataset.go` layers as facts move.
+See the [coverage map](implementation-coverage.md#uniform-file-layout).
 
 Prefer existing standard-library and first-party mechanisms. Consolidate actual
 duplicated mechanics only when ownership, scalar semantics, errors, budgets and

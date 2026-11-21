@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"strconv"
 	"strings"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -83,6 +83,7 @@ func HiddenContextStatement(major int, filter HiddenContextFilter) (string, []an
 	plan, err := hiddenContextPlan(major, filter)
 	return plan.sql, plan.args, err
 }
+
 func hiddenContextPlan(major int, filter HiddenContextFilter) (hiddenContextSelection, error) {
 	if major < 11 {
 		return hiddenContextSelection{}, ErrUnsupportedVersion
@@ -140,6 +141,7 @@ func DecodeHiddenContext(result session.Result, major int, filter HiddenContextF
 	}
 	return decodeHiddenContext(result, plan)
 }
+
 func decodeHiddenContext(result session.Result, plan hiddenContextSelection) (HiddenContextResult, error) {
 	index, err := parameterColumns(result, plan.selection)
 	if err != nil {
@@ -232,4 +234,30 @@ func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
 		return &Error{Source: hiddenContextSource, cause: cause}
 	}, "limits", "query", "validate")
+}
+
+// HiddenContextOptions carries the source selectors for the options-based fact APIs.
+type HiddenContextOptions struct {
+	OracleMajor int
+	Filter      HiddenContextFilter
+}
+
+// HiddenContextStatementWithOptions selects the same source as HiddenContextStatement using one options value.
+func HiddenContextStatementWithOptions(options HiddenContextOptions) (string, []any, error) {
+	return HiddenContextStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeHiddenContextWithOptions selects the same source as DecodeHiddenContext using one options value.
+func DecodeHiddenContextWithOptions(result session.Result, options HiddenContextOptions) (HiddenContextResult, error) {
+	return DecodeHiddenContext(result, options.OracleMajor, options.Filter)
+}
+
+// HiddenContextRowsWithOptions selects the same source as HiddenContextRows using one options value.
+func HiddenContextRowsWithOptions(ctx context.Context, q rowset.Queryer, options HiddenContextOptions) (*sql.Rows, error) {
+	return HiddenContextRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// HiddenContextJSONWithOptions selects the same source as HiddenContextJSON using one options value.
+func HiddenContextJSONWithOptions(ctx context.Context, q rowset.Queryer, options HiddenContextOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return HiddenContextJSON(ctx, q, options.OracleMajor, options.Filter, limits)
 }

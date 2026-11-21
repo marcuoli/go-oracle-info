@@ -17,7 +17,13 @@ func TestMemoryNativeSourceReleaseMatrix(t *testing.T) {
 					o.PDB.AllowInherited = true
 				}
 				for _, rac := range []bool{false, true} {
-					p, err := sourcePlan(parameter, o, rac)
+					var p datasetSelection
+					var err error
+					if rac {
+						p, err = racPlan(o)
+					} else {
+						p, err = parameterPlan(parameter, o)
+					}
 					admitted := major != 26 && (scope == NonCDB || major >= 12)
 					if !admitted {
 						if err == nil || p.sql != "" {

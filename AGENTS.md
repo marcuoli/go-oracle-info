@@ -19,7 +19,7 @@ Keep effective instance settings, session settings and stored SPFILE definitions
 
 Generic query execution, native row consumption and JSON datasets belong exclusively in go-oracle-session/rowset. Domain facts delegate there; do not implement or preserve an info/rowset compatibility package. Keep Oracle SQL/filter/schema/provenance here. Borrowed caller-native rows do not expose an owned Session.Stream lease or private cursor.
 
-Follow docs/implementation-pattern.md for every implementation and docs/developer-guide.md for punctual fact additions. Owned buffered paths
+Follow docs/implementation-pattern.md for every implementation and docs/developer-guide.md for punctual fact additions. Keep each complete fact family in a lowercase snake_case fact file with its SQL, schema, decoder and adapters. Use contract.go for genuinely shared mechanisms and remove superseded implementation files. Owned buffered paths
 use admitted session.Statement/complete session.Result readers and caller refs;
 share domain selection/schema/provenance with borrowed rows/JSON. Validate all
 rows before returning a result, including post-query cancellation. Preserve raw

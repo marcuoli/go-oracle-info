@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+
 	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
+	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
 // ArchiveProgress preserves source values and SQL NULL without derived health or topology.
@@ -48,6 +50,7 @@ func ArchiveProgressStatement(version string, filter ArchiveProgressOptions) (st
 	p, e := archiveProgressPlan(version, filter)
 	return p.sql, p.args, e
 }
+
 func archiveProgressPlan(version string, filter ArchiveProgressOptions) (selection, error) {
 	if !numtext.IsUnsignedInteger(filter.ResetlogsChange) || len(filter.ResetlogsChange) > 38 {
 		return selection{}, ErrInvalidRequest
@@ -95,6 +98,7 @@ func DecodeArchiveProgress(result session.Result, version string, filter Archive
 	}
 	return decodeArchiveProgress(result, p)
 }
+
 func decodeArchiveProgress(result session.Result, p selection) (ArchiveProgressResult, error) {
 	index, e := columns(result, p)
 	if e != nil {
@@ -165,4 +169,45 @@ func ArchiveProgressJSON(ctx context.Context, q rowset.Queryer, version string, 
 		return nil, e
 	}
 	return readJSON(ctx, q, p, limits)
+}
+
+// ArchiveProgressOptions admits an incarnation, without a historical date cutoff.
+// This is archived-log registration, not the active receive/apply position.
+type ArchiveProgressOptions struct {
+	Instances       []int64
+	ResetlogsChange string
+	ResetlogsTime   string
+}
+
+// ArchiveProgressRequest supplies incarnation admission and a caller reference.
+type ArchiveProgressRequest struct {
+	OracleVersion string
+	Filter        ArchiveProgressOptions
+	Reference     reference.Reference
+}
+
+// ArchiveProgressSourceOptions carries the source selectors for the options-based fact APIs.
+type ArchiveProgressSourceOptions struct {
+	OracleVersion string
+	Filter        ArchiveProgressOptions
+}
+
+// ArchiveProgressStatementWithOptions selects the same source as ArchiveProgressStatement using one options value.
+func ArchiveProgressStatementWithOptions(options ArchiveProgressSourceOptions) (string, []any, error) {
+	return ArchiveProgressStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveProgressWithOptions selects the same source as DecodeArchiveProgress using one options value.
+func DecodeArchiveProgressWithOptions(result session.Result, options ArchiveProgressSourceOptions) (ArchiveProgressResult, error) {
+	return DecodeArchiveProgress(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveProgressRowsWithOptions selects the same source as ArchiveProgressRows using one options value.
+func ArchiveProgressRowsWithOptions(ctx context.Context, q rowset.Queryer, options ArchiveProgressSourceOptions) (*sql.Rows, error) {
+	return ArchiveProgressRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveProgressJSONWithOptions selects the same source as ArchiveProgressJSON using one options value.
+func ArchiveProgressJSONWithOptions(ctx context.Context, q rowset.Queryer, options ArchiveProgressSourceOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveProgressJSON(ctx, q, options.OracleVersion, options.Filter, limits)
 }

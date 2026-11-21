@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"strconv"
 	"strings"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -56,9 +56,11 @@ func InvalidDetailsStatement(major int, owners ...string) (string, []any, error)
 	}
 	return `SELECT OWNER AS OWNER, OBJECT_TYPE AS OBJECT_TYPE, OBJECT_NAME AS OBJECT_NAME, STATUS AS STATUS, TO_CHAR(CREATED,'YYYY-MM-DD"T"HH24:MI:SS') AS CREATED, TO_CHAR(LAST_DDL_TIME,'YYYY-MM-DD"T"HH24:MI:SS') AS LAST_DDL_TIME FROM DBA_OBJECTS` + filter + " ORDER BY OWNER,OBJECT_TYPE,OBJECT_NAME", args, nil
 }
+
 func invalidDetailsSchema() []rowset.Column {
 	return []rowset.Column{{Name: "OWNER", Kind: rowset.Text}, {Name: "OBJECT_TYPE", Kind: rowset.Text}, {Name: "OBJECT_NAME", Kind: rowset.Text}, {Name: "STATUS", Kind: rowset.Text}, {Name: "CREATED", Kind: rowset.Text}, {Name: "LAST_DDL_TIME", Kind: rowset.Text}}
 }
+
 func invalidDetailsProvenance(major int, owners []string) Provenance {
 	return Provenance{Source: "DBA_OBJECTS", Scope: "current_container_invalid_objects", OracleMajor: major, Owners: append([]string(nil), owners...)}
 }
@@ -144,4 +146,30 @@ func InvalidDetailsJSON(ctx context.Context, q rowset.Queryer, major int, owners
 		}
 		return cause
 	})
+}
+
+// InvalidDetailsOptions carries the source selectors for the options-based fact APIs.
+type InvalidDetailsOptions struct {
+	OracleMajor int
+	Owners      []string
+}
+
+// InvalidDetailsStatementWithOptions selects the same source as InvalidDetailsStatement using one options value.
+func InvalidDetailsStatementWithOptions(options InvalidDetailsOptions) (string, []any, error) {
+	return InvalidDetailsStatement(options.OracleMajor, options.Owners...)
+}
+
+// DecodeInvalidDetailsWithOptions selects the same source as DecodeInvalidDetails using one options value.
+func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error) {
+	return DecodeInvalidDetails(result, options.OracleMajor, options.Owners...)
+}
+
+// InvalidDetailsRowsWithOptions selects the same source as InvalidDetailsRows using one options value.
+func InvalidDetailsRowsWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions) (*sql.Rows, error) {
+	return InvalidDetailsRows(ctx, q, options.OracleMajor, options.Owners...)
+}
+
+// InvalidDetailsJSONWithOptions selects the same source as InvalidDetailsJSON using one options value.
+func InvalidDetailsJSONWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return InvalidDetailsJSON(ctx, q, options.OracleMajor, options.Owners, limits)
 }
