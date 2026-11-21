@@ -7,14 +7,14 @@ import (
 )
 
 func TestBundledCatalogsHaveValidSourceReferences(t *testing.T) {
-	for _, product := range []Product{Database, Exadata, ODA} {
+	for _, product := range []Product{Database, Exadata, ODA, SuperCluster} {
 		t.Run(string(product), func(t *testing.T) {
 			catalog, err := Load(product)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if catalog.Product != product || catalog.SchemaVersion != 1 ||
-				catalog.AsOf == "" || len(catalog.Releases) == 0 || len(catalog.Patches) == 0 {
+				catalog.AsOf == "" || product != SuperCluster && len(catalog.Releases) == 0 || len(catalog.Patches) == 0 {
 				t.Fatal("missing product, release, or patch metadata")
 			}
 
@@ -47,6 +47,13 @@ func TestBundledCatalogsHaveValidSourceReferences(t *testing.T) {
 					t.Fatalf("invalid patch provenance: %+v", record)
 				}
 				for _, a := range record.Artifacts {
+					if a.CorroboratedBy != nil {
+						for _, source := range *a.CorroboratedBy {
+							if !ids[source] {
+								t.Fatalf("missing corroborating source %q", source)
+							}
+						}
+					}
 					if a.Number < 0 || a.Source != "" && !ids[a.Source] {
 						t.Fatalf("invalid patch artifact: %+v", a)
 					}
@@ -148,4 +155,28 @@ func hasArtifact(c Catalog, version string, number int) bool {
 			return a.Number == number
 		})
 	})
+}
+
+func TestSuperClusterAdmitsOnlyExplicitFullStackRecords(t *testing.T) {
+	c, err := Load(SuperCluster)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Releases) != 0 {
+		t.Fatal("Database release lines were misrepresented as SuperCluster product releases")
+	}
+	seen := false
+	for _, p := range c.Patches {
+		if p.Kind != "QFSDP" || p.Component != "supercluster" || p.SourceKind != "QFSDP_SUPERCLUSTER" {
+			t.Fatalf("unrelated patch in SuperCluster catalog: %+v", p)
+		}
+		for _, a := range p.Artifacts {
+			if a.Number == 38273760 && a.CorroboratedBy != nil && len(*a.CorroboratedBy) > 0 && p.Line == "21" && a.Platform != "" {
+				seen = true
+			}
+		}
+	}
+	if !seen {
+		t.Fatal("known QFSDP package, platform, or Oracle corroboration missing")
+	}
 }

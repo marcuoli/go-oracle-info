@@ -12,9 +12,10 @@ import (
 type Product string
 
 const (
-	Database Product = "database"
-	Exadata  Product = "exadata"
-	ODA      Product = "oda"
+	Database     Product = "database"
+	Exadata      Product = "exadata"
+	ODA          Product = "oda"
+	SuperCluster Product = "supercluster"
 )
 
 // Source identifies an Oracle document or a named, reproducible Harvester export.
@@ -69,19 +70,20 @@ type Patch struct {
 // Artifact carries the source's platform or hardware scope and package details.
 // Numbers may repeat across versions and scopes. Empty dates are unresolved.
 type Artifact struct {
-	Number           int    `json:"number,omitempty"`
-	Version          string `json:"version,omitempty"`
-	Component        string `json:"component,omitempty"`
-	Scope            string `json:"scope,omitempty"`
-	Platform         string `json:"platform,omitempty"`
-	MOSPlatform      string `json:"mos_platform,omitempty"`
-	PlatformID       *int   `json:"platform_id,omitempty"`
-	ReleaseDate      string `json:"release_date,omitempty"`
-	Source           string `json:"source,omitempty"`
-	RecordedSourceID string `json:"recorded_source_id,omitempty"`
-	Base             *bool  `json:"base_release,omitempty"`
-	Terminal         *bool  `json:"terminal_release,omitempty"`
-	DisabledAt       string `json:"disabled_at,omitempty"`
+	Number           int       `json:"number,omitempty"`
+	Version          string    `json:"version,omitempty"`
+	Component        string    `json:"component,omitempty"`
+	Scope            string    `json:"scope,omitempty"`
+	Platform         string    `json:"platform,omitempty"`
+	MOSPlatform      string    `json:"mos_platform,omitempty"`
+	PlatformID       *int      `json:"platform_id,omitempty"`
+	ReleaseDate      string    `json:"release_date,omitempty"`
+	Source           string    `json:"source,omitempty"`
+	RecordedSourceID string    `json:"recorded_source_id,omitempty"`
+	CorroboratedBy   *[]string `json:"corroborated_by,omitempty"`
+	Base             *bool     `json:"base_release,omitempty"`
+	Terminal         *bool     `json:"terminal_release,omitempty"`
+	DisabledAt       string    `json:"disabled_at,omitempty"`
 }
 
 // Coverage records what an input provided for a product or release line.
@@ -90,6 +92,14 @@ type Coverage struct {
 	Line   string `json:"line,omitempty"`
 	Source string `json:"source"`
 	Status string `json:"status"`
+}
+
+// History holds the previously observed metadata for records corrected by
+// a later verified refresh. Records dropped by a rolling source stay in
+// the main catalog; they continue to reference their original snapshot.
+type History struct {
+	Releases []Release `json:"releases,omitempty"`
+	Patches  []Patch   `json:"patches,omitempty"`
 }
 
 // Catalog is the reproducible offline view bundled with a module release.
@@ -102,6 +112,7 @@ type Catalog struct {
 	Patches       []Patch    `json:"patches"`
 	Coverage      []Coverage `json:"coverage"`
 	Notes         []string   `json:"notes"`
+	History       *History   `json:"history,omitempty"`
 }
 
 //go:embed data/*.json
@@ -110,7 +121,7 @@ var data embed.FS
 // Load returns an independent copy of the bundled catalog for product.
 func Load(product Product) (Catalog, error) {
 	switch product {
-	case Database, Exadata, ODA:
+	case Database, Exadata, ODA, SuperCluster:
 	default:
 		return Catalog{}, fmt.Errorf("unknown Oracle catalog product %q", product)
 	}

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add the SuperCluster QFSDP catalog and require an official-source, history-preserving catalog refresh before each module publish (#91).
 - Add read-only logical database DBID and name from Oracle 9.2 onward, with the raw CDB flag from 12.1 (#84).
 
 - Reuse dictionary inventory validation and buffered budget checks, simplify native fact JSON opening and verify options-based API parity (#87).

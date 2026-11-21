@@ -208,6 +208,48 @@ def database_catalog(docs, manifest, as_of, harvester_revision):
     return catalog("database", as_of, sources, releases, patches, coverage, notes)
 
 
+def supercluster_catalog(database, as_of):
+    guide = source("oracle-supercluster-qfsdp-guide", "Oracle SuperCluster M8 and M7 Configuration Guide",
+                   "https://docs.oracle.com/cd/E58626_01/html/E58636/z400034a1004245704.html",
+                   checked_utc="2026-11-21")
+    announcements = {
+        36867121: ("2024-Q4", "https://community.oracle.com/mosc/discussion/4577639/were-releasing-quarterly-full-stack-download-patch-for-supercluster-q4-2024-patch-36867121"),
+        37610906: ("2025-Q2", "https://community.oracle.com/mosc/discussion/4586923/were-releasing-quarterly-full-stack-download-patch-for-supercluster-q2-2025-patch-37610906"),
+        38273760: ("2025-Q4", "https://community.oracle.com/mosc/discussion/4594830/were-releasing-quarterly-full-stack-download-patch-for-supercluster-q4-2025-patch-38273760"),
+    }
+    notices = {number: source(f"oracle-supercluster-{period}", f"Oracle SuperCluster {period} QFSDP announcement",
+                              url, checked_utc="2026-11-21")
+               for number, (period, url) in announcements.items()}
+    patches = []
+    used = set()
+    for old in database["patches"]:
+        if old.get("source_kind") != "QFSDP_SUPERCLUSTER":
+            continue
+        patch = dict(old, kind="QFSDP", component="supercluster")
+        artifacts = []
+        for a in old.get("artifacts", []):
+            record = dict(a)
+            if a.get("number") in notices:
+                record["corroborated_by"] = [notices[a["number"]]["id"]]
+            used.add(a.get("source", old["source"]))
+            artifacts.append(record)
+        if artifacts:
+            patch["artifacts"] = artifacts
+        used.add(old["source"])
+        patches.append(patch)
+    if not patches:
+        raise ValueError("Harvester export has no SuperCluster QFSDP records")
+    sources = [s for s in database["sources"] if s["id"] in used] + [guide, *notices.values()]
+    coverage = [dict(line=line, source="harvester-patch-export", status="harvester_qfsdp_snapshot")
+                for line in sorted({p["line"] for p in patches})]
+    coverage.append(dict(source=guide["id"], status="official_patch_family_reference"))
+    return catalog("supercluster", as_of, sources, [], patches, coverage, [
+        "Harvester lines and versions are associated Database release levels, not SuperCluster hardware or image versions.",
+        "Only explicit SuperCluster QFSDP labels are admitted. Oracle announcements corroborate named package identities only.",
+        "The saved source does not establish the current latest SuperCluster QFSDP or every model and platform applicability.",
+    ])
+
+
 def verified_mhtml(docs, item):
     raw = (docs / item["file"]).read_bytes()
     if sha(raw) != item["sha256"]:
@@ -483,17 +525,7 @@ def oda_catalog(root, as_of):
     ])
 
 
-def main():
-    cli = argparse.ArgumentParser(description=__doc__)
-    cli.add_argument("--harvester-docs", type=Path, required=True)
-    cli.add_argument("--harvester-revision", required=True)
-    cli.add_argument("--oda-captures", type=Path, required=True)
-    cli.add_argument("--output-dir", type=Path, required=True)
-    cli.add_argument("--as-of", type=date.fromisoformat, required=True)
-    cli.add_argument("--exadata-announcement-checked", type=date.fromisoformat, default=date(2026, 11, 21))
-    a = cli.parse_args()
-    docs = a.harvester_docs
-    as_of = a.as_of.isoformat()
+def build_catalogs(docs, harvester_revision, oda_captures, as_of, announcement_check):
     capture = read_json(docs / "mos-capture-manifest.json")
     if capture["schema"] != 1:
         raise ValueError("unexpected Harvester source manifest schema")
@@ -503,14 +535,18 @@ def main():
     for item in manifest.values():
         if sha((docs / item["file"]).read_bytes()) != item["sha256"]:
             raise ValueError(f"Harvester capture hash mismatch: {item['current_id']}")
-    results = [
-        database_catalog(docs, manifest, as_of, a.harvester_revision),
-        exadata_catalog(docs, manifest, as_of, a.exadata_announcement_checked.isoformat()),
-        oda_catalog(a.oda_captures, as_of),
+    database = database_catalog(docs, manifest, as_of, harvester_revision)
+    return [
+        database, supercluster_catalog(database, as_of),
+        exadata_catalog(docs, manifest, as_of, announcement_check),
+        oda_catalog(oda_captures, as_of),
     ]
-    a.output_dir.mkdir(parents=True, exist_ok=True)
-    for item in results:
-        path = a.output_dir / (item["product"] + ".json")
+
+
+def write_catalogs(catalogs, output_dir):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for item in catalogs:
+        path = output_dir / (item["product"] + ".json")
         # Compact rows keep the large per-platform history readable in diffs.
         with path.open("w", encoding="utf-8", newline="\n") as output:
             output.write("{\n")
@@ -527,6 +563,20 @@ def main():
             output.write("\n}\n")
         print(item["product"], len(item["releases"]), "release records,", len(item["patches"]),
               "patch records,", sum(len(p.get("artifacts", [])) for p in item["patches"]), "artifact records")
+
+
+def main():
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("--harvester-docs", type=Path, required=True)
+    cli.add_argument("--harvester-revision", required=True)
+    cli.add_argument("--oda-captures", type=Path, required=True)
+    cli.add_argument("--output-dir", type=Path, required=True)
+    cli.add_argument("--as-of", type=date.fromisoformat, required=True)
+    cli.add_argument("--exadata-announcement-checked", type=date.fromisoformat, default=date(2026, 11, 21))
+    a = cli.parse_args()
+    catalogs = build_catalogs(a.harvester_docs, a.harvester_revision, a.oda_captures,
+                              a.as_of.isoformat(), a.exadata_announcement_checked.isoformat())
+    write_catalogs(catalogs, a.output_dir)
 
 
 if __name__ == "__main__":
