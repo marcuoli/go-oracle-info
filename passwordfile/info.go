@@ -128,9 +128,7 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	if err != nil {
 		return nil, err
 	}
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, plan)
-	}, plan.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql), plan.schema, limits, rowset.EnvelopeOptions{
 		MaxRows:    1,
 		Provenance: plan.provenance,
 		Validate: projection.ValidateRowset(&Error{Operation: "decode", cause: ErrInvalidEvidence}, func(result session.Result) error {
@@ -142,7 +140,7 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 		switch stage {
 		case "header", "encode":
 			return &Error{Operation: "encode", cause: cause}
-		case "budget", "consume":
+		case "query", "budget", "consume":
 			return &Error{Operation: stage, cause: cause}
 		}
 		return cause

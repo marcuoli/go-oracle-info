@@ -8,7 +8,6 @@ import (
 	"errors"
 	"reflect"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
@@ -92,20 +91,11 @@ type selection struct {
 }
 
 func columns(result session.Result, plan selection) (map[string]int, error) {
-	names := make([]string, len(plan.schema))
-	for i, c := range plan.schema {
-		names[i] = c.Name
-	}
-	index, ok := projection.Columns(result, names...)
+	index, ok := projection.TypedColumns(result, plan.schema)
 	if !ok {
 		return nil, ErrInvalidEvidence
 	}
 	for _, row := range result.Rows {
-		for _, v := range row {
-			if !utf8.ValidString(v.Text) || (v.Null && v.Text != "") {
-				return nil, ErrInvalidEvidence
-			}
-		}
 		for _, name := range plan.integers {
 			v := row[index[name]]
 			if !v.Null && !numeric.IsSignedInteger(v.Text) {
@@ -131,18 +121,8 @@ func query(ctx context.Context, reader Reader, request Request, plan selection) 
 	if err = errors.Join(err, ctx.Err()); err != nil {
 		return session.Result{}, &Error{Operation: "query", cause: err}
 	}
-	if len(result.Rows) > limits.MaxRows {
+	if !projection.FitsBufferedLimits(result, limits) {
 		return session.Result{}, &Error{Operation: "budget", cause: rowset.ErrCapacity}
-	}
-	// Count every retained value, including late values, before publishing facts.
-	retained := 0
-	for _, row := range result.Rows {
-		for _, v := range row {
-			if len(v.Text) > limits.MaxBytes-retained {
-				return session.Result{}, &Error{Operation: "budget", cause: rowset.ErrCapacity}
-			}
-			retained += len(v.Text)
-		}
 	}
 	return result, nil
 }

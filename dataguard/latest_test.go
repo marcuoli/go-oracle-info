@@ -26,7 +26,7 @@ func TestIncarnationRequiresPairedTime(t *testing.T) {
 			r.Rows[0][i] = v("2026-11-17T01:02:03")
 		}
 	}
-	if _, err = DecodeArchiveProgress(r, "23.26.1.0.0", options); !errors.Is(err, ErrInvalidEvidence) {
+	if _, err = DecodeArchiveProgressWithOptions(r, ArchiveProgressSourceOptions{OracleVersion: "23.26.1.0.0", Filter: options}); !errors.Is(err, ErrInvalidEvidence) {
 		t.Fatalf("accepted other resetlogs time: %v", err)
 	}
 }

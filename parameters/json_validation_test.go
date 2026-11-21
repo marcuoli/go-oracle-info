@@ -74,8 +74,11 @@ func TestParameterJSONRejectsLateOutOfSelectionRows(t *testing.T) {
 		{"hidden prefix", parameterResult(true, false), "NAME", "processes", func(r session.Result) error { _, e := parameters.DecodeHidden(r, 19, parameters.Filter{}); return e }, func(c context.Context, q rowset.Queryer) (json.RawMessage, error) {
 			return parameters.HiddenJSON(c, q, 19, parameters.Filter{}, rowset.Limits{})
 		}},
-		{"stored SID", parameterResult(true, true), "SID", "node8", func(r session.Result) error { _, e := parameters.DecodeSPFile(r, 19, stored); return e }, func(c context.Context, q rowset.Queryer) (json.RawMessage, error) {
-			return parameters.SPFileJSON(c, q, 19, stored, rowset.Limits{})
+		{"stored SID", parameterResult(true, true), "SID", "node8", func(r session.Result) error {
+			_, e := parameters.DecodeSPFileWithOptions(r, parameters.SPFileOptions{OracleMajor: 19, Filter: stored})
+			return e
+		}, func(c context.Context, q rowset.Queryer) (json.RawMessage, error) {
+			return parameters.SPFileJSONWithOptions(c, q, parameters.SPFileOptions{OracleMajor: 19, Filter: stored}, rowset.Limits{MaxRows: 2, MaxBytes: 32768})
 		}},
 		{"catalog prefix", hiddenCatalogResult(), "NAME", "processes", func(r session.Result) error {
 			_, e := parameters.DecodeHiddenCatalog(r, 19, parameters.HiddenCatalogFilter{})
@@ -84,7 +87,7 @@ func TestParameterJSONRejectsLateOutOfSelectionRows(t *testing.T) {
 			return parameters.HiddenCatalogJSON(c, q, 19, parameters.HiddenCatalogFilter{}, rowset.Limits{})
 		}},
 		{"catalog substring", hiddenCatalogResult(), "NAME", "_unrelated", func(r session.Result) error { _, e := parameters.DecodeHiddenCatalog(r, 19, substring); return e }, func(c context.Context, q rowset.Queryer) (json.RawMessage, error) {
-			return parameters.HiddenCatalogJSON(c, q, 19, substring, rowset.Limits{})
+			return parameters.HiddenCatalogJSONWithOptions(c, q, parameters.HiddenCatalogOptions{OracleMajor: 19, Filter: substring}, rowset.Limits{MaxRows: 2, MaxBytes: 32768})
 		}},
 		{"catalog exact name", hiddenCatalogResult(), "NAME", "_waiters_other", func(r session.Result) error { _, e := parameters.DecodeHiddenCatalog(r, 19, exact); return e }, func(c context.Context, q rowset.Queryer) (json.RawMessage, error) {
 			return parameters.HiddenCatalogJSON(c, q, 19, exact, rowset.Limits{})

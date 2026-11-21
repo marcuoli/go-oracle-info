@@ -17,11 +17,12 @@ import (
 func TestOldestStatisticsOwnedAndNative(t *testing.T) {
 	options := StatisticsOptions{OracleMajor: 19, Limit: 2}
 	owners := []string{"CaseOwner"}
+	admitted := OldestStatisticsOptions{StatisticsOptions: options, Owners: owners}
 	ref, _ := reference.NewReference("unit", "objects", "oldest", 1)
 	columns := []string{"OWNER", "TABLE_NAME", "PARTITION_NAME", "SUBPARTITION_NAME", "OBJECT_TYPE", "NUM_ROWS", "LAST_ANALYZED", "STATTYPE_LOCKED", "SCOPE"}
 	values := []driver.Value{"CaseOwner", "T雪", nil, nil, "TABLE", "12.5", nil, nil, "SHARED"}
 	input := session.Result{Columns: columns, Rows: [][]session.Value{{{Text: "CaseOwner"}, {Text: "T雪"}, {Null: true}, {Null: true}, {Text: "TABLE"}, {Text: "12.5"}, {Null: true}, {Null: true}, {Text: "SHARED"}}}}
-	facts, err := DecodeOldestStatistics(input, options, owners...)
+	facts, err := DecodeOldestStatisticsWithOptions(input, admitted)
 	if err != nil || facts.Provenance.Complete || len(facts.Rows) != 1 || facts.Rows[0].NumRows.String != "12.5" || facts.Rows[0].LastAnalyzed.Valid || facts.Rows[0].Scope == nil || facts.Rows[0].Scope.String != "SHARED" {
 		t.Fatal(facts, err)
 	}
@@ -38,13 +39,13 @@ func TestOldestStatisticsOwnedAndNative(t *testing.T) {
 	}
 	db, state := testsql.New(t, testsql.Step{Columns: columns, Values: [][]driver.Value{values}})
 	spy := &datasetSpy{db: db}
-	r, err := OldestStatisticsRows(t.Context(), spy, options, owners...)
+	r, err := OldestStatisticsRowsWithOptions(t.Context(), spy, admitted)
 	if err != nil || r != spy.last || !r.Next() || state.Closed() != 0 {
 		t.Fatal(r, err)
 	}
 	r.Close()
 	db, state = testsql.New(t, testsql.Step{Columns: columns, Values: [][]driver.Value{values}})
-	payload, err := OldestStatisticsJSON(t.Context(), db, options, rowset.Limits{}, owners...)
+	payload, err := OldestStatisticsJSONWithOptions(t.Context(), db, admitted, rowset.Limits{MaxRows: 2, MaxBytes: 8192})
 	if err != nil || !json.Valid(payload) || state.Closed() != 1 {
 		t.Fatal(string(payload), err)
 	}
@@ -66,6 +67,12 @@ func TestOldestStatisticsOwnedAndNative(t *testing.T) {
 		if document.Data.Columns[i].Name != name {
 			t.Fatal(document.Data.Columns)
 		}
+	}
+	// The options-based JSON path forwards the exact encoded byte limit.
+	db, state = testsql.New(t, testsql.Step{Columns: columns, Values: [][]driver.Value{values}})
+	short, err := OldestStatisticsJSONWithOptions(t.Context(), db, admitted, rowset.Limits{MaxRows: 2, MaxBytes: len(payload) - 1})
+	if short != nil || !errors.Is(err, rowset.ErrCapacity) || state.Closed() != 1 {
+		t.Fatal(string(short), err, state.Closed())
 	}
 	late := append([]driver.Value(nil), values...)
 	late[0] = "DifferentOwner"

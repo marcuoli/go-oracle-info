@@ -13,6 +13,7 @@ import (
 
 func TestJSONDomainAdmissionParity(t *testing.T) {
 	limits := rowset.Limits{MaxRows: 4, MaxBytes: 32768}
+	options := ClientsOptions{OracleMajor: 19, Filter: Filter{Instances: []int64{1}, SourceRole: DatabaseInstance}}
 	cases := []struct {
 		name          string
 		plan          func() (selection, error)
@@ -22,12 +23,12 @@ func TestJSONDomainAdmissionParity(t *testing.T) {
 		single        bool
 	}{
 		{name: "unselected-instance", plan: func() (selection, error) {
-			return clientsPlan(19, Filter{Instances: []int64{1}, SourceRole: DatabaseInstance})
+			return clientsPlan(options.OracleMajor, options.Filter)
 		}, decode: func(r session.Result) error {
-			_, e := DecodeClients(r, 19, Filter{Instances: []int64{1}, SourceRole: DatabaseInstance})
+			_, e := DecodeClientsWithOptions(r, options)
 			return e
 		}, json: func(q rowset.Queryer) (json.RawMessage, error) {
-			return ClientsJSON(context.Background(), q, 19, Filter{Instances: []int64{1}, SourceRole: DatabaseInstance}, limits)
+			return ClientsJSONWithOptions(t.Context(), q, options, limits)
 		}, column: "INST_ID", value: "2"},
 	}
 	for _, tc := range cases {

@@ -349,9 +349,7 @@ func open(ctx context.Context, q rowset.Queryer, p selection) (*sql.Rows, error)
 
 func readJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.Limits) (json.RawMessage, error) {
 	p.provenance.Complete = true
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, p)
-	}, p.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
 		Provenance: p.provenance,
 		Validate: projection.ValidateRowset(&Error{p.provenance.Source, ErrInvalidEvidence}, func(result session.Result) error {
 			_, err := columns(result, p)
@@ -359,7 +357,7 @@ func readJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.
 		}),
 	})
 	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
-		if stage == "consume" || stage == "encode" && !errors.Is(cause, rowset.ErrCapacity) {
+		if stage == "query" || stage == "consume" || stage == "encode" && !errors.Is(cause, rowset.ErrCapacity) {
 			return &Error{p.provenance.Source, cause}
 		}
 		return cause

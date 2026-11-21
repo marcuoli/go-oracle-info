@@ -29,7 +29,7 @@ func TestJSONDomainAdmissionParity(t *testing.T) {
 			return MembersJSON(context.Background(), q, 19, Filter{Instances: []int64{1}}, limits)
 		}, column: "INST_ID", value: "2"},
 		{name: "history", plan: func() (selection, error) { return historyPlan(19, bounds()) }, decode: func(r session.Result) error { _, e := DecodeHistory(r, 19, bounds()); return e }, json: func(q rowset.Queryer) (json.RawMessage, error) {
-			return HistoryJSON(context.Background(), q, 19, bounds(), limits)
+			return HistoryJSONWithOptions(t.Context(), q, HistoryOptions{OracleMajor: 19, Filter: bounds()}, limits)
 		}, column: "FIRST_TIME", value: "2026-11-08T00:00:00"},
 		{name: "archivedLogs", plan: func() (selection, error) { return archivedLogsPlan(19, bounds()) }, decode: func(r session.Result) error { _, e := DecodeArchivedLogs(r, 19, bounds()); return e }, json: func(q rowset.Queryer) (json.RawMessage, error) {
 			return ArchivedLogsJSON(context.Background(), q, 19, bounds(), limits)
