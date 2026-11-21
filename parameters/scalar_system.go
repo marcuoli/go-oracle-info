@@ -7,7 +7,7 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/marcuoli/go-oracle-info/internal/legacyversion"
+	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -108,7 +108,7 @@ func ScalarSystemStatement(options ScalarSystemOptions) (string, []any, error) {
 }
 
 func scalarSystemPlan(options ScalarSystemOptions) (selection, error) {
-	major, ok := legacyversion.Major(options.OracleVersion)
+	major, ok := oracleversion.LegacyFactMajor(options.OracleVersion)
 	if !ok {
 		return selection{}, ErrUnsupportedVersion
 	}

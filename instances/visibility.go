@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/marcuoli/go-oracle-info/internal/legacyversion"
+	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -61,7 +61,7 @@ func VisibilityStatement(options VisibilityOptions) (string, error) {
 }
 
 func visibilityPlan(options VisibilityOptions) (selection, error) {
-	major, ok := legacyversion.Major(options.OracleVersion)
+	major, ok := oracleversion.LegacyFactMajor(options.OracleVersion)
 	if !ok {
 		return selection{}, ErrUnsupportedVersion
 	}

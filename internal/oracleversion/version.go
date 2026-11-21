@@ -31,3 +31,22 @@ func Parse(text string) ([5]uint64, bool) {
 	}
 	return version, true
 }
+
+// LegacyFactMajor admits the reviewed numeric releases for instance visibility
+// and scalar system parameters. Oracle Database 26ai uses the numeric 23 series.
+func LegacyFactMajor(text string) (int, bool) {
+	numbers, ok := Parse(text)
+	if !ok {
+		return 0, false
+	}
+	switch numbers[0] {
+	case 9:
+		return 9, numbers[1] == 2
+	case 10, 11, 12:
+		return int(numbers[0]), numbers[1] == 1 || numbers[1] == 2
+	case 18, 19, 21, 23:
+		return int(numbers[0]), true
+	default:
+		return 0, false
+	}
+}
