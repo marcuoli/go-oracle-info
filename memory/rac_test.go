@@ -1,10 +1,11 @@
 package memory_test
 
 import (
-	"github.com/marcuoli/go-oracle-info/memory"
-	"github.com/marcuoli/go-oracle-session/session"
 	"strings"
 	"testing"
+
+	"github.com/marcuoli/go-oracle-info/memory"
+	"github.com/marcuoli/go-oracle-session/session"
 )
 
 func racRow(name, value, instance, source, target string) []session.Value {
@@ -61,5 +62,22 @@ func TestRACSQLPreservesMembershipAndVersionScope(t *testing.T) {
 		if o.OracleMajor < 12 && strings.Contains(sql, "P.CON_ID") {
 			t.Fatal("legacy catalog used container column")
 		}
+	}
+}
+
+func TestRACTotalsRoundHalfUpWithoutLosingLowBits(t *testing.T) {
+	input := racResult(
+		racRow("sga_target", "1237940039285380274899124224", "1", "3", "3"), // 2^90 bytes
+		racRow("pga_aggregate_target", "0", "1", "3", "3"),
+		racRow("sga_target", "67108864", "2", "3", "3"),           // Exactly 0.0625 GiB
+		racRow("pga_aggregate_target", "67108863", "2", "3", "3"), // One byte below the tie
+	)
+	report, err := memory.DecodeRAC(input, memory.Options{Scope: memory.ConnectedPDB, OracleMajor: 19})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.SGA.State != memory.Available || report.SGA.ValueGiB != "1152921504606846976.063" ||
+		report.PGA.State != memory.Available || report.PGA.ValueGiB != "0.062" {
+		t.Fatalf("unexpected totals: SGA %+v; PGA %+v", report.SGA, report.PGA)
 	}
 }

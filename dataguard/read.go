@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/marcuoli/go-oracle-info/internal/datetime"
+	numtext "github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -139,9 +140,6 @@ func reviewedVersion(version string) bool {
 	}
 	return false
 }
-func unsigned(value string) bool {
-	return value != "" && strings.IndexFunc(value, func(r rune) bool { return r < '0' || r > '9' }) < 0
-}
 func instanceClause(ids []int64) (string, []any, error) {
 	var marks []string
 	var args []any
@@ -199,7 +197,7 @@ func columns(r session.Result, p selection) (map[string]int, error) {
 			if v.Null {
 				continue
 			}
-			if (f.exact && !unsigned(v.Text)) || (f.decimal && !decimalText.MatchString(v.Text)) {
+			if (f.exact && !numtext.IsUnsignedInteger(v.Text)) || (f.decimal && !decimalText.MatchString(v.Text)) {
 				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
 			}
 			if f.kind == rowset.Integer {

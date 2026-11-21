@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
-	"math/big"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -116,11 +116,8 @@ func DecodeDatabaseInfo(result session.Result, options DatabaseInfoOptions) (Dat
 		// Oracle SCNs are unsigned decimal identifiers, not signed64 counters.
 		// Keep their exact text even beyond MaxInt64; JSON uses the same decoder.
 		scn := row[index["CURRENT_SCN"]]
-		if !scn.Null {
-			n, ok := new(big.Int).SetString(scn.Text, 10)
-			if !ok || n.Sign() < 0 || scn.Text == "" || scn.Text[0] < '0' || scn.Text[0] > '9' {
-				return DatabaseInfoResult{}, ErrInvalidEvidence
-			}
+		if !scn.Null && !numeric.IsUnsignedInteger(scn.Text) {
+			return DatabaseInfoResult{}, ErrInvalidEvidence
 		}
 		fact := DatabaseInfo{
 			DBID:            row[index["DBID"]],

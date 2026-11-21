@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -149,10 +149,8 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 		}
 		for _, name := range plan.integers {
 			v := row[index[name]]
-			if !v.Null {
-				if _, ok := new(big.Int).SetString(v.Text, 10); !ok {
-					return nil, ErrInvalidEvidence
-				}
+			if !v.Null && !numeric.IsSignedInteger(v.Text) {
+				return nil, ErrInvalidEvidence
 			}
 		}
 	}
