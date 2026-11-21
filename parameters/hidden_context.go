@@ -220,44 +220,16 @@ func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	type envelope struct {
-		Provenance HiddenContextProvenance `json:"provenance"`
-		Data       any                     `json:"data"`
-	}
-	header, err := json.Marshal(envelope{Provenance: plan.provenance})
-	if err != nil {
-		return nil, &Error{Source: hiddenContextSource, cause: err}
-	}
-	original := resolved.MaxBytes
-	resolved.MaxBytes -= len(header) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{Source: hiddenContextSource, cause: rowset.ErrCapacity}
-	}
-	rows, err := open(ctx, q, plan.selection)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{Source: hiddenContextSource, cause: err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{Source: hiddenContextSource, cause: ErrInvalidEvidence}
-	}
-	if _, err = decodeHiddenContext(result, plan); err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope{Provenance: plan.provenance, Data: table})
-	if len(payload) > original {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{Source: hiddenContextSource, cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan.selection)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		Provenance: plan.provenance,
+		Validate: projection.ValidateRowset(&Error{Source: hiddenContextSource, cause: ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := decodeHiddenContext(result, plan)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &Error{Source: hiddenContextSource, cause: cause}
+	}, "limits", "query", "validate")
 }

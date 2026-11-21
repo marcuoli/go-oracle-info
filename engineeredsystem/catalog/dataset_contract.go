@@ -97,49 +97,12 @@ func datasetColumns(result session.Result, p datasetSelection, integerFields ...
 
 // Only shared rowset owns cursor consumption. Domain validation precedes encoding.
 func readDatasetJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
 	p.provenance.Complete = true
-	envelope := struct {
-		Provenance DatasetProvenance `json:"provenance"`
-		Data       json.RawMessage   `json:"data"`
-	}{Provenance: p.provenance}
-	overhead, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(overhead) - 4
-	if budget.MaxBytes < 1 {
-		return nil, &DatasetError{p.provenance.Source, rowset.ErrCapacity}
-	}
-	cursor, err := rowset.Query(ctx, q, p.sql, p.args...)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	table, err := rowset.Read(ctx, cursor, p.schema, budget)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &DatasetError{p.provenance.Source, ErrInvalidEvidence}
-	}
-	if err = validate(result); err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return nil, err
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
+	})
+	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &DatasetError{p.provenance.Source, cause}
+	}, "limits", "header")
 }

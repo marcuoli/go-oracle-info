@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"strconv"
 	"strings"
 
@@ -124,52 +123,28 @@ func OracleHomeRowsJSON(ctx context.Context, q rowset.Queryer, major int, limits
 	if _, err := OracleHomeStatement(major); err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Inferred   bool            `json:"inferred"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: oracleHomeProvenance(major), Inferred: major < 12}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-	if budget.MaxRows > 1 {
-		budget.MaxRows = 1
-	}
-	cursor, err := OracleHomeRows(ctx, q, major)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, cursor, oracleHomeSchema(), budget)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, ErrInvalidEvidence
-	}
-	if _, err = DecodeOracleHome(result, major); err != nil {
-		return nil, err
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return OracleHomeRows(ctx, q, major)
+	}, oracleHomeSchema(), limits, rowset.EnvelopeOptions{
+		Header: struct {
+			Provenance Provenance `json:"provenance"`
+			Inferred   bool       `json:"inferred"`
+		}{Provenance: oracleHomeProvenance(major), Inferred: major < 12},
+		MaxRows: 1,
+		Validate: projection.ValidateRowset(ErrInvalidEvidence, func(result session.Result) error {
+			_, err := DecodeOracleHome(result, major)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
+}
+
+// OracleHomeJSON reads the native Oracle home row with its source provenance.
+func OracleHomeJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error) {
+	return OracleHomeRowsJSON(ctx, q, major, limits)
 }

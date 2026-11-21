@@ -188,3 +188,79 @@ func RACJSON(ctx context.Context, q rowset.Queryer, options Options, limits rows
 	}
 	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := DecodeRAC(r, options); return err })
 }
+
+// ParameterOptions admits a configured-memory setting and its source scope.
+type ParameterOptions struct {
+	Parameter Parameter
+	Options   Options
+}
+
+// ParameterStatement selects the same scoped projection and bind values as ParameterRows.
+func ParameterStatement(options ParameterOptions) (string, []any, error) {
+	plan, err := sourcePlan(options.Parameter, options.Options, false)
+	return plan.sql, plan.args, err
+}
+
+// DecodeParameter validates the selected source before decoding its observation.
+func DecodeParameter(result session.Result, options ParameterOptions) (Observation, error) {
+	plan, err := sourcePlan(options.Parameter, options.Options, false)
+	if err != nil {
+		return Observation{}, err
+	}
+	if _, err = datasetColumns(result, plan); err != nil {
+		return Observation{}, err
+	}
+	return Decode(result, options.Parameter, options.Options)
+}
+
+// ReadParameter is the named form of Read.
+func ReadParameter(ctx context.Context, reader Reader, request SourceRequest) (Observation, error) {
+	return Read(ctx, reader, request)
+}
+
+// ParameterRows is the named form of Rows.
+func ParameterRows(ctx context.Context, q rowset.Queryer, options ParameterOptions) (*sql.Rows, error) {
+	return Rows(ctx, q, options.Parameter, options.Options)
+}
+
+// ParameterJSON is the named form of JSON.
+func ParameterJSON(ctx context.Context, q rowset.Queryer, options ParameterOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options.Parameter, options.Options, limits)
+}
+
+// RACRequest adds the caller's SQL reference to one admitted RAC selection.
+type RACRequest struct {
+	Options   Options
+	Reference reference.Reference
+}
+
+// ReadRACWithOptions reads RAC memory using a single caller request.
+func ReadRACWithOptions(ctx context.Context, reader Reader, request RACRequest) (RACObservation, error) {
+	return ReadRAC(ctx, reader, request.Options, request.Reference)
+}
+
+// PDBStatementWithOptions selects a fully admitted connected-PDB projection.
+func PDBStatementWithOptions(options ParameterOptions) (string, []any, error) {
+	if options.Options.Scope != ConnectedPDB {
+		return "", nil, ErrUnsupportedScope
+	}
+	return ParameterStatement(options)
+}
+
+// DecodePDBWithOptions validates a complete connected-PDB source.
+func DecodePDBWithOptions(result session.Result, options ParameterOptions) (Observation, error) {
+	if options.Options.Scope != ConnectedPDB {
+		return Observation{}, ErrUnsupportedScope
+	}
+	return DecodeParameter(result, options)
+}
+
+// PDBRowsWithOptions is the named form of PDBRows.
+func PDBRowsWithOptions(ctx context.Context, q rowset.Queryer, options ParameterOptions) (*sql.Rows, error) {
+	return PDBRows(ctx, q, options.Parameter, options.Options)
+}
+
+// PDBJSONWithOptions is the named form of PDBJSON.
+func PDBJSONWithOptions(ctx context.Context, q rowset.Queryer, options ParameterOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return PDBJSON(ctx, q, options.Parameter, options.Options, limits)
+}

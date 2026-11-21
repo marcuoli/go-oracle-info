@@ -6,7 +6,7 @@ go 1.27.4
 // Tidy prunes these explicit version floors; refresh them after tidy.
 
 require (
-	github.com/marcuoli/go-oracle-session v0.10.0
+	github.com/marcuoli/go-oracle-session v0.15.0
 	github.com/marcuoli/go-sqltemplate v0.1.1
 )
 

@@ -288,3 +288,28 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	}
 	return json.RawMessage(payload), nil
 }
+
+// ObjectStatement is the named form of Statement.
+func ObjectStatement(options Options) (string, []any, error) {
+	return Statement(options)
+}
+
+// DecodeObject is the named form of Decode.
+func DecodeObject(result session.Result, options Options) (Result, error) {
+	return Decode(result, options)
+}
+
+// ReadObject is the named form of Read.
+func ReadObject(ctx context.Context, reader Reader, request Request) (Result, error) {
+	return Read(ctx, reader, request)
+}
+
+// ObjectRows is the named form of Rows.
+func ObjectRows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error) {
+	return Rows(ctx, q, options)
+}
+
+// ObjectJSON is the named form of JSON.
+func ObjectJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options, limits)
+}

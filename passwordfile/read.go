@@ -124,49 +124,25 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	if err != nil {
 		return nil, err
 	}
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	metadata, err := json.Marshal(JSONEnvelope{Provenance: plan.provenance})
-	if err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, &Error{Operation: "budget", cause: rowset.ErrCapacity}
-	}
-	// Oracle documents one row; a second row must not become complete metadata.
-	resolved.MaxRows = 1
-	rows, err := open(ctx, q, plan)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, rows, plan.schema, resolved)
-	if err != nil {
-		return nil, &Error{Operation: "consume", cause: err}
-	}
-	// A typed rowset is complete transport evidence, not domain admission.
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{Operation: "decode", cause: ErrInvalidEvidence}
-	}
-	if _, err = decode(result, plan); err != nil {
-		return nil, err
-	}
-	data, err := json.Marshal(table)
-	if err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	payload, err := json.Marshal(JSONEnvelope{Provenance: plan.provenance, Data: data})
-	original, _ := rowset.Resolve(limits)
-	if len(payload) > original.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = errors.Join(err, ctx.Err()); err != nil {
-		return nil, &Error{Operation: "encode", cause: err}
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, plan)
+	}, plan.schema, limits, rowset.EnvelopeOptions{
+		MaxRows:    1,
+		Provenance: plan.provenance,
+		Validate: projection.ValidateRowset(&Error{Operation: "decode", cause: ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := decode(result, plan)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		switch stage {
+		case "header", "encode":
+			return &Error{Operation: "encode", cause: cause}
+		case "budget", "consume":
+			return &Error{Operation: stage, cause: cause}
+		}
+		return cause
+	})
 }
 
 func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, error) {
@@ -214,4 +190,29 @@ func decode(result session.Result, plan selection) (Observation, error) {
 	}
 	observation.State, observation.Value = Available, info
 	return observation, nil
+}
+
+// InfoStatement is the named form of Statement.
+func InfoStatement(options Options) (string, error) {
+	return Statement(options)
+}
+
+// DecodeInfo is the named form of Decode.
+func DecodeInfo(result session.Result, options Options) (Observation, error) {
+	return Decode(result, options)
+}
+
+// ReadInfo is the named form of Read.
+func ReadInfo(ctx context.Context, reader Reader, request Request) (Observation, error) {
+	return Read(ctx, reader, request)
+}
+
+// InfoRows is the named form of Rows.
+func InfoRows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error) {
+	return Rows(ctx, q, options)
+}
+
+// InfoJSON is the named form of JSON.
+func InfoJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options, limits)
 }

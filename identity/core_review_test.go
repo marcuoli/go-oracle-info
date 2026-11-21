@@ -54,3 +54,35 @@ func TestDatabaseInfoSCNRemainsUnsignedExactText(t *testing.T) {
 		})
 	}
 }
+
+func TestSingleRowJSONSourcesRejectSecondRowAtConsumption(t *testing.T) {
+	t.Run("session context", func(t *testing.T) {
+		row := []driver.Value{"host", "os_user", "SESSION_USER"}
+		db, state := testsql.New(t, testsql.Step{
+			Columns: []string{"CLIENT_HOST", "OS_USER", "SESSION_USER"},
+			Values:  [][]driver.Value{row, row},
+		})
+		payload, err := SessionContextJSON(t.Context(), db, 19, rowset.Limits{MaxRows: 5})
+		checkSingleRowJSONFailure(t, payload, err, state)
+	})
+	t.Run("database info", func(t *testing.T) {
+		source := databaseInfoFixture(false)
+		row := make([]driver.Value, len(source.Columns))
+		for i, value := range source.Rows[0] {
+			if !value.Null {
+				row[i] = value.Text
+			}
+		}
+		db, state := testsql.New(t, testsql.Step{Columns: source.Columns, Values: [][]driver.Value{row, row}})
+		payload, err := DatabaseInfoJSON(t.Context(), db, DatabaseInfoOptions{OracleMajor: 19}, rowset.Limits{MaxRows: 5})
+		checkSingleRowJSONFailure(t, payload, err, state)
+	})
+}
+
+func checkSingleRowJSONFailure(t *testing.T, payload json.RawMessage, err error, state *testsql.State) {
+	t.Helper()
+	failure, ok := err.(*rowset.Error)
+	if payload != nil || !ok || failure.Operation != "budget" || !errors.Is(err, rowset.ErrCapacity) || state.Closed() != 1 {
+		t.Fatalf("single-row source = %s, err = %v, closed = %d", payload, err, state.Closed())
+	}
+}

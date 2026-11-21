@@ -144,3 +144,29 @@ func SGAComponentsJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	}
 	return readJSON(ctx, q, plan, limits, func(result session.Result) error { _, err := decodeSGAComponents(result, plan); return err })
 }
+
+// SGAComponentsOptions carries the source selectors for the options-based fact APIs.
+type SGAComponentsOptions struct {
+	OracleMajor int
+	Filter      InstanceFilter
+}
+
+// SGAComponentsStatementWithOptions selects the same source as SGAComponentsStatement using one options value.
+func SGAComponentsStatementWithOptions(options SGAComponentsOptions) (string, []any, error) {
+	return SGAComponentsStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeSGAComponentsWithOptions selects the same source as DecodeSGAComponents using one options value.
+func DecodeSGAComponentsWithOptions(result session.Result, options SGAComponentsOptions) (SGAComponentsResult, error) {
+	return DecodeSGAComponents(result, options.OracleMajor, options.Filter)
+}
+
+// SGAComponentsRowsWithOptions selects the same source as SGAComponentsRows using one options value.
+func SGAComponentsRowsWithOptions(ctx context.Context, q rowset.Queryer, options SGAComponentsOptions) (*sql.Rows, error) {
+	return SGAComponentsRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// SGAComponentsJSONWithOptions selects the same source as SGAComponentsJSON using one options value.
+func SGAComponentsJSONWithOptions(ctx context.Context, q rowset.Queryer, options SGAComponentsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return SGAComponentsJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}

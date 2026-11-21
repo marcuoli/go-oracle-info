@@ -58,6 +58,29 @@ private native cursors from a Session lease.
 | scheduler | Jobs |
 | services | Names |
 
+### Named families for existing APIs
+
+The named functions select the same sources as the generic functions from prior
+releases. Existing function signatures remain supported.
+
+| Package | Named family |
+| --- | --- |
+| dblinks, directories, networkacl, sequences, triggers, users | Inventory |
+| instances | Inventory |
+| memory | Parameter |
+| metadata | Object |
+| passwordfile | Info |
+| registry | Components |
+| services | Definitions |
+| identity | OracleHome, including OracleHomeJSON for the native projection |
+
+Existing families with multiple positional source selectors expose
+`StatementWithOptions`, `Decode…WithOptions`, `RowsWithOptions` and
+`JSONWithOptions` forms. This covers ASM clients, encryption, Data Guard
+transport facts, configured PDB memory, invalid details and oldest statistics,
+parameter facts, redo inventories and SGA components. `ReadRACWithOptions`
+takes a request containing the RAC selection and SQL reference.
+
 OldestStatistics reuses the existing OldestStatisticsStatement and
 StatisticsOptions. DecodeOldestStatistics/ReadOldestStatistics and
 OldestStatisticsRows/OldestStatisticsJSON preserve the nullable Statistics model,

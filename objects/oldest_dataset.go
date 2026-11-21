@@ -118,3 +118,55 @@ func OldestStatisticsJSON(ctx context.Context, q rowset.Queryer, options Statist
 	}
 	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := decodeOldestDataset(r, p); return err })
 }
+
+// InvalidDetailsOptions carries the source selectors for the options-based fact APIs.
+type InvalidDetailsOptions struct {
+	OracleMajor int
+	Owners      []string
+}
+
+// InvalidDetailsStatementWithOptions selects the same source as InvalidDetailsStatement using one options value.
+func InvalidDetailsStatementWithOptions(options InvalidDetailsOptions) (string, []any, error) {
+	return InvalidDetailsStatement(options.OracleMajor, options.Owners...)
+}
+
+// DecodeInvalidDetailsWithOptions selects the same source as DecodeInvalidDetails using one options value.
+func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error) {
+	return DecodeInvalidDetails(result, options.OracleMajor, options.Owners...)
+}
+
+// InvalidDetailsRowsWithOptions selects the same source as InvalidDetailsRows using one options value.
+func InvalidDetailsRowsWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions) (*sql.Rows, error) {
+	return InvalidDetailsRows(ctx, q, options.OracleMajor, options.Owners...)
+}
+
+// InvalidDetailsJSONWithOptions selects the same source as InvalidDetailsJSON using one options value.
+func InvalidDetailsJSONWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return InvalidDetailsJSON(ctx, q, options.OracleMajor, options.Owners, limits)
+}
+
+// OldestStatisticsOptions carries the source selectors for the options-based fact APIs.
+type OldestStatisticsOptions struct {
+	StatisticsOptions
+	Owners []string
+}
+
+// OldestStatisticsStatementWithOptions selects the same source as OldestStatisticsStatement using one options value.
+func OldestStatisticsStatementWithOptions(options OldestStatisticsOptions) (string, []any, error) {
+	return OldestStatisticsStatement(options.StatisticsOptions, options.Owners...)
+}
+
+// DecodeOldestStatisticsWithOptions selects the same source as DecodeOldestStatistics using one options value.
+func DecodeOldestStatisticsWithOptions(result session.Result, options OldestStatisticsOptions) (OldestStatisticsResult, error) {
+	return DecodeOldestStatistics(result, options.StatisticsOptions, options.Owners...)
+}
+
+// OldestStatisticsRowsWithOptions selects the same source as OldestStatisticsRows using one options value.
+func OldestStatisticsRowsWithOptions(ctx context.Context, q rowset.Queryer, options OldestStatisticsOptions) (*sql.Rows, error) {
+	return OldestStatisticsRows(ctx, q, options.StatisticsOptions, options.Owners...)
+}
+
+// OldestStatisticsJSONWithOptions selects the same source as OldestStatisticsJSON using one options value.
+func OldestStatisticsJSONWithOptions(ctx context.Context, q rowset.Queryer, options OldestStatisticsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return OldestStatisticsJSON(ctx, q, options.StatisticsOptions, limits, options.Owners...)
+}

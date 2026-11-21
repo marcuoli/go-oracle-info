@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 
+	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
+	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
 // Service retains source spelling, exact integer text and selected SQL NULL.
@@ -170,44 +171,58 @@ func Rows(ctx context.Context, q rowset.Queryer, major int, includeEdition ...bo
 // JSON independently consumes/finalizes a cursor. It returns no JSON on terminal,
 // scan, close, cancellation or capacity failure; the budget includes provenance.
 func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits, includeEdition ...bool) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	provenance := serviceProvenance(major, includeEdition...)
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	budget := resolved
-	budget.MaxBytes -= len(metadata) - 4
-	if budget.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-
-	cursor, err := Rows(ctx, q, major, includeEdition...)
-	if err != nil {
-		return nil, err
-	}
-	envelope.Data, err = rowset.ReadJSON(ctx, cursor, serviceSchema(major, includeEdition...), budget)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if len(payload) > resolved.MaxBytes {
-		err = errors.Join(err, rowset.ErrCapacity)
-	}
-	if err = factReadError(ctx, err); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(payload), nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return Rows(ctx, q, major, includeEdition...)
+	}, serviceSchema(major, includeEdition...), limits, rowset.EnvelopeOptions{
+		Provenance: serviceProvenance(major, includeEdition...),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "encode" {
+			return &ReadError{cause: cause}
+		}
+		return cause
+	})
 }
 
 // Oracle documents EDITION from 11.2.0.2. Major 11 alone cannot admit it.
 func serviceEdition(major int, include []bool) bool {
 	return major >= 12 || (len(include) == 1 && include[0])
+}
+
+// DefinitionsOptions admits the Oracle projection for registered services.
+type DefinitionsOptions struct {
+	OracleMajor int
+	// IncludeEdition admits the EDITION column on 11.2.0.2 and later.
+	IncludeEdition bool
+}
+
+// DefinitionsRequest adds the caller's SQL reference to the source options.
+type DefinitionsRequest struct {
+	Options   DefinitionsOptions
+	Reference reference.Reference
+}
+
+// DefinitionsStatement is the named form of Statement.
+func DefinitionsStatement(options DefinitionsOptions) (string, error) {
+	return Statement(options.OracleMajor, options.IncludeEdition)
+}
+
+// DecodeDefinitions is the named form of Decode.
+func DecodeDefinitions(result session.Result, options DefinitionsOptions) (Result, error) {
+	return Decode(result, options.OracleMajor, options.IncludeEdition)
+}
+
+// ReadDefinitions is the named form of Read.
+func ReadDefinitions(ctx context.Context, reader Reader, request DefinitionsRequest) (Result, error) {
+	return Read(ctx, reader, Request{OracleMajor: request.Options.OracleMajor, Reference: request.Reference, IncludeEdition: request.Options.IncludeEdition})
+}
+
+// DefinitionsRows is the named form of Rows.
+func DefinitionsRows(ctx context.Context, q rowset.Queryer, options DefinitionsOptions) (*sql.Rows, error) {
+	return Rows(ctx, q, options.OracleMajor, options.IncludeEdition)
+}
+
+// DefinitionsJSON is the named form of JSON.
+func DefinitionsJSON(ctx context.Context, q rowset.Queryer, options DefinitionsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options.OracleMajor, limits, options.IncludeEdition)
 }

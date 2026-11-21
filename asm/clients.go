@@ -148,3 +148,29 @@ func ClientsJSON(ctx context.Context, q rowset.Queryer, major int, filter Filter
 	}
 	return readJSON(ctx, q, plan, limits, func(result session.Result) error { _, err := decodeClients(result, plan); return err })
 }
+
+// ClientsOptions carries the source selectors for the options-based fact APIs.
+type ClientsOptions struct {
+	OracleMajor int
+	Filter      Filter
+}
+
+// ClientsStatementWithOptions selects the same source as ClientsStatement using one options value.
+func ClientsStatementWithOptions(options ClientsOptions) (string, []any, error) {
+	return ClientsStatement(options.OracleMajor, options.Filter)
+}
+
+// DecodeClientsWithOptions selects the same source as DecodeClients using one options value.
+func DecodeClientsWithOptions(result session.Result, options ClientsOptions) (ClientsResult, error) {
+	return DecodeClients(result, options.OracleMajor, options.Filter)
+}
+
+// ClientsRowsWithOptions selects the same source as ClientsRows using one options value.
+func ClientsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ClientsOptions) (*sql.Rows, error) {
+	return ClientsRows(ctx, q, options.OracleMajor, options.Filter)
+}
+
+// ClientsJSONWithOptions selects the same source as ClientsJSON using one options value.
+func ClientsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ClientsOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ClientsJSON(ctx, q, options.OracleMajor, options.Filter, limits)
+}

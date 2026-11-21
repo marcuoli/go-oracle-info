@@ -137,3 +137,28 @@ func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.
 	}
 	return readJSON(ctx, q, plan, limits)
 }
+
+// InventoryStatement is the named form of Statement.
+func InventoryStatement(options Options) (string, []any, error) {
+	return Statement(options)
+}
+
+// DecodeInventory is the named form of Decode.
+func DecodeInventory(result session.Result, options Options) (Result, error) {
+	return Decode(result, options)
+}
+
+// ReadInventory is the named form of Read.
+func ReadInventory(ctx context.Context, reader Reader, request Request) (Result, error) {
+	return Read(ctx, reader, request)
+}
+
+// InventoryRows is the named form of Rows.
+func InventoryRows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error) {
+	return Rows(ctx, q, options)
+}
+
+// InventoryJSON is the named form of JSON.
+func InventoryJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error) {
+	return JSON(ctx, q, options, limits)
+}

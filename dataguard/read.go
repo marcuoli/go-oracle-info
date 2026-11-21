@@ -275,52 +275,172 @@ func open(ctx context.Context, q rowset.Queryer, p selection) (*sql.Rows, error)
 	return rows, nil
 }
 func readJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.Limits) (json.RawMessage, error) {
-	resolved, err := rowset.Resolve(limits)
-	if err != nil {
-		return nil, err
-	}
-	maxBytes := resolved.MaxBytes
 	p.provenance.Complete = true
-	envelope := struct {
-		Provenance Provenance      `json:"provenance"`
-		Data       json.RawMessage `json:"data"`
-	}{Provenance: p.provenance}
-	metadata, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	resolved.MaxBytes -= len(metadata) - 4
-	if resolved.MaxBytes < 1 {
-		return nil, rowset.ErrCapacity
-	}
-	rows, err := open(ctx, q, p)
-	if err != nil {
-		return nil, err
-	}
-	table, err := rowset.Read(ctx, rows, p.schema, resolved)
-	if err != nil {
-		return nil, &Error{p.provenance.Source, err}
-	}
-	result, ok := projection.FromRowset(table)
-	if !ok {
-		return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
-	}
-	if _, err = columns(result, p); err != nil {
-		return nil, err
-	}
-	envelope.Data, err = json.Marshal(table)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	if len(payload) > maxBytes {
-		return nil, rowset.ErrCapacity
-	}
-	if err = ctx.Err(); err != nil {
-		return nil, &Error{p.provenance.Source, err}
-	}
-	return payload, nil
+	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
+		return open(ctx, q, p)
+	}, p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate: projection.ValidateRowset(&Error{p.provenance.Source, ErrInvalidEvidence}, func(result session.Result) error {
+			_, err := columns(result, p)
+			return err
+		}),
+	})
+	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
+		if stage == "consume" || stage == "encode" && !errors.Is(cause, rowset.ErrCapacity) {
+			return &Error{p.provenance.Source, cause}
+		}
+		return cause
+	})
+}
+
+// ScopeOptions carries the source selectors for the options-based fact APIs.
+type ScopeOptions struct {
+	OracleVersion string
+	Filter        Filter
+}
+
+// ArchiveDestinationsStatementWithOptions selects the same source as ArchiveDestinationsStatement using one options value.
+func ArchiveDestinationsStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ArchiveDestinationsStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveDestinationsWithOptions selects the same source as DecodeArchiveDestinations using one options value.
+func DecodeArchiveDestinationsWithOptions(result session.Result, options ScopeOptions) (ArchiveDestinationsResult, error) {
+	return DecodeArchiveDestinations(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationsRowsWithOptions selects the same source as ArchiveDestinationsRows using one options value.
+func ArchiveDestinationsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ArchiveDestinationsRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationsJSONWithOptions selects the same source as ArchiveDestinationsJSON using one options value.
+func ArchiveDestinationsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveDestinationsJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// ArchiveDestinationStatusStatementWithOptions selects the same source as ArchiveDestinationStatusStatement using one options value.
+func ArchiveDestinationStatusStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ArchiveDestinationStatusStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveDestinationStatusWithOptions selects the same source as DecodeArchiveDestinationStatus using one options value.
+func DecodeArchiveDestinationStatusWithOptions(result session.Result, options ScopeOptions) (ArchiveDestinationStatusResult, error) {
+	return DecodeArchiveDestinationStatus(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationStatusRowsWithOptions selects the same source as ArchiveDestinationStatusRows using one options value.
+func ArchiveDestinationStatusRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ArchiveDestinationStatusRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveDestinationStatusJSONWithOptions selects the same source as ArchiveDestinationStatusJSON using one options value.
+func ArchiveDestinationStatusJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveDestinationStatusJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// ArchiveGapsStatementWithOptions selects the same source as ArchiveGapsStatement using one options value.
+func ArchiveGapsStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ArchiveGapsStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveGapsWithOptions selects the same source as DecodeArchiveGaps using one options value.
+func DecodeArchiveGapsWithOptions(result session.Result, options ScopeOptions) (ArchiveGapsResult, error) {
+	return DecodeArchiveGaps(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveGapsRowsWithOptions selects the same source as ArchiveGapsRows using one options value.
+func ArchiveGapsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ArchiveGapsRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveGapsJSONWithOptions selects the same source as ArchiveGapsJSON using one options value.
+func ArchiveGapsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveGapsJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// ProcessesStatementWithOptions selects the same source as ProcessesStatement using one options value.
+func ProcessesStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return ProcessesStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeProcessesWithOptions selects the same source as DecodeProcesses using one options value.
+func DecodeProcessesWithOptions(result session.Result, options ScopeOptions) (ProcessesResult, error) {
+	return DecodeProcesses(result, options.OracleVersion, options.Filter)
+}
+
+// ProcessesRowsWithOptions selects the same source as ProcessesRows using one options value.
+func ProcessesRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return ProcessesRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ProcessesJSONWithOptions selects the same source as ProcessesJSON using one options value.
+func ProcessesJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ProcessesJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// RecoveryProgressStatementWithOptions selects the same source as RecoveryProgressStatement using one options value.
+func RecoveryProgressStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return RecoveryProgressStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeRecoveryProgressWithOptions selects the same source as DecodeRecoveryProgress using one options value.
+func DecodeRecoveryProgressWithOptions(result session.Result, options ScopeOptions) (RecoveryProgressResult, error) {
+	return DecodeRecoveryProgress(result, options.OracleVersion, options.Filter)
+}
+
+// RecoveryProgressRowsWithOptions selects the same source as RecoveryProgressRows using one options value.
+func RecoveryProgressRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return RecoveryProgressRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// RecoveryProgressJSONWithOptions selects the same source as RecoveryProgressJSON using one options value.
+func RecoveryProgressJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return RecoveryProgressJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// StandbyLogsStatementWithOptions selects the same source as StandbyLogsStatement using one options value.
+func StandbyLogsStatementWithOptions(options ScopeOptions) (string, []any, error) {
+	return StandbyLogsStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeStandbyLogsWithOptions selects the same source as DecodeStandbyLogs using one options value.
+func DecodeStandbyLogsWithOptions(result session.Result, options ScopeOptions) (StandbyLogsResult, error) {
+	return DecodeStandbyLogs(result, options.OracleVersion, options.Filter)
+}
+
+// StandbyLogsRowsWithOptions selects the same source as StandbyLogsRows using one options value.
+func StandbyLogsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error) {
+	return StandbyLogsRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// StandbyLogsJSONWithOptions selects the same source as StandbyLogsJSON using one options value.
+func StandbyLogsJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return StandbyLogsJSON(ctx, q, options.OracleVersion, options.Filter, limits)
+}
+
+// ArchiveProgressSourceOptions carries the source selectors for the options-based fact APIs.
+type ArchiveProgressSourceOptions struct {
+	OracleVersion string
+	Filter        ArchiveProgressOptions
+}
+
+// ArchiveProgressStatementWithOptions selects the same source as ArchiveProgressStatement using one options value.
+func ArchiveProgressStatementWithOptions(options ArchiveProgressSourceOptions) (string, []any, error) {
+	return ArchiveProgressStatement(options.OracleVersion, options.Filter)
+}
+
+// DecodeArchiveProgressWithOptions selects the same source as DecodeArchiveProgress using one options value.
+func DecodeArchiveProgressWithOptions(result session.Result, options ArchiveProgressSourceOptions) (ArchiveProgressResult, error) {
+	return DecodeArchiveProgress(result, options.OracleVersion, options.Filter)
+}
+
+// ArchiveProgressRowsWithOptions selects the same source as ArchiveProgressRows using one options value.
+func ArchiveProgressRowsWithOptions(ctx context.Context, q rowset.Queryer, options ArchiveProgressSourceOptions) (*sql.Rows, error) {
+	return ArchiveProgressRows(ctx, q, options.OracleVersion, options.Filter)
+}
+
+// ArchiveProgressJSONWithOptions selects the same source as ArchiveProgressJSON using one options value.
+func ArchiveProgressJSONWithOptions(ctx context.Context, q rowset.Queryer, options ArchiveProgressSourceOptions, limits rowset.Limits) (json.RawMessage, error) {
+	return ArchiveProgressJSON(ctx, q, options.OracleVersion, options.Filter, limits)
 }
