@@ -27,7 +27,7 @@ func TestEncryptionSourcesAreIndependentAndScoped(t *testing.T) {
 		{"root_columns", 26, true, ColumnEncryption, "CDB_ENCRYPTED_COLUMNS"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sql, err := EncryptionStatement(tc.major, tc.root, tc.kind)
+			sql, err := EncryptionStatementWithOptions(EncryptionOptions{OracleMajor: tc.major, Root: tc.root, Kind: tc.kind})
 			if err != nil || !strings.Contains(sql, "FROM "+tc.source) || strings.Contains(sql, "V$ENCRYPTED_TABLESPACES") {
 				t.Fatal("wrong scope or mounted-unsafe fallback", sql, err)
 			}
@@ -86,7 +86,7 @@ func TestEncryptionJSONOwnsCursorAndPublishesNoFailurePrefix(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			db, state := testsql.New(t, testsql.Step{SQL: sql, Columns: []string{"ENCRYPTED_COUNT", "UNKNOWN_COUNT"}, Values: [][]driver.Value{{tc.value, "0"}}, NextErr: tc.next, CloseErr: tc.close})
-			payload, err := EncryptionJSON(t.Context(), db, 19, true, ColumnEncryption, rowset.Limits{MaxRows: 2, MaxBytes: 4096})
+			payload, err := EncryptionJSONWithOptions(t.Context(), db, EncryptionOptions{OracleMajor: 19, Root: true, Kind: ColumnEncryption}, rowset.Limits{MaxRows: 2, MaxBytes: 4096})
 			if tc.fail {
 				if err == nil || len(payload) != 0 {
 					t.Fatal("failed JSON published", string(payload), err)

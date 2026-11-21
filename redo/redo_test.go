@@ -53,7 +53,8 @@ func TestRedoSelectionAndLargeSCN(t *testing.T) {
 func TestHistoryFiniteLocalBoundsAndNoLatePrefix(t *testing.T) {
 	filter := bounds()
 	filter.Instances = []int64{1, 7}
-	sql, args, err := HistoryStatement(19, filter)
+	options := HistoryOptions{OracleMajor: 19, Filter: filter}
+	sql, args, err := HistoryStatementWithOptions(options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func TestHistoryFiniteLocalBoundsAndNoLatePrefix(t *testing.T) {
 	}
 	plan, _ := historyPlan(19, filter)
 	source := sourceResult(plan)
-	good, err := DecodeHistory(source, 19, filter)
+	good, err := DecodeHistoryWithOptions(source, options)
 	if err != nil || len(good.Rows) != 1 {
 		t.Fatalf("bad valid history: %+v %v", good, err)
 	}
@@ -80,7 +81,7 @@ func TestHistoryFiniteLocalBoundsAndNoLatePrefix(t *testing.T) {
 		}
 		bad := source
 		bad.Rows = append(bad.Rows, late)
-		facts, err := DecodeHistory(bad, 19, filter)
+		facts, err := DecodeHistoryWithOptions(bad, options)
 		if !errors.Is(err, ErrInvalidEvidence) || facts.Rows != nil {
 			t.Fatalf("accepted outside/malformed late history: %+v %v", facts, err)
 		}

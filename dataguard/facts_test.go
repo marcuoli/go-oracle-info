@@ -34,8 +34,8 @@ func TestReleaseSelectionAndAdmission(t *testing.T) {
 			t.Fatalf("invalid IDs accepted: %v %v", ids, err)
 		}
 	}
-	sql, args, err := ArchiveProgressStatement("23.26.1.0.0", ArchiveProgressOptions{Instances: []int64{7}, ResetlogsChange: "18446744073709551616", ResetlogsTime: "2026-11-18T00:00:00"})
-	if err != nil || len(args) != 3 || !strings.Contains(sql, "REGISTRAR = 'RFS'") || !strings.Contains(sql, "APPLIED = 'YES'") || !strings.Contains(sql, "DENSE_RANK()") || strings.Contains(sql, "MAX(") || strings.Contains(sql, "FIRST_TIME >=") || strings.Contains(sql, "SYSDATE") {
+	sql, args, err := ArchiveProgressStatementWithOptions(ArchiveProgressSourceOptions{OracleVersion: "23.26.1.0.0", Filter: ArchiveProgressOptions{Instances: []int64{7}, ResetlogsChange: "18446744073709551616", ResetlogsTime: "2026-11-18T00:00:00"}})
+	if err != nil || len(args) != 3 || args[0] != "18446744073709551616" || args[1] != 0 || args[2] != int64(7) || !strings.Contains(sql, "REGISTRAR = 'RFS'") || !strings.Contains(sql, "APPLIED = 'YES'") || !strings.Contains(sql, "DENSE_RANK()") || strings.Contains(sql, "MAX(") || strings.Contains(sql, "FIRST_TIME >=") || strings.Contains(sql, "SYSDATE") {
 		t.Fatalf("unsafe latest snapshot %s %v %v", sql, args, err)
 	}
 	if strings.Contains(sql, "18446744073709551616") {

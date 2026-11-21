@@ -89,6 +89,47 @@ func TestReadRejectsFailureCancellationAndFiniteBudget(t *testing.T) {
 	}
 }
 
+func TestReadBufferedBudgetCountsAllRawTextBytes(t *testing.T) {
+	options := Options{OracleMajor: 11, Owners: []string{"APP"}, Names: []string{"D", "D2"}}
+	ref, err := reference.NewReference("unit", "directories", "budget", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Shuffled metadata, SQL NULL and a three-byte final value total 12 bytes.
+	result := session.Result{
+		Columns: []string{"directory_path", "owner", "directory_name"},
+		Rows: [][]session.Value{
+			{{Null: true}, {Text: "APP"}, {Text: "D"}},
+			{{Text: "雪"}, {Text: "APP"}, {Text: "D2"}},
+		},
+	}
+	request := Request{Options: options, Reference: ref, Limits: rowset.Limits{MaxRows: 2, MaxBytes: 12}}
+	reader := fixtureReader(func(context.Context, session.Statement) (session.Result, error) { return result, nil })
+	got, err := Read(t.Context(), reader, request)
+	if err != nil || len(got.Records) != 2 || !got.Records[0].Path.Null || got.Records[1].Path.Text != "雪" {
+		t.Fatalf("exact budget, row order or raw values changed: %#v, %v", got, err)
+	}
+
+	request.Limits.MaxBytes--
+	got, err = Read(t.Context(), reader, request)
+	var domainErr *Error
+	if got.Records != nil || !errors.As(err, &domainErr) || domainErr.Operation != "budget" || !errors.Is(err, rowset.ErrCapacity) {
+		t.Fatalf("late over-budget value published partial data or lost budget error: %#v, %v", got, err)
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	failure := errors.New("reader failure")
+	reader = func(context.Context, session.Statement) (session.Result, error) {
+		cancel()
+		return result, failure
+	}
+	got, err = Read(ctx, reader, request)
+	if got.Records != nil || !errors.As(err, &domainErr) || domainErr.Operation != "query" || !errors.Is(err, failure) || !errors.Is(err, context.Canceled) || errors.Is(err, rowset.ErrCapacity) {
+		t.Fatalf("query/cancellation lost precedence over the budget: %#v, %v", got, err)
+	}
+}
+
 type nilFactReader struct{}
 
 func (*nilFactReader) Query(context.Context, session.Statement) (session.Result, error) {

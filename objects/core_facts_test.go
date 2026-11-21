@@ -50,7 +50,7 @@ func TestInvalidDetailsRetainDatesAndEnforceSelectedOwnerStatus(t *testing.T) {
 		case "late":
 			source.Rows = append(source.Rows, nil)
 		}
-		facts, err = DecodeInvalidDetails(source, 19, "Case'Owner")
+		facts, err = DecodeInvalidDetailsWithOptions(source, InvalidDetailsOptions{OracleMajor: 19, Owners: []string{"Case'Owner"}})
 		if facts.Rows != nil || !errors.Is(err, ErrInvalidEvidence) {
 			t.Fatalf("%s: %+v %v", mutation, facts, err)
 		}

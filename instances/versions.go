@@ -205,9 +205,7 @@ func VersionsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowse
 	if major >= 18 {
 		precision = FullPrecision
 	}
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, plan)
-	}, plan.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql), plan.schema, limits, rowset.EnvelopeOptions{
 		Header: struct {
 			Provenance    Provenance       `json:"provenance"`
 			ContextSource string           `json:"context_source"`
@@ -220,6 +218,8 @@ func VersionsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowse
 	})
 	return payload, projection.WrapEnvelopeError(err, func(stage string, cause error) error {
 		switch stage {
+		case "query":
+			return &Error{Operation: "query", cause: cause}
 		case "encode", "budget", "consume":
 			return &Error{Operation: stage + " versions", cause: cause}
 		}

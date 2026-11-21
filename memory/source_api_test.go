@@ -85,6 +85,24 @@ func TestMemorySourceOwnedNativeAndJSON(t *testing.T) {
 	if err != nil || got.ValueGiB != "1.5" || got.Origin != ContainerParameter {
 		t.Fatal(got, err)
 	}
+	pdb := ParameterOptions{Parameter: SGA, Options: options}
+	decoded, err = DecodePDBWithOptions(input, pdb)
+	if err != nil || decoded != got || decoded.CurrentContainerID != 3 {
+		t.Fatal(decoded, got, err)
+	}
+	query, args, err := PDBStatementWithOptions(pdb)
+	if err != nil || len(args) != 0 {
+		t.Fatal(query, args, err)
+	}
+	db, state = testsql.New(t, testsql.Step{SQL: query, Columns: cols, Values: [][]driver.Value{{"1.5", "3", "3", "sga_target", "1", "1", "3"}}})
+	spy = &sourceSpy{db: db}
+	rows, err = PDBRowsWithOptions(t.Context(), spy, pdb)
+	if err != nil || rows == nil || rows != spy.last || !rows.Next() || state.Closed() != 0 {
+		t.Fatal(rows, err, state.Closed())
+	}
+	if err = rows.Close(); err != nil || state.Closed() != 1 {
+		t.Fatal(err, state.Closed())
+	}
 }
 func TestRACSourceJSONAndReadAlias(t *testing.T) {
 	ref, _ := reference.NewReference("unit", "memory", "rac", 1)

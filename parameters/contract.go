@@ -157,9 +157,7 @@ func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, err
 }
 
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits) (json.RawMessage, error) {
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, plan)
-	}, plan.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
 		Provenance: plan.provenance,
 		Validate: projection.ValidateRowset(&Error{Source: plan.provenance.Source, cause: ErrInvalidEvidence}, func(result session.Result) error {
 			_, err := parameterColumns(result, plan)
@@ -168,7 +166,7 @@ func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rows
 	})
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
 		return &Error{Source: plan.provenance.Source, cause: cause}
-	}, "limits", "query", "validate")
+	}, "limits", "validate")
 }
 
 // SourceOptions carries the source selectors for the options-based fact APIs.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reuse dictionary inventory validation and buffered budget checks, simplify native fact JSON opening and verify options-based API parity (#87).
 - Add an offline Oracle Database, Exadata and ODA release catalog seeded from verified Harvester and Oracle records (#86).
 - Add independent PDB-scoped scalar parameter, Resource Manager sample and memory gauge facts (#82).
 - Add version-aware per-member container inventory and independently readable PDB saved states (#81).

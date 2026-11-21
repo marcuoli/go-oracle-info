@@ -222,9 +222,7 @@ func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	if err != nil {
 		return nil, err
 	}
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, plan.selection)
-	}, plan.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
 		Provenance: plan.provenance,
 		Validate: projection.ValidateRowset(&Error{Source: hiddenContextSource, cause: ErrInvalidEvidence}, func(result session.Result) error {
 			_, err := decodeHiddenContext(result, plan)
@@ -233,7 +231,7 @@ func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	})
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
 		return &Error{Source: hiddenContextSource, cause: cause}
-	}, "limits", "query", "validate")
+	}, "limits", "validate")
 }
 
 // HiddenContextOptions carries the source selectors for the options-based fact APIs.

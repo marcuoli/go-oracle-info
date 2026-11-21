@@ -161,16 +161,14 @@ func open(ctx context.Context, q rowset.Queryer, plan selection) (*sql.Rows, err
 
 func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
 	plan.provenance.Complete = true
-	payload, err := rowset.QueryEnvelopeJSON(ctx, func(ctx context.Context) (rowset.Cursor, error) {
-		return open(ctx, q, plan)
-	}, plan.schema, limits, rowset.EnvelopeOptions{
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
 		MaxRows:    plan.maxRows,
 		Provenance: plan.provenance,
 		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
 	})
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
 		return &Error{plan.provenance.Source, cause}
-	}, "limits", "query")
+	}, "limits")
 }
 
 func instanceClause(ids []int64) (string, []any, error) {

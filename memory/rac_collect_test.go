@@ -15,11 +15,16 @@ func TestRACCollectionBindsOnlyTheAdmittedTarget(t *testing.T) {
 		racRow("sga_target", "1073741824", "1", "4", "4"),
 		racRow("pga_aggregate_target", "0", "1", "4", "4"),
 	)}}
-	got, err := memory.CollectRAC(context.Background(), reader, memory.Options{
-		Scope: memory.DiscoveredPDB, OracleMajor: 12, TargetContainerID: 4,
-	}, testRef(t, 1))
+	ref := testRef(t, 4)
+	got, err := memory.ReadRACWithOptions(t.Context(), reader, memory.RACRequest{
+		Options:   memory.Options{Scope: memory.DiscoveredPDB, OracleMajor: 12, TargetContainerID: 4},
+		Reference: ref,
+	})
 	if err != nil || got.SGA.ValueGiB != "1" || got.PGA.ValueGiB != "0" || len(reader.statements) != 1 {
 		t.Fatalf("%+v calls=%d %v", got, len(reader.statements), err)
+	}
+	if reader.statements[0].Reference != ref {
+		t.Fatalf("caller reference changed: %v", reader.statements[0].Reference)
 	}
 	args := reader.statements[0].Args
 	if len(args) != 1 || args[0] != sql.Named("target_container_id", 4) {
