@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.22.0 (2026-11-20)
+
+- Add exact temporary tablespace free-space observations with separate session and owning-instance scope (#74).
+
 ## v0.21.0 (2026-11-19)
 
 - Add independent GoldenGate Extract/Replicat identity and attachment facts, structurally verified accessible heartbeat discovery, and complete typed/native/atomic JSON heartbeat and signed lag/freshness evidence without schema guessing, process-health policy or connection ownership (#72).

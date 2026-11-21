@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/marcuoli/go-oracle-info/asm"
+	"github.com/marcuoli/go-oracle-info/identity"
 	"github.com/marcuoli/go-oracle-info/redo"
 	"github.com/marcuoli/go-oracle-info/storage"
 )
@@ -392,4 +393,38 @@ func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter,
 		return nil, err
 	}
 	return redo.ArchivedLogsJSON(ctx, c.native(), major, filter, resolved)
+}
+
+// TempFreeSpace observes the release and returns the actual TEMP free-space
+// cursor. The caller owns iteration, Err, Close and finite stream budgets.
+func (c *Client) TempFreeSpace(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.tempFreeSpaceVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.TempFreeSpaceRows(ctx, c.native(), version)
+}
+
+// TempFreeSpaceJSON returns one complete bounded TEMP free-space dataset.
+func (c *Client) TempFreeSpaceJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.tempFreeSpaceVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.TempFreeSpaceJSON(ctx, c.native(), version, resolved)
+}
+
+func (c *Client) tempFreeSpaceVersion(ctx context.Context) (string, error) {
+	version, err := c.Version(ctx)
+	if err != nil {
+		return "", err
+	}
+	if version.State != identity.Available {
+		return "", ErrVersionUnavailable
+	}
+	return version.Value, nil
 }
