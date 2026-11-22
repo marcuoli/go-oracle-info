@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "database",
-  "as_of": "2026-11-21",
+  "as_of": "2026-11-22",
   "sources": [
     {"id": "KB106910", "title": "Database 12.1.0.2 Proactive Patch Information", "url": "https://support.oracle.com/ic/builder/rt/customer_portal/live/webApps/customer-portal/?anchorId=&kmContentId=2285558&page=sptemplate&sptemplate=km-article", "old_doc_id": "2285558.1", "checked_utc": "2026-11-09T00:59:22.317Z", "revision": "Nov 2, 2026", "sha256": "b0b3af8273b7db9d3fa3aeea35aabc6e9890e818bc855eb508573d6673867714"},
     {"id": "KB107134", "title": "Data Pump Recommended Proactive Patches For 19.10 and Above", "url": "https://support.oracle.com/ic/builder/rt/customer_portal/live/webApps/customer-portal/?anchorId=&kmContentId=2819284&page=sptemplate&sptemplate=km-article", "old_doc_id": "2819284.1", "checked_utc": "2026-11-09T01:00:30.528Z", "revision": "Oct 20, 2026", "sha256": "b005fa179b6459a3e9042b836a66c68d568093135088b08027b987f4cffddfb0"},
