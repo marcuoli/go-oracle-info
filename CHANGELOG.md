@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Resolve Oracle patch platform aliases, read reviewed Gold Image references and decode AutoUpgrade metadata (#111).
+
 - Load reviewed Oracle patch recommendations and look up an exact release train and home (#109).
 
 ## v0.24.0 (2026-11-22)
