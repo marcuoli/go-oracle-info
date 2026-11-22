@@ -114,7 +114,9 @@ def linked_patch_numbers(links):
     numbers = set()
     for link in links:
         url = urlsplit(link)
-        if url.hostname not in (None, "support.oracle.com") or url.path != LINK_PATH:
+        site_relative = not url.scheme and not url.netloc
+        official = url.scheme == "https" and url.netloc == "support.oracle.com"
+        if not (site_relative or official) or url.path != LINK_PATH or url.fragment:
             continue
         for number in parse_qs(url.query).get("patchId", []):
             if NUMBER.fullmatch(number):

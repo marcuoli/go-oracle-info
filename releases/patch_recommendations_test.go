@@ -99,6 +99,9 @@ func TestLoadPatchRecommendationsRejectsUnqualifiedInput(t *testing.T) {
 	valid := PatchRecommendationSet{scope, source, []PatchRecommendation{{Number: 10010000}}}
 	noRows := valid
 	noRows.Rows = nil
+	validJSON := string(encodeRecommendationSnapshot(t, valid))
+	missingFixedRU := strings.Replace(validJSON, `"fixed_in_ru":"",`, "", 1)
+	nullFixedMRP := strings.Replace(validJSON, `"fixed_in_mrp":""`, `"fixed_in_mrp":null`, 1)
 	badNumber := valid
 	badNumber.Rows = []PatchRecommendation{{Number: 0}}
 	badProof := valid
@@ -107,6 +110,11 @@ func TestLoadPatchRecommendationsRejectsUnqualifiedInput(t *testing.T) {
 	badProof2.Source.CapturedUTC = ""
 	badCapture := valid
 	badCapture.Source.CapturedUTC = "2026-11-11T00:00:00Z"
+	encodedID := valid
+	encodedID.Source.Document.ID = "x&session=synthetic"
+	encodedID.Source.Document.URL = "https://support.oracle.com/epmos/faces/DocumentDisplay?id=x%26session%3Dsynthetic"
+	badOldID := valid
+	badOldID.Source.Document.OldDocID = "100.1&session=synthetic"
 	badURL := valid
 	badURL.Source.Document.URL += "&session=private"
 	wrongDoc := valid
@@ -128,7 +136,11 @@ func TestLoadPatchRecommendationsRejectsUnqualifiedInput(t *testing.T) {
 		{"capture chronology", bytes.NewReader(encodeRecommendationSnapshot(t, badCapture))},
 		{"wrong document", bytes.NewReader(encodeRecommendationSnapshot(t, wrongDoc))},
 		{"session URL", bytes.NewReader(encodeRecommendationSnapshot(t, badURL))},
+		{"encoded article value", bytes.NewReader(encodeRecommendationSnapshot(t, encodedID))},
+		{"invalid legacy identifier", bytes.NewReader(encodeRecommendationSnapshot(t, badOldID))},
 		{"non-patch number", bytes.NewReader(encodeRecommendationSnapshot(t, badNumber))},
+		{"missing fixed RU", strings.NewReader(missingFixedRU)},
+		{"null fixed MRP", strings.NewReader(nullFixedMRP)},
 		{"non-source platform", bytes.NewReader(encodeRecommendationSnapshot(t, badPlatform))},
 		{"trailing content", bytes.NewReader(append(encodeRecommendationSnapshot(t, valid), []byte("{}")...))},
 		{"size", strings.NewReader(strings.Repeat(" ", maxPatchRecommendationBytes+1))},

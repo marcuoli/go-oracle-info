@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/marcuoli/go-oracle-info/internal/numeric"
 )
 
 // PatchRecommendationHome identifies the home named in the source section.
@@ -86,8 +88,17 @@ func LoadPatchRecommendations(reader io.Reader) (PatchRecommendationCatalog, err
 		return PatchRecommendationCatalog{}, fmt.Errorf("%w: snapshot exceeds size limit", ErrInvalidPatchRecommendations)
 	}
 	var snapshot struct {
-		SchemaVersion int                      `json:"schema_version"`
-		Sections      []PatchRecommendationSet `json:"sections"`
+		SchemaVersion int `json:"schema_version"`
+		Sections      []struct {
+			Scope  PatchRecommendationScope  `json:"scope"`
+			Source PatchRecommendationSource `json:"source"`
+			Rows   []struct {
+				Number         int     `json:"number"`
+				FixedInRU      *string `json:"fixed_in_ru"`
+				FixedInMRP     *string `json:"fixed_in_mrp"`
+				PlatformFamily string  `json:"platform_family,omitempty"`
+			} `json:"rows"`
+		} `json:"sections"`
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
@@ -107,12 +118,16 @@ func LoadPatchRecommendations(reader io.Reader) (PatchRecommendationCatalog, err
 		if _, exists := sections[section.Scope]; exists {
 			return PatchRecommendationCatalog{}, fmt.Errorf("%w: duplicate source section %d", ErrInvalidPatchRecommendations, i+1)
 		}
-		for _, row := range section.Rows {
-			if row.Number <= 0 || row.Number > 1<<31-1 || !validRecommendationPlatform(row.PlatformFamily) {
+		rows := make([]PatchRecommendation, len(section.Rows))
+		for j, row := range section.Rows {
+			if row.Number <= 0 || row.Number > 1<<31-1 || row.FixedInRU == nil || row.FixedInMRP == nil ||
+				!validRecommendationPlatform(row.PlatformFamily) {
 				return PatchRecommendationCatalog{}, fmt.Errorf("%w: invalid row in source section %d", ErrInvalidPatchRecommendations, i+1)
 			}
+			rows[j] = PatchRecommendation{Number: row.Number, FixedInRU: *row.FixedInRU,
+				FixedInMRP: *row.FixedInMRP, PlatformFamily: row.PlatformFamily}
 		}
-		sections[section.Scope] = section
+		sections[section.Scope] = PatchRecommendationSet{Scope: section.Scope, Source: section.Source, Rows: rows}
 	}
 	return PatchRecommendationCatalog{sections: sections}, nil
 }
@@ -149,7 +164,10 @@ func validRecommendationPlatform(platform string) bool {
 func validRecommendationSource(source PatchRecommendationSource) bool {
 	doc := source.Document
 	checked, err := time.Parse(time.RFC3339Nano, doc.CheckedUTC)
-	if err != nil || doc.ID == "" || strings.TrimSpace(doc.Title) == "" || !isHexLength(doc.SHA256, 64) {
+	if err != nil || !isRecommendationArticleID(doc.ID) || strings.TrimSpace(doc.Title) == "" || !isHexLength(doc.SHA256, 64) {
+		return false
+	}
+	if doc.OldDocID != "" && !isLegacyRecommendationID(doc.OldDocID) {
 		return false
 	}
 	if source.ArchiveCommit != "" && !isHexLength(source.ArchiveCommit, 40) {
@@ -176,6 +194,18 @@ func isHexLength(value string, digits int) bool {
 	return err == nil
 }
 
+func isRecommendationArticleID(id string) bool {
+	if digits, found := strings.CutPrefix(id, "KB"); found {
+		return len(digits) <= 12 && numeric.IsUnsignedInteger(digits)
+	}
+	return isLegacyRecommendationID(id)
+}
+
+func isLegacyRecommendationID(id string) bool {
+	number, suffix, ok := strings.Cut(id, ".")
+	return ok && len(number) <= 12 && len(suffix) <= 4 &&
+		numeric.IsUnsignedInteger(number) && numeric.IsUnsignedInteger(suffix)
+}
 func matchingRecommendationArticle(doc Source) bool {
 	ref, err := url.Parse(doc.URL)
 	if err != nil || ref.Scheme != "https" || ref.Host != "support.oracle.com" || ref.User != nil || ref.Fragment != "" {

@@ -45,6 +45,12 @@ class RecommendationsTest(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, error):
                         build(review())
 
+    def test_requires_site_relative_or_https_oracle_patch_link(self):
+        for prefix in ("http://support.oracle.com", "ftp://support.oracle.com", "file:", "https://support.oracle.com@third-party.invalid"):
+            row = ROW.replace('href="/', f'href="{prefix}/')
+            with self.subTest(prefix=prefix), patch("refresh_patch_recommendations.capture_html", return_value=DB + "<table>" + HEADER + row + "</table>"):
+                with self.assertRaisesRegex(ValueError, "one exact patch reference"):
+                    build(review())
     def test_duplicate_review_and_source_tables(self):
         duplicate_review = deepcopy(review())
         duplicate_review["sources"].append(duplicate_review["sources"][0])
