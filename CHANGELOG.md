@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Load reviewed Oracle patch recommendations and look up an exact release train and home (#109).
+
 ## v0.24.0 (2026-11-22)
 
 - Select exact and latest Oracle database patch packages by release train, family and named platform (#105).
