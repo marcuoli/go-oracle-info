@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "oda",
-  "as_of": "2026-11-21",
+  "as_of": "2026-11-22",
   "sources": [
     {"id": "oracle-oda-12.1.2.10-archive-1", "title": "Oracle Database Appliance 12.1.2.10 archived release notes", "url": "https://docs.oracle.com/cd/E83239_01/doc.121/e83195/toc.htm", "checked_utc": "2026-11-21T14:33:59.466352+00:00", "sha256": "6d4ca3c7b6273658245bff59b0b076de21c991b69304dc260c1b0c2bd788531c"},
     {"id": "oracle-oda-12.1.2.12-archive-1", "title": "Oracle Database Appliance 12.1.2.12 archived release notes", "url": "https://docs.oracle.com/cd/E88491_01/doc.121/e88394/toc.htm", "checked_utc": "2026-11-21T14:33:59.466352+00:00", "sha256": "15aab9ecdcde76feaea834a43af64f233d68572f9aa7c327cfd6664875a4ca42"},
