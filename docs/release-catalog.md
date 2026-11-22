@@ -57,6 +57,8 @@ inventory, release availability on a live system, or patch eligibility.
 
 ## Select a patch package by release and platform
 
+See [Gold Images and AutoUpgrade](patch-tools.md) for exact platform alias resolution, Oracle Gold Image references, and AutoUpgrade manifest and archive metadata.
+
 Use `Catalog.ExactPatchPackage` and `Catalog.LatestPatchPackage` on a catalog
 loaded with `releases.Load(releases.Database)`. The result identifies a package
 number observed in the bundled snapshot. Live file resolution, authentication,
