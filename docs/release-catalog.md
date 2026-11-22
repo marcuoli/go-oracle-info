@@ -122,6 +122,55 @@ recorded source identifier. `ErrInvalidPatchPackageQuery`,
 malformed requests, absent eligible packages, and competing numbers at the
 selected version. All original raw rows remain accessible through `Load`.
 
+## Look up reviewed patch recommendations
+
+The `releases.LoadPatchRecommendations(reader)` API reads a versioned,
+caller-supplied JSON snapshot. The caller obtains the approved snapshot and
+verifies it against the review receipt. For example, look up
+`releases.PatchRecommendationScope{Line: "19", Train: "19.28", Home: releases.DatabaseHome}`
+using the catalog's `Lookup` method.
+
+A successful lookup returns source-ordered rows with the listed patch number,
+fixed-in RU and MRP text, and any reviewed operating-system family restriction.
+An unspecified platform family leaves applicability unresolved. Each set
+retains the document identifier, stable Oracle link, and original capture hash.
+Use the captured timestamp and source revision when present. For archived
+HTML without a verified capture timestamp, the Git commit identifies the
+retained bytes.
+
+The caller can distinguish a reviewed empty table from a missing section.
+An empty table returns a non-nil empty `Rows` slice. An absent exact
+train and home returns `ErrPatchRecommendationCoverageUnavailable`.
+Invalid scopes and snapshots return `ErrInvalidPatchRecommendations`.
+Use a canonical train such as `19.28` or `23.26.4` as the scope.
+Fixed-in text and platform restrictions remain attached to the source rows.
+A package filename, applicability to a particular installation, entitlement,
+and download verification are separate Oracle Support operations.
+
+### Prepare the private snapshot
+
+Use the existing approved Harvester evidence route for Oracle article
+KB188772 and archived Doc ID 555.1. Record a version 1 review with a
+`sources` array. Each entry contains `source.document` with the existing
+`Source` fields, either an absolute `capture` path for MHTML with
+`source.captured_utc` or an `archive` with `repository` and
+`path: assets/docs/555.1.html` plus `source.archive_commit`. Review each
+`sections` entry by exact `line`, `train`, `home` and `expected_rows`.
+Verify the source identification and documented scope, preserve the original
+capture hash and check date, and record any unverified scope.
+
+```powershell
+python -B scripts/refresh_patch_recommendations.py --review <private-review.json> --output <private-recommendations.json>
+```
+
+The command verifies the capture and extracts only structured facts from
+the reviewed tables. The snapshot contains one record per approved train
+and home under `sections`, with `scope`, `source`, and `rows`. Keep the
+snapshot, review, and Oracle captures on the approved private evidence route.
+Keep the original article and credentials out of SDK source and release
+artifacts. Public distribution of private recommendation data needs its own
+scope review.
+
 ## Refresh before publish
 
 1. Record the selected module version and the exact canonical main commit as
