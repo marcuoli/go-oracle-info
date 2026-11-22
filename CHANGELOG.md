@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the repository-scoped go-oracle-info-docs skill for Oracle documentation, catalog, and MOS evidence workflows (#115).
+
 ## v0.25.0 (2026-11-22)
 
 - Resolve Oracle patch platform aliases, read reviewed Gold Image references and decode AutoUpgrade metadata (#111).
