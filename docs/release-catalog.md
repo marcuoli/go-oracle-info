@@ -53,6 +53,75 @@ An absent date or package number is unresolved. A published `tbd`,
 identify material read and gaps; they do not certify a complete Oracle
 inventory, release availability on a live system, or patch eligibility.
 
+
+
+## Select a patch package by release and platform
+
+Use `Catalog.ExactPatchPackage` and `Catalog.LatestPatchPackage` on a catalog
+loaded with `releases.Load(releases.Database)`. The result identifies a package
+number observed in the bundled snapshot. Live file resolution, authentication,
+entitlement, and compatibility with an installation require separate evidence.
+
+```go
+catalog, err := releases.Load(releases.Database)
+if err != nil {
+    return err
+}
+filter := releases.PatchPackageFilter{
+    Line: "19", Family: releases.DatabaseRU, Platform: releases.LinuxX8664,
+}
+pkg, err := catalog.ExactPatchPackage(filter, "19.33")
+if err != nil {
+    return err
+}
+fmt.Println(pkg.Artifact.Number, pkg.Version, pkg.Train, pkg.AsOf)
+```
+
+Supported lines are `18`, `19`, `21`, `23`, and `26`. Use
+`PatchReleaseLine` to derive the line from a numeric train or full version
+without checking package coverage. For 26ai, `23.26.4` maps to line `26`
+and the incomplete `23.26` is invalid. For 23ai, `23.9` maps to line `23`.
+
+An exact lookup of a train such as `19.33` or `23.26.4` selects the
+highest eligible version of the requested family within that train. When a
+version includes more numeric components, the lookup requires that exact
+version. Each result's `Version` can be passed back to the exact selector.
+Use `Train` to find an optional component for the same base release. For
+example, the 19.33 JDK package has a later version qualifier than the DB RU.
+Latest selects the highest numeric version with an eligible package for
+that exact family and platform anywhere in the requested line. Retain the
+primary result's train for companion selections to keep all packages aligned.
+
+Platform input is an exact, case-sensitive MOS label. Use
+`LinuxX8664` or `WindowsX64` where applicable. Other supported labels are
+`Linux x86`, `Linux ARM 64-bit`, `IBM AIX on POWER Systems (64-bit)`,
+`IBM: Linux on System z`, `HP-UX Itanium`, `Oracle Solaris on SPARC (32-bit)`,
+`Oracle Solaris on SPARC (64-bit)`, and `Oracle Solaris on x86-64 (64-bit)`.
+MOS UI tokens and the catalog's internal numeric platform IDs are separate
+identifiers. A package must have the exact requested label and a positive
+patch number. Platform Independent and unresolved platform rows cannot
+satisfy a named-platform lookup.
+
+| Family | Snapshot evidence and scope |
+| --- | --- |
+| `DatabaseRU`, `GridInfrastructureRU` | Explicit modern RU rows. Database RU selection is for Unix-like platforms. |
+| `WindowsDatabaseBundle` | Dedicated Windows x64 DB Bundle Patch rows. The 19c snapshot ends at 19.32 for this family. |
+| `DatabaseCombo`, `GridInfrastructureCombo` | Explicit source combo bundles, including 18c. |
+| `DatabaseMRP`, `GridInfrastructureMRP` | Historical 19c Linux x86-64 records through 19.20. The retained current proactive article does not establish newer or Windows MRP coverage. |
+| `OJVM`, `JDK` | Exact source component rows on named platforms. JDK has 19c and 21c entries. |
+| `DataPumpBundle` | Exact Data Pump rows, including 19c Linux and Windows with distinct package numbers. The 23ai and 26ai observations include Linux x86-64 and do not establish Windows coverage. |
+
+Disabled or restricted observations are ineligible. A negative observation
+also excludes an otherwise matching observation of the same version and
+package number. Equivalent observations at the selected version coalesce
+by number, retain the first artifact, and resolve group, artifact, recorded,
+and corroborating source references when present. `AsOf` is the catalog
+snapshot date. The raw artifact retains the package's own release date and
+recorded source identifier. `ErrInvalidPatchPackageQuery`,
+`ErrPatchPackageUnavailable`, and `ErrAmbiguousPatchPackage` distinguish
+malformed requests, absent eligible packages, and competing numbers at the
+selected version. All original raw rows remain accessible through `Load`.
+
 ## Refresh before publish
 
 1. Record the selected module version and the exact canonical main commit as
