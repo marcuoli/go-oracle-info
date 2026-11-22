@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Select exact and latest Oracle database patch packages by release train, family and named platform (#105).
+
 ## v0.23.0 (2026-11-21)
 
 - Review verified existing Oracle source captures for publication and retain the original capture dates (#102).
