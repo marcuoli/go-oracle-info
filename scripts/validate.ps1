@@ -24,9 +24,12 @@ try {
         $previousPath=$env:PATH
         try {
             if($env:OS -eq 'Windows_NT'){
-                $compilerDirectory='I:\os\msys64\ucrt64\bin'
-                $env:CC=Join-Path $compilerDirectory 'gcc.exe'
-                if(-not(Test-Path -LiteralPath $env:CC) -or -not(Test-Path -LiteralPath (Join-Path $compilerDirectory 'as.exe'))){throw 'Approved race compiler is unavailable'}
+                $compiler=Get-Command gcc.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+                if(-not $compiler){throw 'Approved race compiler is unavailable on PATH'}
+                $compilerDirectory=Split-Path -Parent $compiler.Source
+                if(-not(Test-Path -LiteralPath (Join-Path $compilerDirectory 'as.exe') -PathType Leaf)){throw 'Approved race assembler is unavailable beside GCC'}
+                # Go parses CC as a command line. Keep paths that contain spaces in one argument.
+                $env:CC='"'+$compiler.Source+'"'
                 # GCC's cc1 lives outside bin and needs the existing MSYS2 DLLs.
                 # Limit this environment change to the race command; never persist it.
                 $env:PATH=$compilerDirectory+[IO.Path]::PathSeparator+$previousPath

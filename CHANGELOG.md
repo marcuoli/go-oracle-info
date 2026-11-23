@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## v0.29.1 (2026-11-23)
+
+- Update go-oracle-session to v0.23.0 and refresh four indirect dependency versions. Verify source and build compatibility on Go 1.27.4 (#141).
+
+- Use the managed MSYS2 UCRT compiler for Windows race validation (#141).
+
+- Review the four bundled Oracle catalogs against Oracle web sources and retained My Oracle Support evidence (#141).
+
 ## v0.29.0 (2026-11-23)
 
 - Document every public package and the retained compatibility entry points. Standardize native Client method pairs for invalid objects and GoldenGate (#137).
