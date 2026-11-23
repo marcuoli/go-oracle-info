@@ -24,7 +24,7 @@ try {
         $previousPath=$env:PATH
         try {
             if($env:OS -eq 'Windows_NT'){
-                $compilerDirectory='I:\os\msys64\ucrt64\bin'
+                $compilerDirectory=Join-Path $base 'tools\msys2\rolling\ucrt64\bin'
                 $env:CC=Join-Path $compilerDirectory 'gcc.exe'
                 if(-not(Test-Path -LiteralPath $env:CC) -or -not(Test-Path -LiteralPath (Join-Path $compilerDirectory 'as.exe'))){throw 'Approved race compiler is unavailable'}
                 # GCC's cc1 lives outside bin and needs the existing MSYS2 DLLs.
