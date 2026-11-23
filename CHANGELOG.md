@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.25.2 (2026-11-23)
+
 - Regenerate private recommendations, Gold Images and AutoUpgrade JSON from local MOS captures and reviewed archived HTML (#119).
 
 ## v0.25.1 (2026-11-23)
