@@ -3,7 +3,7 @@
 ![Source compatibility](https://img.shields.io/badge/source%20compatibility-Go%201.27.4%2B-blue)
 ![Module and build requirement](https://img.shields.io/badge/module%2Fbuild-Go%201.27.4-blue)
 
-Reusable read-only Oracle identity/platform, configured-memory and engineered-system facts.
+Reusable read-only Oracle facts. Use the [package map](docs/architecture.md#package-map) to find the right fact API.
 
 Public packages select reviewed SQL and validate exact results from a caller-owned reader. The module opens no connections, changes no container or endpoint, and selects no credentials, driver, retry policy, scoring or report layout. It reuses the driver-neutral query/value contract in go-oracle-session.
 

@@ -174,3 +174,23 @@ func TestSingularTemporaryPropertyJSONRejectsExtraSourceRows(t *testing.T) {
 		t.Fatalf("singular property prefix: %s %v closes=%d", payload, err, state.Closed())
 	}
 }
+
+func sgaComponentsPlan(major int, filter InstanceFilter) (selection, error) {
+	statement, args, err := SGAComponentsStatement(major, filter)
+	if err != nil {
+		return selection{}, err
+	}
+	schema := []rowset.Column{
+		{Name: "INST_ID", Kind: rowset.Integer},
+		{Name: "POOL", Kind: rowset.Text},
+		{Name: "NAME", Kind: rowset.Text},
+		{Name: "BYTES", Kind: rowset.Integer},
+	}
+	if major >= 12 {
+		schema = append(schema, rowset.Column{Name: "CON_ID", Kind: rowset.Integer})
+	}
+	return selection{
+		sql: statement, args: args, schema: schema,
+		provenance: Provenance{Source: "GV$SGASTAT"},
+	}, nil
+}

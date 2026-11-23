@@ -43,17 +43,18 @@ only19/21/23. Numeric26 is rejected; 26ai branding does not admit it.
 | `database.CPUCount` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.CharacterSet` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.Configuration` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
-| `database.DatafileSize` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `storage.DatafileSize` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.EncryptionCounts` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.Endian` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.NLSInstance` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.PDBCount` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
-| `database.PGAAllocated` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `memory.PGAAllocated` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.Products` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
-| `database.SGAAllocated` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `memory.SGAAllocated` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `memory.SGAComponents` | U | U | U | S | S | S | S | S | S | S | S | S |
 | `database.SessionParameters` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.SessionParametersWithDefaults` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
-| `database.Storage` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `storage.FileNames` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `dataguard.Lag` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `dataguard.Status` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `engineeredsystem/catalog.Alerts` | U | U | U | U | U | C | C | C | C | C | C | C |
@@ -110,8 +111,10 @@ record deliberate canonical source differences.
 | scheduler.Jobs | DBA_SCHEDULER_JOBS exact owner; raw flags and timestamp-with-zone values; no job execution |
 | database.Configuration / CPUCount / SessionParameters / SessionParametersWithDefaults | V$PARAMETER executing-session values/display/default flags, distinct from instance SYSTEM_PARAMETER2 and stored SPFILE |
 | database.Endian / CharacterSet / NLSInstance | V$TRANSPORTABLE_PLATFORM+V$DATABASE / NLS_DATABASE_PARAMETERS / NLS_INSTANCE_PARAMETERS; not interchangeable NLS scopes |
-| database.Products / DatafileSize / Storage / EncryptionCounts | DBA_REGISTRY / DBA_DATA_FILES / data+temp filenames / DBA_TABLESPACES+DBA_ENCRYPTED_COLUMNS; dictionary visibility, units and source discriminators preserved |
-| database.SGAAllocated / PGAAllocated / PDBCount | V$SGA / V$PGASTAT observed rounded allocation, not configured targets; V$PDBS non-seed count requires admitted CDB root |
+| database.Products / EncryptionCounts / PDBCount | DBA_REGISTRY / DBA_TABLESPACES+DBA_ENCRYPTED_COLUMNS / V$PDBS. Non-seed PDB counts require admitted CDB root. |
+| storage.DatafileSize / FileNames | DBA_DATA_FILES rounded allocation / admitted data+temp names and file-kind discriminators |
+| memory.SGAAllocated / PGAAllocated | V$SGA / V$PGASTAT observed instance allocation rounded to three decimal GiB |
+| memory.SGAComponents | Same GV$SGASTAT projection as the legacy storage API. CON_ID begins at 12, with the established reporting-instance filters and ordered binds. The documented 19c/26ai source and scope limits are in [the source guide](redo-storage-asm.md). |
 | services.Names | V$SERVICES excluding the two internal names; not the richer registered-service projection |
 | dataguard.Status / Lag | V$DATABASE role/protection/switchover / V$DATAGUARD_STATS raw name/value/unit/time_computed/datum_time; primary empty lag is valid, not standby qualification |
 | objects.InvalidObjects / ObjectInventory / ObjectTotals | DBA_OBJECTS raw owner/type/status and exact count text; no report scoring |
@@ -120,6 +123,10 @@ record deliberate canonical source differences.
 | identity.* | Reviewed V$DATABASE, V$INSTANCE, V$VERSION, V$PDBS and USERENV fields; VERSION_FULL versus VERSION bootstrap kept distinct; actual container/instance identity never inferred from branding |
 | memory.Scoped / PDB / RAC | Existing GV$SYSTEM_PARAMETER, GV$INSTANCE/GV$PDBS and caller-admitted guarded V$PARAMETER sources; selected-source observation versus proven member totals distinct; no new fallback |
 | catalog.Metadata / Configuration / VisibleCellCount / Cells / Alerts / ConnectedCells | SYS.ALL_TAB_COLUMNS and caller-admitted local/global cell/config/info/alert layouts; missing optional column, projected SQL NULL and absent source distinct. Complete UCS2 LOB length checked; scalar and XML layouts distinct; bounded connected sample stays a sample |
+
+The relocated memory and storage entry points and their legacy adapters
+use the same SQL, schema, version gates and caller-admitted scopes. Existing
+native evidence applies only to the previously qualified combinations.
 
 ## Native SQL and driver evidence
 

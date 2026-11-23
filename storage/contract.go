@@ -8,7 +8,6 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
@@ -171,25 +170,45 @@ func readJSON(ctx context.Context, q rowset.Queryer, plan selection, limits rows
 	}, "limits")
 }
 
-func instanceClause(ids []int64) (string, []any, error) {
-	if len(ids) > 1000 {
-		return "", nil, ErrInvalidRequest
+// The dictionary summaries retain their reviewed version and reader contracts,
+// separately from the file inventory projections.
+func fileSummaryMajor(major int) error {
+	switch major {
+	case 19, 21, 23:
+		return nil
+	default:
+		return ErrUnsupportedVersion
 	}
-	seen := map[int64]bool{}
-	args := make([]any, 0, len(ids))
-	binds := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if id <= 0 || seen[id] {
-			return "", nil, ErrInvalidRequest
-		}
-		seen[id] = true
-		args = append(args, id)
-		binds = append(binds, ":"+strconv.Itoa(len(args)))
+}
+
+func validFileSummaryReader(reader Reader) bool {
+	if reader == nil {
+		return false
 	}
-	if len(ids) == 0 {
-		return "", args, nil
+	v := reflect.ValueOf(reader)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return !v.IsNil()
 	}
-	return "v.INST_ID IN (" + strings.Join(binds, ",") + ")", args, nil
+	return true
+}
+
+func fileSummaryReadError(ctx context.Context, p selection, err error) error {
+	if err = errors.Join(err, ctx.Err()); err != nil {
+		return &Error{p.provenance.Source, err}
+	}
+	return nil
+}
+
+func readFileSummaryJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
+	p.provenance.Complete = true
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
+	})
+	return payload, projection.WrapMovedEnvelopeError(err, func(cause error) error {
+		return &Error{p.provenance.Source, cause}
+	}, "limits", "header")
 }
 
 // Request admits a source version and caller-owned SQL execution reference.
@@ -209,14 +228,4 @@ type TempfileOptions struct {
 type TempfileRequest struct {
 	Options   TempfileOptions
 	Reference reference.Reference
-}
-
-// InstanceFilter selects reporting IDs; empty means all visible admitted rows.
-type InstanceFilter struct{ Instances []int64 }
-
-// SGARequest admits per-instance observed component facts, not configured targets.
-type SGARequest struct {
-	OracleMajor int
-	Filter      InstanceFilter
-	Reference   reference.Reference
 }

@@ -88,6 +88,14 @@ var ErrUnsupportedVersion = errors.New("unsupported Oracle memory source version
 
 var ErrInvalidRequest = errors.New("invalid Oracle memory request")
 
+// ErrInvalidObservedEvidence rejects invalid allocation or component facts.
+var ErrInvalidObservedEvidence = errors.New("invalid observed Oracle memory evidence")
+
+// The connected allocation projections retain their reviewed version families.
+func supportsAllocation(major int) bool {
+	return major == 19 || major == 21 || major == 23
+}
+
 // DatasetError retains private causes without echoing SQL, bindings or driver diagnostics.
 type DatasetError struct {
 	Source string
@@ -158,6 +166,17 @@ func readDatasetJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, 
 		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
 	})
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &DatasetError{p.provenance.Source, cause}
+	}, "limits", "header")
+}
+
+func readAllocationJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
+	p.provenance.Complete = true
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidObservedEvidence, validate),
+	})
+	return payload, projection.WrapMovedEnvelopeError(err, func(cause error) error {
 		return &DatasetError{p.provenance.Source, cause}
 	}, "limits", "header")
 }
