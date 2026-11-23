@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "exadata",
-  "as_of": "2026-11-22",
+  "as_of": "2026-11-23",
   "sources": [
     {"id": "KB153930", "title": "Exadata Database Machine and Exadata Storage Server Supported Versions", "url": "https://support.oracle.com/support/?anchorId=&kmContentId=888828&page=sptemplate&sptemplate=km-article", "old_doc_id": "888828.1", "checked_utc": "2026-11-09T01:00:16.834Z", "revision": "Nov 4, 2026", "sha256": "8dade98bab2063544de891f128deef5d0659204ff415359462738f8c92cfd481"},
     {"id": "oracle-exadata-2026-11-18", "title": "Exadata System Software Updates – November 18, 2026", "url": "https://blogs.oracle.com/exadata/software-2026-nov-17", "checked_utc": "2026-11-21"}
