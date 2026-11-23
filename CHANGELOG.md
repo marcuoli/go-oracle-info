@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.26.0 (2026-11-23)
+
+- Read direct object and column privileges and role memberships for named users and roles, with release-aware grant options (#125).
+
 - Save a reusable MOS refresh prompt alongside the documentation skill (#123).
 
 ## v0.25.2 (2026-11-23)

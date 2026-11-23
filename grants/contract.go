@@ -70,8 +70,9 @@ func (e *Error) Error() string { return "Oracle dictionary " + e.Operation + " f
 func (e *Error) Unwrap() error { return e.cause }
 
 type selection struct {
-	ownerColumn string
-	nameColumn  string
+	ownerColumn       string
+	nameColumn        string
+	classifiedGrantee bool
 
 	sql        string
 	args       []any
@@ -134,6 +135,12 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 		return nil, ErrInvalidEvidence
 	}
 	for _, row := range result.Rows {
+		if plan.classifiedGrantee {
+			name, kind := row[index["GRANTEE"]], row[index["GRANTEE_KIND"]]
+			if name.Null || name.Text == "" || name.Text == "PUBLIC" || kind.Null || (kind.Text != "USER" && kind.Text != "ROLE") {
+				return nil, ErrInvalidEvidence
+			}
+		}
 		if plan.ownerColumn != "" && !containsScope(plan.provenance.Owners, row[index[plan.ownerColumn]]) {
 			return nil, ErrInvalidEvidence
 		}
