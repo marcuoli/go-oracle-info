@@ -66,9 +66,19 @@ the SDK and may be unavailable to a caller.
 
 ## Prepare a local review input
 
-Use `python -B scripts/refresh_patch_tools.py --help` for the snapshot
-generator. It verifies the Oracle capture manifest, exact archive commit and
-hash, article revisions, scoped table headers, patch links and attachment
-identity before writing `gold-images.json` and `autoupgrade-archive.json`.
-Keep review inputs and generated Oracle Support snapshots outside the checkout.
-Recheck platform/file availability and evidence scope when applying a capture.
+Use the project-owned private MOS evidence directory. Its `import-manifest.json`
+identifies the dated capture directory containing `mos-capture-manifest.json`
+and the archived AutoUpgrade HTML. Reuse the original reviewed commit, SHA-256,
+and review timestamp when replaying the archive.
+
+```powershell
+python -B scripts/refresh_patch_tools.py --oracle-docs <capture-directory> --archive-file <archived-HTML> --archive-commit <recorded-commit> --archive-sha256 <recorded-sha256> --reviewed-utc <review-time-UTC> --output-dir <private-output-directory>
+```
+
+The output directory must already exist. The generator verifies the Oracle
+capture manifest, archive identity and hash, article revisions, scoped table
+headers, patch links and attachment identity before writing `gold-images.json`
+and `autoupgrade-archive.json`. The previous `--archive-repo` option still
+accepts the original Git archive instead of `--archive-file`. Keep review
+inputs and generated Oracle Support snapshots outside the checkout. Recheck
+platform/file availability and evidence scope when applying a capture.

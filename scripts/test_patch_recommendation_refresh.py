@@ -1,4 +1,7 @@
 from copy import deepcopy
+from hashlib import sha256
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -27,6 +30,36 @@ class RecommendationsTest(unittest.TestCase):
             "number": 23456789, "fixed_in_ru": "19.28", "fixed_in_mrp": "MRP 19.28.1",
             "platform_family": "Linux",
         }])
+
+    def test_local_archive_matches_git_archive_and_requires_reviewed_bytes(self):
+        content = ("<title>Document 555.1</title>" + DB + "<table>" + HEADER + ROW + "</table>").encode()
+        commit = "1" * 40
+        config = review()
+        entry = config["sources"][0]
+        entry["source"] = {"archive_commit": commit, "document": {"id": "555.1", "sha256": sha256(content).hexdigest()}}
+
+        with TemporaryDirectory() as directory, patch("refresh_patch_recommendations.subprocess.check_output") as git:
+            file = Path(directory) / "555.1.html"
+            file.write_bytes(content)
+            entry["archive"] = {"file": str(file)}
+            local = build(config)
+            self.assertEqual(local["sections"][0]["rows"][0]["number"], 23456789)
+            git.assert_not_called()
+
+            entry["archive"]["repository"] = directory
+            with self.assertRaisesRegex(ValueError, "one local archive file or one Git archive"):
+                build(config)
+            del entry["archive"]["repository"]
+            file.write_bytes(content + b" ")
+            with self.assertRaisesRegex(ValueError, "capture hash mismatch"):
+                build(config)
+            git.assert_not_called()
+
+            entry["archive"] = {"repository": directory, "path": "assets/docs/555.1.html"}
+            git.return_value = content
+            self.assertEqual(build(config), local)
+            git.assert_called_once()
+            self.assertEqual(git.call_args.args[0][-1], f"{commit}:./assets/docs/555.1.html")
 
     def test_explicit_empty_and_absent_table(self):
         table = "<table>" + HEADER + "</table>"

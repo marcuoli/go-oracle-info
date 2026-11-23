@@ -82,13 +82,21 @@ def capture_html(entry):
     if bool(archive) == bool(capture):
         raise ValueError("review must identify exactly one capture")
     if archive:
-        repository = Path(archive["repository"]).resolve(strict=True).as_posix()
         commit = source["archive_commit"]
-        path = archive["path"]
-        if not re.fullmatch(r"[0-9a-f]{40}", commit) or path != "assets/docs/555.1.html" or doc["id"] != "555.1":
+        if not re.fullmatch(r"[0-9a-f]{40}", commit) or doc["id"] != "555.1":
             raise ValueError("invalid reviewed 555.1 archive identity")
-        raw = subprocess.check_output(["git", "-c", f"safe.directory={repository}", "-C", repository, "show",
-                                       f"{commit}:./{path}"], stderr=subprocess.DEVNULL)
+        if "file" in archive:
+            filename = archive["file"]
+            if not isinstance(filename, str) or not filename.strip() or {"repository", "path"} & archive.keys():
+                raise ValueError("review must identify one local archive file or one Git archive")
+            raw = Path(filename).read_bytes()
+        else:
+            path = archive["path"]
+            if path != "assets/docs/555.1.html":
+                raise ValueError("invalid reviewed 555.1 archive identity")
+            repository = Path(archive["repository"]).resolve(strict=True).as_posix()
+            raw = subprocess.check_output(["git", "-c", f"safe.directory={repository}", "-C", repository, "show",
+                                           f"{commit}:./{path}"], stderr=subprocess.DEVNULL)
     else:
         raw = Path(capture).read_bytes()
     if sha(raw) != doc["sha256"]:

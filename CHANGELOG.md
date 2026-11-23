@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Regenerate private recommendations, Gold Images and AutoUpgrade JSON from local MOS captures and reviewed archived HTML (#119).
+
 ## v0.25.1 (2026-11-23)
 
 - Update go-oracle-session to v0.19.0 and refresh five stable indirect dependency versions. Verify the Go 1.27.4 source and build requirements (#117).
