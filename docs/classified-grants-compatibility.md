@@ -50,10 +50,10 @@ behavior.
 | 12cR1 | 12.1.0.2.0 | Base + COMMON | Base + COMMON | Base + COMMON, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 12cR2 | 12.2.0.1.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 18c | 18.0.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
-| 19c | 19.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
+| 19c | 19.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed at 19.32.0.0.0 in scope below | Unqualified |
 | 21c | 21.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 23c/23ai before 26ai | 23.3.0.0.0 / 23.9.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
-| 26ai | 23.26.1.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
+| 26ai | 23.26.1.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed in scope below | Unqualified |
 
 The conservative major-only Oracle 12 selection projects `COMMON` alone.
 `Read…ForRelease` and `ClassifiedOptions.OracleRelease` take the observed
@@ -96,11 +96,23 @@ families are rejected before SQL. [Oracle Database release numbering](https://do
   [26ai column](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_COL_PRIVS.html),
   [26ai membership](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_ROLE_PRIVS.html).
 
-Qualification needs the intended account and read access to every selected
-dictionary view in the actual connected container. Record OPEN or MOUNT,
-database role, non-CDB/root/PDB and the connected instance/member. The selectors
-use connected-container DBA views, without switching containers or aggregating
-instance-level evidence. Root visibility does not certify every PDB and
-SYSDBA does not qualify another account. No login, container, role, member,
-or OPEN/MOUNT variant was tested natively in this SDK validation.
-[Monitoring CDBs and PDBs](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html).
+## Native SQL and driver qualification
+
+On 2026-11-23, SQL*Plus executed the three full projected statements selected
+from SDK commit `d66bb9fc0c0be006a170829476d6ba17523c90c0`. SQL*Plus consumed
+the projected rows and recorded successful row counts in four existing
+Enterprise Edition CDB-root sessions under SYSDBA.
+
+| Observed numeric release | Role and open mode | Sessions | Object / column / membership rows per session |
+| --- | --- | --- | --- |
+| 19.32.0.0.0 | Primary, READ WRITE | 1 | 8641 / 3 / 162 |
+| 23.26.1.0.0 | Primary, READ WRITE | 2 | 9364 / 3 / 210 |
+| 23.26.1.0.0 | Physical standby, READ ONLY WITH APPLY | 1 | 9364 / 3 / 210 |
+
+These 12 executions qualify the unfiltered projections only in the recorded
+sessions. Row values, application filtering and reader behavior require their
+own driver/application evidence. Member identity was limited to each admitted
+session. Non-CDB, PDB, MOUNT, other RUs, named binds and other accounts/roles
+remain unqualified. Qualification requires the intended account and read access
+to every selected view in the actual connected container. Root visibility is
+root-scoped. [Monitoring CDBs and PDBs](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html).
