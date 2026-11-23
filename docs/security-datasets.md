@@ -99,6 +99,21 @@ that those values are false or unsupported by the database. A new capability
 projection should be added against release-specific evidence rather than inferred
 from a major-version label.
 
+### Classified object, column and role grants
+
+`grants.ReadObjectPrivilegeGrants`, `grants.ReadColumnPrivilegeGrants` and
+`grants.ReadRoleMemberships` provide independent, direct dictionary selections for
+named users and roles. The type of a column grant's object stays NULL when the
+dictionary cannot establish a unique type. Membership records retain direct
+role-to-role edges. These sources exclude exact `PUBLIC` and include visible
+Oracle-maintained accounts and roles. Eligibility policy stays with the caller.
+
+Select the family using `grants.ClassifiedOptions` in its Statement, Decode,
+Rows and JSON entry points. Buffered readers take `grants.Request`. Their
+`Read…ForRelease` forms accept the observed five-part numeric release for
+precise Oracle 12 optional columns. See the
+[classified grants compatibility matrix](classified-grants-compatibility.md).
+
 ## Distinct ACL visibility
 
 `networkacl.Options.Dataset` admits exactly one dataset. Mapping records, DBA ACE

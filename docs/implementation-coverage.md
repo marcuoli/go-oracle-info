@@ -99,7 +99,7 @@ contracts live in `contract.go` when used across facts.
 | `directories` | 1 | `inventory.go` |
 | `engineeredsystem/catalog` | 6 | `cells.go`, `configuration.go`, `alerts.go`, `connected_cells.go`, `visible_cell_count.go`, `metadata.go` |
 | `goldengate` | 8 | `replicats.go`, `apply_coordinators.go`, `capture_processes.go`, `heartbeat_lag.go`, `administrators.go`, `extracts.go`, `heartbeats.go`, `heartbeat_catalog.go` |
-| `grants` | 4 | `direct.go`, `direct_column.go`, `role.go`, `direct_system.go` |
+| `grants` | 7 | `direct.go`, `direct_column.go`, `role.go`, `direct_system.go`, `object_privilege_grants.go`, `column_privilege_grants.go`, `role_memberships.go` |
 | `identity` | 17 | `banners_source.go`, `connected_architecture.go`, `container_source.go`, `database_info.go`, `database_identity.go`, `edition_source.go`, `execution_identity.go`, `full_version_source.go`, `instance_identity.go`, `name_source.go`, `oracle_home.go`, `pdb_open_mode.go`, `version_source.go`, `version_bootstrap.go`, `role_source.go`, `snapshot.go`, `session_context.go` |
 | `instances` | 2 | `inventory.go`, `versions.go` |
 | `memory` | 3 | `parameter.go`, `pdb.go`, `rac.go` |

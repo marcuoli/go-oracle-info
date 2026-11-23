@@ -52,6 +52,7 @@ private native cursors from a Session lease.
 | database | Configuration, Endian, CharacterSet, CPUCount, Products, DatafileSize, Storage, EncryptionCounts, SGAAllocated, PGAAllocated, PDBCount, SessionParameters, SessionParametersWithDefaults, NLSInstance |
 | dataguard | Status, Lag |
 | engineeredsystem/catalog | Metadata, Configuration, VisibleCellCount, Cells, Alerts, ConnectedCells |
+| grants | ObjectPrivilegeGrants, ColumnPrivilegeGrants, RoleMemberships ([compatibility](classified-grants-compatibility.md)) |
 | identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap, LogicalDatabase |
 | instances | Visibility |
 | parameters | ScalarSystem |
