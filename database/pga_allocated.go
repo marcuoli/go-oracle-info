@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
+	"github.com/marcuoli/go-oracle-info/memory"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -31,92 +32,49 @@ type PGAAllocatedResult struct {
 	Rows       []PGAAllocatedRow
 }
 
-// PGAAllocatedStatement selects reviewed SQL with bound values, owning no connection.
+// PGAAllocatedStatement preserves the database API for memory.PGAAllocatedStatement.
 func PGAAllocatedStatement(options PGAAllocatedOptions) (string, []any, error) {
-	p, err := pGAAllocatedDatasetPlan(options)
-	return p.sql, p.args, err
+	statement, args, err := memory.PGAAllocatedStatement(memory.PGAAllocatedOptions(options))
+	return statement, args, legacyMemoryDatasetError(err)
 }
 
-func pGAAllocatedDatasetPlan(options PGAAllocatedOptions) (datasetSelection, error) {
-	if err := datasetMajor(options.OracleMajor); err != nil {
-		return datasetSelection{}, err
-	}
-	query := PGAAllocatedSQL
-	return datasetSelection{sql: query, args: nil, schema: []rowset.Column{{Name: "VALUE", Kind: rowset.Text}}, provenance: DatasetProvenance{Source: "V$PGASTAT", OracleMajor: options.OracleMajor, Scope: "observed_instance_pga_allocation_gib_rounded_three_decimals"}}, nil
-}
-
-// DecodePGAAllocated validates the entire shape and every row before returning facts.
+// DecodePGAAllocated preserves the database API for memory.DecodePGAAllocated.
 func DecodePGAAllocated(result session.Result, options PGAAllocatedOptions) (PGAAllocatedResult, error) {
-	p, err := pGAAllocatedDatasetPlan(options)
-	if err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	return decodeDatasetPGAAllocated(result, p)
+	return legacyPGAAllocatedResult(memory.DecodePGAAllocated(result, memory.PGAAllocatedOptions(options)))
 }
 
-func decodeDatasetPGAAllocated(result session.Result, p datasetSelection) (PGAAllocatedResult, error) {
-	index, err := datasetColumns(result, p)
-	if err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	if len(result.Rows) > 1 {
-		return PGAAllocatedResult{}, ErrInvalidEvidence
-	}
-	rows := make([]PGAAllocatedRow, len(result.Rows))
-	for i, r := range result.Rows {
-		rows[i] = PGAAllocatedRow{GiB: r[index["VALUE"]]}
-	}
-	return PGAAllocatedResult{Provenance: p.provenance, Rows: rows}, nil
-}
-
-// ReadPGAAllocated executes once through an admitted complete bounded reader.
-// Query/terminal/close/cancellation/domain failures publish no successful prefix.
+// ReadPGAAllocated preserves the database API for memory.ReadPGAAllocated.
 func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRequest) (PGAAllocatedResult, error) {
-	p, err := pGAAllocatedDatasetPlan(request.Options)
-	if err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	if !validDatasetReader(reader) || request.Reference.Validate() != nil {
-		return PGAAllocatedResult{}, ErrInvalidRequest
-	}
-	if err = datasetReadError(ctx, p, nil); err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	facts, err := decodeDatasetPGAAllocated(result, p)
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return PGAAllocatedResult{}, err
-	}
-	facts.Provenance.Complete = true
-	return facts, nil
+	return legacyPGAAllocatedResult(memory.ReadPGAAllocated(ctx, reader, memory.PGAAllocatedRequest{
+		Options: memory.PGAAllocatedOptions(request.Options), Reference: request.Reference,
+	}))
 }
 
-// PGAAllocatedRows returns the actual caller-native cursor; its caller owns
-// Next/Scan/Err/Close, affinity, cancellation and finite stream budgets.
+// PGAAllocatedRows returns the native cursor from memory.PGAAllocatedRows.
 func PGAAllocatedRows(ctx context.Context, q rowset.Queryer, options PGAAllocatedOptions) (*sql.Rows, error) {
-	p, err := pGAAllocatedDatasetPlan(options)
-	if err != nil {
-		return nil, err
-	}
-	r, err := rowset.Query(ctx, q, p.sql, p.args...)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	return r, nil
+	rows, err := memory.PGAAllocatedRows(ctx, q, memory.PGAAllocatedOptions(options))
+	return rows, legacyMemoryDatasetError(err)
 }
 
-// PGAAllocatedJSON consumes an independent complete cursor through shared rowset,
-// validates domain facts and publishes nothing on any failure or budget overflow.
+// PGAAllocatedJSON preserves the database API for memory.PGAAllocatedJSON.
 func PGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options PGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, err := pGAAllocatedDatasetPlan(options)
+	payload, err := memory.PGAAllocatedJSON(ctx, q, memory.PGAAllocatedOptions(options), limits)
+	return payload, legacyMemoryDatasetError(err)
+}
+
+func legacyPGAAllocatedResult(facts memory.PGAAllocatedResult, err error) (PGAAllocatedResult, error) {
 	if err != nil {
-		return nil, err
+		return PGAAllocatedResult{}, legacyMemoryDatasetError(err)
 	}
-	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := decodeDatasetPGAAllocated(r, p); return err })
+	rows := make([]PGAAllocatedRow, len(facts.Rows))
+	for i, row := range facts.Rows {
+		rows[i] = PGAAllocatedRow(row)
+	}
+	p := facts.Provenance
+	return PGAAllocatedResult{Provenance: DatasetProvenance{
+		Source: p.Source, OracleMajor: p.OracleMajor, Scope: p.Scope, Complete: p.Complete,
+	}, Rows: rows}, nil
 }
 
 // PGAAllocatedSQL reads observed instance PGA allocation in rounded GiB, not its target.
-const PGAAllocatedSQL = `SELECT TO_CHAR(ROUND(VALUE/POWER(1024,3),3), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS VALUE FROM V$PGASTAT WHERE NAME='total PGA allocated'`
+const PGAAllocatedSQL = memory.PGAAllocatedSQL

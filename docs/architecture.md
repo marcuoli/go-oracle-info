@@ -3,10 +3,35 @@
 All implementations follow the [common Oracle fact pattern](implementation-pattern.md). Keep [package coverage and migrations](implementation-coverage.md) explicit when reviewing or extending a source.
 
 - identity selects release-appropriate database/version/platform facts and preserves SQL NULL and source provenance.
-- memory owns scoped configured-parameter SQL, exact result decoding, the permitted ADB retry and RAC member resolution/aggregation.
+- memory owns configured targets and observed SGA/PGA allocations. Its configured path retains the guarded ADB fallback and scoped RAC aggregation.
 - engineeredsystem owns exact cell/property/payload facts, defensive snapshots, complete-result row decoding and XML normalization; its catalog owns capability-selected static SQL. Consumers attach actual execution coverage and decide collection completion. Shared decoders accept only complete go-oracle-session Results and never acquire scopes, allocate application SQL references or recover sessions.
 - The existing session module owns physical query and cursor lifecycle. Callers supply an already admitted reader and execution references; no driver dependency is introduced here.
 - Applications retain endpoint/container authorization, deadlines, recovery, progress, completion policy, scoring and presentation.
+
+## Package map
+
+| Package | Responsibility |
+| --- | --- |
+| `oracleinfo` (module root) | Non-owning client facade over the caller's admitted handle. |
+| `database` | Connected configuration and capabilities, including NLS, options, installed products, topology and encryption metadata. |
+| `identity`, `instances`, `containers` | Connected identity and release, visible instance inventory and versions, and multitenant inventory and observations. |
+| `memory` | Configured targets in `Parameter`, `PDB` and `RAC`. Observed instance allocations in `SGAAllocated` and `PGAAllocated`, and reporting-member allocation rows in `SGAComponents`. |
+| `storage`, `asm` | Data and temporary file inventories, allocation, names, tablespaces and segments in `storage`. ASM client observations in `asm`. |
+| `parameters`, `performance`, `sqlplan` | Parameter facts and persistence, current resource and blocking observations, and optimizer plan metadata. |
+| `redo`, `dataguard`, `backup`, `goldengate` | Redo and archival, Data Guard, RMAN metadata, and database-visible GoldenGate. |
+| `objects`, `metadata`, `registry` | Object and statistics inventories, separately admitted DDL, and registered components. |
+| `users`, `grants`, `passwordfile`, `networkacl` | Account metadata, privilege evidence, password-file metadata and ACLs. |
+| `alertlog`, `scheduler`, `dblinks`, `directories`, `sequences`, `services`, `triggers` | Their distinct operational and dictionary facts. |
+| `engineeredsystem`, `engineeredsystem/catalog` | Cell evidence models and decoders, and capability-selected SQL. |
+| `patches`, `releases` | Database-observed patch evidence and offline Oracle release/package catalogs, respectively. |
+
+Existing `database.SGAAllocated`, `database.PGAAllocated`,
+`database.DatafileSize`, `database.Storage` and `storage.SGAComponents`
+families delegate to their owners while keeping their published types and
+signatures. `database.Storage` corresponds to `storage.FileNames`. See the
+[complete API inventory](fact-apis.md#families) for the current entry points.
+
+## Memory, visibility and transport
 
 Configured SGA is the instance maximum for non-CDB/root, or a positive PDB target with explicitly admitted instance inheritance. Configured PGA is its aggregate target, including a valid zero. Neither is observed memory consumption. RAC totals require complete member evidence and sum raw bytes before rounding.
 

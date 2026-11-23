@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
+	"github.com/marcuoli/go-oracle-info/memory"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -31,92 +32,49 @@ type SGAAllocatedResult struct {
 	Rows       []SGAAllocatedRow
 }
 
-// SGAAllocatedStatement selects reviewed SQL with bound values, owning no connection.
+// SGAAllocatedStatement preserves the database API for memory.SGAAllocatedStatement.
 func SGAAllocatedStatement(options SGAAllocatedOptions) (string, []any, error) {
-	p, err := sGAAllocatedDatasetPlan(options)
-	return p.sql, p.args, err
+	statement, args, err := memory.SGAAllocatedStatement(memory.SGAAllocatedOptions(options))
+	return statement, args, legacyMemoryDatasetError(err)
 }
 
-func sGAAllocatedDatasetPlan(options SGAAllocatedOptions) (datasetSelection, error) {
-	if err := datasetMajor(options.OracleMajor); err != nil {
-		return datasetSelection{}, err
-	}
-	query := SGAAllocatedSQL
-	return datasetSelection{sql: query, args: nil, schema: []rowset.Column{{Name: "VALUE", Kind: rowset.Text}}, provenance: DatasetProvenance{Source: "V$SGA", OracleMajor: options.OracleMajor, Scope: "observed_instance_sga_allocation_gib_rounded_three_decimals"}}, nil
-}
-
-// DecodeSGAAllocated validates the entire shape and every row before returning facts.
+// DecodeSGAAllocated preserves the database API for memory.DecodeSGAAllocated.
 func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGAAllocatedResult, error) {
-	p, err := sGAAllocatedDatasetPlan(options)
-	if err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	return decodeDatasetSGAAllocated(result, p)
+	return legacySGAAllocatedResult(memory.DecodeSGAAllocated(result, memory.SGAAllocatedOptions(options)))
 }
 
-func decodeDatasetSGAAllocated(result session.Result, p datasetSelection) (SGAAllocatedResult, error) {
-	index, err := datasetColumns(result, p)
-	if err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	if len(result.Rows) != 1 {
-		return SGAAllocatedResult{}, ErrInvalidEvidence
-	}
-	rows := make([]SGAAllocatedRow, len(result.Rows))
-	for i, r := range result.Rows {
-		rows[i] = SGAAllocatedRow{GiB: r[index["VALUE"]]}
-	}
-	return SGAAllocatedResult{Provenance: p.provenance, Rows: rows}, nil
-}
-
-// ReadSGAAllocated executes once through an admitted complete bounded reader.
-// Query/terminal/close/cancellation/domain failures publish no successful prefix.
+// ReadSGAAllocated preserves the database API for memory.ReadSGAAllocated.
 func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRequest) (SGAAllocatedResult, error) {
-	p, err := sGAAllocatedDatasetPlan(request.Options)
-	if err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	if !validDatasetReader(reader) || request.Reference.Validate() != nil {
-		return SGAAllocatedResult{}, ErrInvalidRequest
-	}
-	if err = datasetReadError(ctx, p, nil); err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	facts, err := decodeDatasetSGAAllocated(result, p)
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return SGAAllocatedResult{}, err
-	}
-	facts.Provenance.Complete = true
-	return facts, nil
+	return legacySGAAllocatedResult(memory.ReadSGAAllocated(ctx, reader, memory.SGAAllocatedRequest{
+		Options: memory.SGAAllocatedOptions(request.Options), Reference: request.Reference,
+	}))
 }
 
-// SGAAllocatedRows returns the actual caller-native cursor; its caller owns
-// Next/Scan/Err/Close, affinity, cancellation and finite stream budgets.
+// SGAAllocatedRows returns the native cursor from memory.SGAAllocatedRows.
 func SGAAllocatedRows(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions) (*sql.Rows, error) {
-	p, err := sGAAllocatedDatasetPlan(options)
-	if err != nil {
-		return nil, err
-	}
-	r, err := rowset.Query(ctx, q, p.sql, p.args...)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	return r, nil
+	rows, err := memory.SGAAllocatedRows(ctx, q, memory.SGAAllocatedOptions(options))
+	return rows, legacyMemoryDatasetError(err)
 }
 
-// SGAAllocatedJSON consumes an independent complete cursor through shared rowset,
-// validates domain facts and publishes nothing on any failure or budget overflow.
+// SGAAllocatedJSON preserves the database API for memory.SGAAllocatedJSON.
 func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, err := sGAAllocatedDatasetPlan(options)
+	payload, err := memory.SGAAllocatedJSON(ctx, q, memory.SGAAllocatedOptions(options), limits)
+	return payload, legacyMemoryDatasetError(err)
+}
+
+func legacySGAAllocatedResult(facts memory.SGAAllocatedResult, err error) (SGAAllocatedResult, error) {
 	if err != nil {
-		return nil, err
+		return SGAAllocatedResult{}, legacyMemoryDatasetError(err)
 	}
-	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := decodeDatasetSGAAllocated(r, p); return err })
+	rows := make([]SGAAllocatedRow, len(facts.Rows))
+	for i, row := range facts.Rows {
+		rows[i] = SGAAllocatedRow(row)
+	}
+	p := facts.Provenance
+	return SGAAllocatedResult{Provenance: DatasetProvenance{
+		Source: p.Source, OracleMajor: p.OracleMajor, Scope: p.Scope, Complete: p.Complete,
+	}, Rows: rows}, nil
 }
 
 // SGAAllocatedSQL reads observed instance SGA allocation in rounded GiB, not configured memory.
-const SGAAllocatedSQL = `SELECT TO_CHAR(ROUND(SUM(VALUE)/POWER(1024,3),3), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS VALUE FROM V$SGA`
+const SGAAllocatedSQL = memory.SGAAllocatedSQL

@@ -264,7 +264,7 @@ func JSON(ctx context.Context, q rowset.Queryer, parameter Parameter, options Op
 	if err != nil {
 		return nil, err
 	}
-	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := Decode(r, parameter, options); return err })
+	return readDatasetJSON(ctx, q, p, limits, ErrInvalidEvidence, func(r session.Result) error { _, err := Decode(r, parameter, options); return err })
 }
 
 // ParameterStatement selects the same scoped projection and bind values as ParameterRows.

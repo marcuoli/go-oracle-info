@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move observed SGA/PGA allocations and components into memory and file-capacity facts into storage. Preserve existing imports, types and behavior (#135).
+
 ## v0.28.0 (2026-11-23)
 
 - Select scoped PUBLIC object and column grants when either recorded account is non-Oracle-maintained (#133).

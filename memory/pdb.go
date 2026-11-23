@@ -1,4 +1,4 @@
-// Package memory selects and decodes read-only configured-memory facts.
+// Package memory selects and decodes configured memory and observed allocation facts.
 // It opens no sessions and leaves endpoint/container admission to callers.
 package memory
 

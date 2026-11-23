@@ -11,7 +11,9 @@ admit endpoint/container/edition, source privileges and reporting-member coverag
 `Decode`, `Read`, `Rows` and `JSON` companions (for example `ReadGroups` and
 `GroupsStatement`). Storage provides the same companions for `Tablespaces`,
 `Datafiles`, `Tempfiles`, `FreeExtents`, `Segments`, `LongColumns`,
-`DefaultTemporary`, `TemporaryGroups` and `SGAComponents`. `asm.Clients` provides
+`DefaultTemporary` and `TemporaryGroups`. `memory.SGAComponents` provides
+observed reporting-instance allocations. Its legacy `storage` entry points
+preserve their public types and behavior. `asm.Clients` provides
 its own companions. There is no query registry or connection/cache manager.
 
 Functional readers accept the observed Oracle major, a valid caller-owned SQL

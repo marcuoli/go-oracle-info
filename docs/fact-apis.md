@@ -49,17 +49,25 @@ private native cursors from a Session lease.
 | --- | --- |
 | alertlog | Entries, Counts |
 | backup | Jobs |
-| database | Configuration, Endian, CharacterSet, CPUCount, Products, DatafileSize, Storage, EncryptionCounts, SGAAllocated, PGAAllocated, PDBCount, SessionParameters, SessionParametersWithDefaults, NLSInstance |
+| database | Configuration, Endian, CharacterSet, CPUCount, Products, EncryptionCounts, PDBCount, SessionParameters, SessionParametersWithDefaults, NLSInstance |
 | dataguard | Status, Lag |
 | engineeredsystem/catalog | Metadata, Configuration, VisibleCellCount, Cells, Alerts, ConnectedCells |
 | grants | ObjectPrivilegeGrants, ColumnPrivilegeGrants, RoleMemberships ([compatibility](classified-grants-compatibility.md)) |
 | identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap, LogicalDatabase |
 | instances | Visibility |
+| memory | SGAAllocated, PGAAllocated, SGAComponents |
+| storage | DatafileSize, FileNames |
 | parameters | ScalarSystem |
 | objects | InvalidObjects, ObjectInventory, Schema, ObjectTotals, Tables, Table, TableCount, TablesStatistics, TableStatistics, OldestStatistics |
 | performance | Blockers, ResourceLimits |
 | scheduler | Jobs |
 | services | Names |
+
+The existing `database.SGAAllocated`, `database.PGAAllocated`,
+`database.DatafileSize`, `database.Storage` and `storage.SGAComponents`
+families remain available with their published types, errors and JSON. The
+new owner of `database.Storage` is `storage.FileNames`. The moved families
+retain the same release and scope gates.
 
 ### Named families for existing APIs
 

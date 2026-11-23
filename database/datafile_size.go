@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
+	"github.com/marcuoli/go-oracle-info/storage"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 	"github.com/marcuoli/go-sqltemplate/reference"
@@ -31,92 +32,49 @@ type DatafileSizeResult struct {
 	Rows       []DatafileSizeRow
 }
 
-// DatafileSizeStatement selects reviewed SQL with bound values, owning no connection.
+// DatafileSizeStatement preserves the database API for storage.DatafileSizeStatement.
 func DatafileSizeStatement(options DatafileSizeOptions) (string, []any, error) {
-	p, err := datafileSizeDatasetPlan(options)
-	return p.sql, p.args, err
+	statement, args, err := storage.DatafileSizeStatement(storage.DatafileSizeOptions(options))
+	return statement, args, legacyStorageDatasetError(err)
 }
 
-func datafileSizeDatasetPlan(options DatafileSizeOptions) (datasetSelection, error) {
-	if err := datasetMajor(options.OracleMajor); err != nil {
-		return datasetSelection{}, err
-	}
-	query := DatafileSizeSQL
-	return datasetSelection{sql: query, args: nil, schema: []rowset.Column{{Name: "VALUE", Kind: rowset.Text}}, provenance: DatasetProvenance{Source: "DBA_DATA_FILES", OracleMajor: options.OracleMajor, Scope: "visible_observed_allocation_gib_rounded_three_decimals"}}, nil
-}
-
-// DecodeDatafileSize validates the entire shape and every row before returning facts.
+// DecodeDatafileSize preserves the database API for storage.DecodeDatafileSize.
 func DecodeDatafileSize(result session.Result, options DatafileSizeOptions) (DatafileSizeResult, error) {
-	p, err := datafileSizeDatasetPlan(options)
-	if err != nil {
-		return DatafileSizeResult{}, err
-	}
-	return decodeDatasetDatafileSize(result, p)
+	return legacyDatafileSizeResult(storage.DecodeDatafileSize(result, storage.DatafileSizeOptions(options)))
 }
 
-func decodeDatasetDatafileSize(result session.Result, p datasetSelection) (DatafileSizeResult, error) {
-	index, err := datasetColumns(result, p)
-	if err != nil {
-		return DatafileSizeResult{}, err
-	}
-	if len(result.Rows) != 1 {
-		return DatafileSizeResult{}, ErrInvalidEvidence
-	}
-	rows := make([]DatafileSizeRow, len(result.Rows))
-	for i, r := range result.Rows {
-		rows[i] = DatafileSizeRow{GiB: r[index["VALUE"]]}
-	}
-	return DatafileSizeResult{Provenance: p.provenance, Rows: rows}, nil
-}
-
-// ReadDatafileSize executes once through an admitted complete bounded reader.
-// Query/terminal/close/cancellation/domain failures publish no successful prefix.
+// ReadDatafileSize preserves the database API for storage.ReadDatafileSize.
 func ReadDatafileSize(ctx context.Context, reader Reader, request DatafileSizeRequest) (DatafileSizeResult, error) {
-	p, err := datafileSizeDatasetPlan(request.Options)
-	if err != nil {
-		return DatafileSizeResult{}, err
-	}
-	if !validDatasetReader(reader) || request.Reference.Validate() != nil {
-		return DatafileSizeResult{}, ErrInvalidRequest
-	}
-	if err = datasetReadError(ctx, p, nil); err != nil {
-		return DatafileSizeResult{}, err
-	}
-	result, err := reader.Query(ctx, session.Statement{Text: p.sql, Args: p.args, Reference: request.Reference})
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return DatafileSizeResult{}, err
-	}
-	facts, err := decodeDatasetDatafileSize(result, p)
-	if err = datasetReadError(ctx, p, err); err != nil {
-		return DatafileSizeResult{}, err
-	}
-	facts.Provenance.Complete = true
-	return facts, nil
+	return legacyDatafileSizeResult(storage.ReadDatafileSize(ctx, reader, storage.DatafileSizeRequest{
+		Options: storage.DatafileSizeOptions(request.Options), Reference: request.Reference,
+	}))
 }
 
-// DatafileSizeRows returns the actual caller-native cursor; its caller owns
-// Next/Scan/Err/Close, affinity, cancellation and finite stream budgets.
+// DatafileSizeRows returns the native cursor from storage.DatafileSizeRows.
 func DatafileSizeRows(ctx context.Context, q rowset.Queryer, options DatafileSizeOptions) (*sql.Rows, error) {
-	p, err := datafileSizeDatasetPlan(options)
-	if err != nil {
-		return nil, err
-	}
-	r, err := rowset.Query(ctx, q, p.sql, p.args...)
-	if err != nil {
-		return nil, &DatasetError{p.provenance.Source, err}
-	}
-	return r, nil
+	rows, err := storage.DatafileSizeRows(ctx, q, storage.DatafileSizeOptions(options))
+	return rows, legacyStorageDatasetError(err)
 }
 
-// DatafileSizeJSON consumes an independent complete cursor through shared rowset,
-// validates domain facts and publishes nothing on any failure or budget overflow.
+// DatafileSizeJSON preserves the database API for storage.DatafileSizeJSON.
 func DatafileSizeJSON(ctx context.Context, q rowset.Queryer, options DatafileSizeOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, err := datafileSizeDatasetPlan(options)
+	payload, err := storage.DatafileSizeJSON(ctx, q, storage.DatafileSizeOptions(options), limits)
+	return payload, legacyStorageDatasetError(err)
+}
+
+func legacyDatafileSizeResult(facts storage.DatafileSizeResult, err error) (DatafileSizeResult, error) {
 	if err != nil {
-		return nil, err
+		return DatafileSizeResult{}, legacyStorageDatasetError(err)
 	}
-	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := decodeDatasetDatafileSize(r, p); return err })
+	rows := make([]DatafileSizeRow, len(facts.Rows))
+	for i, row := range facts.Rows {
+		rows[i] = DatafileSizeRow(row)
+	}
+	p := facts.Provenance
+	return DatafileSizeResult{Provenance: DatasetProvenance{
+		Source: p.Source, OracleMajor: p.OracleMajor, Scope: p.Scope, Complete: p.Complete,
+	}, Rows: rows}, nil
 }
 
 // DatafileSizeSQL sums visible datafile bytes in rounded GiB; an empty source remains NULL.
-const DatafileSizeSQL = `SELECT CASE WHEN COUNT(*)>0 THEN TO_CHAR(ROUND(SUM(BYTES)/POWER(1024,3),3), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') END AS VALUE FROM DBA_DATA_FILES`
+const DatafileSizeSQL = storage.DatafileSizeSQL

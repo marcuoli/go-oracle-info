@@ -6,6 +6,14 @@ and legacy database SQL constants remain unchanged.
 
 ## File allocation and storage
 
+`storage.DatafileSize` reads the visible dictionary datafile allocation rounded
+to three decimal GiB. `storage.FileNames` returns the selected datafile and
+tempfile names and their kinds. Both keep the established current-dictionary
+source contract and the `database.DatafileSize` and `database.Storage`
+compatibility APIs. The legacy name-classification SQL is also available as
+`storage.StorageTypeSQL`.
+
+
 storage.DatabaseFilesStatement, DecodeDatabaseFiles, ReadDatabaseFiles,
 DatabaseFilesRows and DatabaseFilesJSON use V$DATAFILE and V$TEMPFILE. Rows retain
 file kind, identity, exact numeric bytes, literal path and actual CON_ID on 12+.

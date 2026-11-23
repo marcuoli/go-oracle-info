@@ -48,7 +48,7 @@ separate from source review and fixture coverage.
 | `grants` | Direct/object/column/role grant facts | Full fact pipeline; raw grants do not imply effective access |
 | `identity` | Scalar/bootstrap properties and complete database/session datasets | Complete source datasets plus preserved bootstrap/property contracts |
 | `instances` | Qualified visible-member context | Full fact pipeline; visibility is not physical RAC completeness |
-| `memory` | Admitted configured-memory collection and RAC aggregation | Complete scoped/PDB/RAC source adapters plus unchanged aggregate/property contracts |
+| `memory` | Admitted configured-memory collection, RAC aggregation and observed SGA/PGA allocations | Complete scoped/PDB/RAC source adapters plus unchanged aggregate/property contracts |
 | `metadata` | Explicit object DDL/CLOB capture | Full fact pipeline; shared conversion plus local complete CLOB validation |
 | `networkacl` | ACL dictionary facts | Full fact pipeline; no network probes |
 | `objects` | Invalid details, statistics decoder and compatibility selectors | Complete compatibility-source families plus invalid details |
@@ -62,7 +62,7 @@ separate from source review and fixture coverage.
 | `sequences` | Sequence dictionary facts | Full fact pipeline; observed metadata is not a future value guarantee |
 | `services` | Registered service details and legacy name selector | Full pipeline; retain name-selector source/filter distinction |
 | `sqlplan` | SQL profile and baseline metadata | Full fact pipelines; no optimizer changes |
-| `storage` | Scoped files/allocation/segments/tablespaces/SGA facts | Full pipelines plus pure properties; retain exact units and instance/container identity |
+| `storage` | Scoped files/allocation/segments/tablespaces | Full pipelines plus pure properties; retain exact units and instance/container identity |
 | `triggers` | Trigger dictionary metadata | Full fact pipeline; no trigger firing or alteration |
 | `users` | Account/table metadata and counts | Full fact pipelines; preserve raw flags and absence |
 | `internal/datetime` | Reviewed static Gregorian DATE SQL expression | Pure SQL-expression helper; unchanged |
@@ -93,7 +93,7 @@ contracts live in `contract.go` when used across facts.
 | `alertlog` | 2 | `entries.go`, `counts.go` |
 | `asm` | 1 | `clients.go` |
 | `backup` | 1 | `jobs.go` |
-| `database` | 17 | `configuration.go`, `character_set.go`, `cpu_count.go`, `datafile_size.go`, `encryption_counts.go`, `encryption.go`, `endian.go`, `nls_database.go`, `nls_instance.go`, `options.go`, `pdb_count.go`, `products.go`, `pga_allocated.go`, `session_parameters.go`, `sga_allocated.go`, `storage.go`, `session_parameters_with_defaults.go` |
+| `database` | 13 | `configuration.go`, `character_set.go`, `cpu_count.go`, `encryption_counts.go`, `encryption.go`, `endian.go`, `nls_database.go`, `nls_instance.go`, `options.go`, `pdb_count.go`, `products.go`, `session_parameters.go`, `session_parameters_with_defaults.go` |
 | `dataguard` | 10 | `archive_destination_status.go`, `archive_destinations.go`, `archive_progress.go`, `archive_gaps.go`, `database_context.go`, `status.go`, `processes.go`, `standby_logs.go`, `recovery_progress.go`, `lag.go` |
 | `dblinks` | 1 | `inventory.go` |
 | `directories` | 1 | `inventory.go` |
@@ -102,7 +102,7 @@ contracts live in `contract.go` when used across facts.
 | `grants` | 7 | `direct.go`, `direct_column.go`, `role.go`, `direct_system.go`, `object_privilege_grants.go`, `column_privilege_grants.go`, `role_memberships.go` |
 | `identity` | 17 | `banners_source.go`, `connected_architecture.go`, `container_source.go`, `database_info.go`, `database_identity.go`, `edition_source.go`, `execution_identity.go`, `full_version_source.go`, `instance_identity.go`, `name_source.go`, `oracle_home.go`, `pdb_open_mode.go`, `version_source.go`, `version_bootstrap.go`, `role_source.go`, `snapshot.go`, `session_context.go` |
 | `instances` | 2 | `inventory.go`, `versions.go` |
-| `memory` | 3 | `parameter.go`, `pdb.go`, `rac.go` |
+| `memory` | 6 | `parameter.go`, `pdb.go`, `rac.go`, `sga_allocated.go`, `pga_allocated.go`, `sga_components.go` |
 | `metadata` | 1 | `metadata.go` |
 | `networkacl` | 1 | `inventory.go` |
 | `objects` | 11 | `invalid_objects.go`, `invalid_details.go`, `object_inventory.go`, `object_totals.go`, `schema.go`, `oldest_statistics.go`, `tables_statistics.go`, `table.go`, `tables.go`, `table_count.go`, `table_statistics.go` |
@@ -116,7 +116,7 @@ contracts live in `contract.go` when used across facts.
 | `sequences` | 1 | `inventory.go` |
 | `services` | 2 | `names.go`, `definitions.go` |
 | `sqlplan` | 2 | `baseline.go`, `profile.go` |
-| `storage` | 11 | `default_temporary.go`, `database_files.go`, `data_files.go`, `long_columns.go`, `segments.go`, `free_extents.go`, `sga_components.go`, `temporary_groups.go`, `tablespaces.go`, `temp_files.go`, `temp_free_space.go` |
+| `storage` | 12 | `default_temporary.go`, `database_files.go`, `data_files.go`, `long_columns.go`, `segments.go`, `free_extents.go`, `datafile_size.go`, `file_names.go`, `temporary_groups.go`, `tablespaces.go`, `temp_files.go`, `temp_free_space.go` |
 | `triggers` | 1 | `inventory.go` |
 | `users` | 4 | `table_metadata.go`, `tablespace_quotas.go`, `inventory.go`, `account_count.go` |
 
@@ -149,8 +149,10 @@ provides Statement, Decode, Read, Rows and JSON as listed in [fact APIs](fact-ap
 | backup.JobsSQL / scheduler.JobsSQL | Each package Jobs; sample versus exact owner |
 | dataguard.StatusSQL / LagSQL | Status / Lag; protection and lag observations separate |
 | database.ConfigurationSQL / EndianSQL / CharacterSetSQL / CPUCountSQL | Configuration / Endian / CharacterSet / CPUCount; raw configuration replaces no legacy labels |
-| database.ProductsSQL / DatafileSizeSQL / StorageSQL / EncryptionSQL | Products / DatafileSize / Storage / EncryptionCounts; report allowlists/classifiers remain consumer-owned |
-| database.SGAAllocatedSQL / PGAAllocatedSQL / PDBCountSQL | SGAAllocated / PGAAllocated / PDBCount; observed allocation and admitted root scope |
+| database.ProductsSQL / EncryptionSQL | database.Products / EncryptionCounts |
+| database.DatafileSizeSQL / StorageSQL | storage.DatafileSize / FileNames. `storage.StorageTypeSQL` retains the original classification selector. |
+| database.SGAAllocatedSQL / PGAAllocatedSQL / PDBCountSQL | memory.SGAAllocated / memory.PGAAllocated / database.PDBCount. Allocation and admitted root scope remain distinct. |
+| storage.SGAComponents | memory.SGAComponents with the same admitted component rows and legacy storage errors |
 | database.ParametersSQL / ParametersWithDefaultsSQL | SessionParameters / SessionParametersWithDefaults; not instance or SPFILE |
 | database.NLSDatabaseSQL / NLSInstanceSQL | Existing NLSDatabase / new NLSInstance |
 | services.NamesSQL | Names; original V$SERVICES source/filter retained |

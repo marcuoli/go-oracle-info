@@ -1,4 +1,4 @@
-// Package database selects read-only connected database/environment facts.
+// Package database selects connected database configuration and capabilities.
 // Callers admit dictionary privileges and root/PDB/instance scope; no scope changes occur here.
 package database
 
