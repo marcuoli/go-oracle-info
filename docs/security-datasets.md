@@ -101,6 +101,8 @@ from a major-version label.
 
 ### Classified object, column and role grants
 
+See the [legacy predefined role catalog](legacy-predefined-roles.md) for documented role names on older releases.
+
 `grants.ReadObjectPrivilegeGrants`, `grants.ReadColumnPrivilegeGrants` and
 `grants.ReadRoleMemberships` provide independent, direct dictionary selections for
 named users and roles. The type of a column grant's object stays NULL when the
