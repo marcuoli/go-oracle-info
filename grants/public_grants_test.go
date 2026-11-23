@@ -237,3 +237,66 @@ func TestApplicationPublicGrantsAreFilteredBeforeTransport(t *testing.T) {
 		t.Fatalf("unexpected success with a contradictory role flag: %+v, %v", facts, err)
 	}
 }
+
+func TestApplicationPublicOwnerOrGrantorUsesBothRecordedAccounts(t *testing.T) {
+	options := ClassifiedOptions{
+		Options:                         Options{OracleMajor: 19, Names: []string{"PUBLIC"}},
+		OracleRelease:                   "19.32.0.0.0",
+		ApplicationPublicOwnerOrGrantor: true,
+	}
+	ownerMatch := "NLSSORT(u.USERNAME, 'NLS_SORT=BINARY') = NLSSORT(t.OWNER, 'NLS_SORT=BINARY')"
+	grantorMatch := "NLSSORT(u.USERNAME, 'NLS_SORT=BINARY') = NLSSORT(t.GRANTOR, 'NLS_SORT=BINARY')"
+	for _, dataset := range []struct {
+		name string
+		plan func(ClassifiedOptions) (selection, error)
+	}{
+		{"objects", objectPrivilegeGrantsPlan},
+		{"columns", columnPrivilegeGrantsPlan},
+	} {
+		t.Run(dataset.name, func(t *testing.T) {
+			plan, err := dataset.plan(options)
+			if err != nil || plan.provenance.Scope != applicationPublicOwnerOrGrantorScope ||
+				!reflect.DeepEqual(plan.args, []any{"PUBLIC"}) ||
+				!strings.Contains(plan.sql, "WHERE ("+ownerMatch+" OR "+grantorMatch+")\n   AND u.ORACLE_MAINTAINED = 'N'") {
+				t.Fatalf("unexpected scoped SQL, provenance or arguments: %+v, %v", plan, err)
+			}
+			ownerOnly := options
+			ownerOnly.ApplicationPublicOwnerOrGrantor, ownerOnly.ApplicationPublicOnly = false, true
+			prior, err := dataset.plan(ownerOnly)
+			if err != nil || prior.provenance.Scope != applicationPublicScope || strings.Contains(prior.sql, grantorMatch) ||
+				!strings.Contains(prior.sql, "WHERE "+ownerMatch+"\n   AND u.ORACLE_MAINTAINED = 'N'") {
+				t.Fatalf("the existing owner-only projection changed: %+v, %v", prior, err)
+			}
+			payload := classifiedFixture(plan,
+				map[string]string{"OWNER": "APP", "GRANTOR": "SYS", "GRANTEE": "PUBLIC", "GRANTEE_KIND": "PUBLIC"},
+				map[string]string{"OWNER": "SYS", "GRANTOR": "APP", "GRANTEE": "PUBLIC", "GRANTEE_KIND": "PUBLIC"})
+			index, err := columns(payload, plan)
+			if err != nil || payload.Rows[0][index["OWNER"]].Text != "APP" || payload.Rows[0][index["GRANTOR"]].Text != "SYS" ||
+				payload.Rows[1][index["OWNER"]].Text != "SYS" || payload.Rows[1][index["GRANTOR"]].Text != "APP" {
+				t.Fatalf("both recorded accounts must survive decoding: %+v, %v", payload, err)
+			}
+			unavailable := options
+			unavailable.OracleMajor, unavailable.OracleRelease = 12, "12.1.0.1.0"
+			if prior, err := dataset.plan(unavailable); !errors.Is(err, ErrApplicationPublicUnavailable) || prior.sql != "" {
+				t.Fatalf("selected a query without a verified Oracle-maintained flag: %q, %v", prior.sql, err)
+			}
+			unavailable.OracleRelease = "12.1.0.2.0"
+			if qualified, err := dataset.plan(unavailable); err != nil || qualified.provenance.Scope != applicationPublicOwnerOrGrantorScope {
+				t.Fatalf("qualified Oracle 12.1 version did not select either-account scope: %q, %v", qualified.sql, err)
+			}
+			combined := options
+			combined.ApplicationPublicOnly = true
+			if prior, err := dataset.plan(combined); !errors.Is(err, ErrInvalidRequest) || prior.sql != "" {
+				t.Fatalf("ambiguous scope was accepted: %q, %v", prior.sql, err)
+			}
+			optionsWithoutPublic := options
+			optionsWithoutPublic.Names = []string{"APP"}
+			if prior, err := dataset.plan(optionsWithoutPublic); !errors.Is(err, ErrInvalidRequest) || prior.sql != "" {
+				t.Fatalf("scope without explicit PUBLIC was accepted: %q, %v", prior.sql, err)
+			}
+		})
+	}
+	if plan, err := roleMembershipsPlan(options); !errors.Is(err, ErrInvalidRequest) || plan.sql != "" {
+		t.Fatal("role membership cannot establish a recorded owner or grantor")
+	}
+}

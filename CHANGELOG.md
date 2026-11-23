@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.28.0 (2026-11-23)
+
+- Select scoped PUBLIC object and column grants when either recorded account is non-Oracle-maintained (#133).
+
 - Catalog documented predefined Oracle roles for 9.2 through 12.1.0.1 (#131).
 
 ## v0.27.0 (2026-11-23)

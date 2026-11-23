@@ -171,3 +171,27 @@ Sources checked 2026-11-23.
 [19c GRANT](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/GRANT.html),
 [19c PUBLIC role](https://docs.oracle.com/en/database/oracle/oracle-database/19/dbseg/grants-and-revokes-privileges-and-public-role.html),
 [26ai DBA_ROLE_PRIVS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_ROLE_PRIVS.html).
+
+## PUBLIC owner or grantor selection (#133)
+
+ApplicationPublicOwnerOrGrantor is an explicit object and column option.
+It accepts PUBLIC as the sole named grantee. The bounded Oracle statement
+compares DBA_USERS.USERNAME with the recorded OWNER or GRANTOR using binary
+identity predicates and requires ORACLE_MAINTAINED = 'N'. Its provenance scope
+is connected_container_dba_application_public_owner_or_grantor. ApplicationPublicOnly
+retains its existing owner-only object and column scope and its existing role
+scope. Supplying both options or applying the new option to role membership
+fails before execution.
+
+The DBA_USERS visibility and ORACLE_MAINTAINED release gate is unchanged.
+Oracle 9iR2, 10gR1/R2, and 11gR1/R2 cannot execute this option. Oracle 12.1.0.1
+and major-only 12 observations cannot select it. The exact 12.1.0.2 boundary,
+12.2.0.1 and the supported 18c, 19c, 21c and numeric 23 family use the
+reviewed classification projection. The rest of the matrix above still
+governs the selected grant columns. Fixture checks distinguish query selection
+from native lab execution and retain exact recorded actor identities.
+
+Native Go driver collection ran as SYSTEM in open primary PDBs on
+19.32.0.0.0 and 23.26.1.0.0. Each returned seven complete object grant rows
+qualified by the recorded grantor only. Both column collections completed
+with zero rows. The owner-only and both-actor cases have fixture coverage.

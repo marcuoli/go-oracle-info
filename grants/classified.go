@@ -23,6 +23,10 @@ type ClassifiedOptions struct {
 	// ApplicationPublicOnly requires exact PUBLIC as the only named scope.
 	// It selects object owners or granted roles marked ORACLE_MAINTAINED=N.
 	ApplicationPublicOnly bool
+	// ApplicationPublicOwnerOrGrantor selects PUBLIC object and column grants
+	// when either recorded account is marked ORACLE_MAINTAINED=N. It requires
+	// PUBLIC as the only name and is independent of the owner-only selection.
+	ApplicationPublicOwnerOrGrantor bool
 }
 
 // ClassifiedRequest configures a bounded read through a caller-owned reader.
@@ -135,10 +139,12 @@ const joinPublicGrantee = namedGrantees + `
 	granteeJoinPredicate + "(" + notPublicGrantee + " OR p.GRANTEE_KIND = 'PUBLIC')"
 
 const applicationPublicScope = "connected_container_dba_application_public"
+const applicationPublicOwnerOrGrantorScope = "connected_container_dba_application_public_owner_or_grantor"
 
 func selectClassifiedGrants(options ClassifiedOptions, release grantRelease, source, table, ownerColumn, order string, fields []grantColumn) (selection, error) {
-	if options.ApplicationPublicOnly {
-		if len(options.Names) != 1 || options.Names[0] != "PUBLIC" {
+	if options.ApplicationPublicOnly || options.ApplicationPublicOwnerOrGrantor {
+		if len(options.Names) != 1 || options.Names[0] != "PUBLIC" ||
+			options.ApplicationPublicOwnerOrGrantor && (options.ApplicationPublicOnly || ownerColumn == "") {
 			return selection{}, ErrInvalidRequest
 		}
 		if !release.roleMaintained {
@@ -158,14 +164,17 @@ func selectClassifiedGrants(options ClassifiedOptions, release grantRelease, sou
 	}
 	statement := "SELECT " + strings.Join(expressions, ", ") + " FROM " + table + join
 	scope := "connected_container_dba_dictionary"
-	if options.ApplicationPublicOnly {
+	if options.ApplicationPublicOnly || options.ApplicationPublicOwnerOrGrantor {
 		scope = applicationPublicScope
 		if ownerColumn == "" {
 			statement += " AND " + grantedRoleMaintenance + " = 'N'"
 		} else {
-			statement += ` AND EXISTS (SELECT 1 FROM DBA_USERS u
- WHERE NLSSORT(u.USERNAME, 'NLS_SORT=BINARY') = NLSSORT(t.OWNER, 'NLS_SORT=BINARY')
-   AND u.ORACLE_MAINTAINED = 'N')`
+			account := "NLSSORT(u.USERNAME, 'NLS_SORT=BINARY') = NLSSORT(t.OWNER, 'NLS_SORT=BINARY')"
+			if options.ApplicationPublicOwnerOrGrantor {
+				scope = applicationPublicOwnerOrGrantorScope
+				account = "(" + account + " OR NLSSORT(u.USERNAME, 'NLS_SORT=BINARY') = NLSSORT(t.GRANTOR, 'NLS_SORT=BINARY'))"
+			}
+			statement += " AND EXISTS (SELECT 1 FROM DBA_USERS u\n WHERE " + account + "\n   AND u.ORACLE_MAINTAINED = 'N')"
 		}
 	}
 	var args []any
