@@ -9,7 +9,7 @@ import (
 	"github.com/marcuoli/go-oracle-session/session"
 )
 
-// ColumnPrivilegeGrant records a direct column grant to a named user or role.
+// ColumnPrivilegeGrant records a direct column grant to a named principal or PUBLIC.
 // ObjectType is SQL NULL if DBA_OBJECTS provides no unique candidate type.
 // A nil flag pointer means the release projection omitted that column.
 // A nonnil flag with Null set retains the source's SQL NULL.
@@ -59,8 +59,8 @@ func columnPrivilegeGrantsPlan(options ClassifiedOptions) (selection, error) {
 	fields := rawGrantColumns("OWNER", "GRANTOR", "GRANTEE")
 	fields = append(fields, grantColumn{"p.GRANTEE_KIND", "GRANTEE_KIND"}, grantColumn{columnGrantObjectType, "OBJECT_TYPE"})
 	fields = append(fields, rawGrantColumns("TABLE_NAME", "COLUMN_NAME", "PRIVILEGE", "GRANTABLE")...)
-	return selectClassifiedGrants(options.Options, "DBA_COL_PRIVS+"+granteeSources+"+DBA_OBJECTS", "DBA_COL_PRIVS", "OWNER",
-		"t.OWNER, t.TABLE_NAME, t.COLUMN_NAME, t.GRANTEE, t.PRIVILEGE, t.GRANTOR", release.appendContainerColumns(fields)), nil
+	return selectClassifiedGrants(options, release, "DBA_COL_PRIVS+"+granteeSources+"+DBA_OBJECTS", "DBA_COL_PRIVS", "OWNER",
+		"t.OWNER, t.TABLE_NAME, t.COLUMN_NAME, t.GRANTEE, t.PRIVILEGE, t.GRANTOR", release.appendContainerColumns(fields))
 }
 
 // DecodeColumnPrivilegeGrants validates every row and retains NULL values and duplicates.
@@ -106,7 +106,15 @@ func ReadColumnPrivilegeGrants(ctx context.Context, reader Reader, request Reque
 // ReadColumnPrivilegeGrantsForRelease additionally accepts the observed numeric Oracle release
 // so the Oracle 12 selector can include only the available flags.
 func ReadColumnPrivilegeGrantsForRelease(ctx context.Context, reader Reader, request Request, oracleRelease string) (ColumnPrivilegeGrantsResult, error) {
-	return readClassifiedGrants(ctx, reader, request, oracleRelease, columnPrivilegeGrantsPlan, decodeColumnPrivilegeGrants)
+	return readClassifiedGrants(ctx, reader, ClassifiedRequest{
+		Options:   ClassifiedOptions{Options: request.Options, OracleRelease: oracleRelease},
+		Reference: request.Reference, Limits: request.Limits,
+	}, columnPrivilegeGrantsPlan, decodeColumnPrivilegeGrants)
+}
+
+// ReadColumnPrivilegeGrantsWithOptions reads a complete result with the selected classification scope.
+func ReadColumnPrivilegeGrantsWithOptions(ctx context.Context, reader Reader, request ClassifiedRequest) (ColumnPrivilegeGrantsResult, error) {
+	return readClassifiedGrants(ctx, reader, request, columnPrivilegeGrantsPlan, decodeColumnPrivilegeGrants)
 }
 
 // ColumnPrivilegeGrantsRows returns the actual caller-owned native cursor. The caller owns

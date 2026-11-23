@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Allow exact PUBLIC in classified grant reads and preserve granted-role maintenance metadata (#129).
 - Catalog documented predefined Oracle accounts for 9.2 through 12.1.0.1 (#126).
 
 ## v0.26.0 (2026-11-23)

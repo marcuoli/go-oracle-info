@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"slices"
 
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
 )
 
-// RoleMembership records a direct role grant to a named user or role.
+// RoleMembership records a direct role grant to a named principal or PUBLIC.
 // Role-to-role edges retain the grantee role as recorded by Oracle.
 // A nil flag pointer means the release projection omitted that column.
 // A nonnil flag with Null set retains the source's SQL NULL.
@@ -22,6 +23,10 @@ type RoleMembership struct {
 	DelegateOption *session.Value
 	Common         *session.Value
 	Inherited      *session.Value
+	// GrantedRoleOracleMaintained is the granted role's dictionary flag.
+	// The selector projects it when exact PUBLIC scope is requested on a
+	// qualified release. It does not identify the grant's author.
+	GrantedRoleOracleMaintained *session.Value `json:",omitempty"`
 }
 
 // RoleMembershipsResult holds one selected dictionary observation in source order.
@@ -36,6 +41,9 @@ func RoleMembershipsStatement(options ClassifiedOptions) (string, []any, error) 
 	return plan.sql, plan.args, err
 }
 
+const grantedRoleMaintenance = `(SELECT r.ORACLE_MAINTAINED FROM DBA_ROLES r
+ WHERE NLSSORT(r.ROLE, 'NLS_SORT=BINARY') = NLSSORT(t.GRANTED_ROLE, 'NLS_SORT=BINARY'))`
+
 func roleMembershipsPlan(options ClassifiedOptions) (selection, error) {
 	release, err := classifiedRelease(options)
 	if err != nil {
@@ -49,8 +57,11 @@ func roleMembershipsPlan(options ClassifiedOptions) (selection, error) {
 	if release.delegate {
 		fields = append(fields, grantColumn{"t.DELEGATE_OPTION", "DELEGATE_OPTION"})
 	}
-	return selectClassifiedGrants(options.Options, "DBA_ROLE_PRIVS+"+granteeSources, "DBA_ROLE_PRIVS", "",
-		"t.GRANTEE, t.GRANTED_ROLE", release.appendContainerColumns(fields)), nil
+	if release.roleMaintained && slices.Contains(options.Names, "PUBLIC") {
+		fields = append(fields, grantColumn{grantedRoleMaintenance, "GRANTED_ROLE_ORACLE_MAINTAINED"})
+	}
+	return selectClassifiedGrants(options, release, "DBA_ROLE_PRIVS+"+granteeSources, "DBA_ROLE_PRIVS", "",
+		"t.GRANTEE, t.GRANTED_ROLE", release.appendContainerColumns(fields))
 }
 
 // DecodeRoleMemberships validates every row and retains NULL values and duplicates.
@@ -71,14 +82,15 @@ func decodeRoleMemberships(result session.Result, plan selection) (RoleMembershi
 	records := make([]RoleMembership, len(result.Rows))
 	for i, row := range result.Rows {
 		records[i] = RoleMembership{
-			Grantee:        row[index["GRANTEE"]],
-			GranteeKind:    row[index["GRANTEE_KIND"]],
-			GrantedRole:    row[index["GRANTED_ROLE"]],
-			AdminOption:    row[index["ADMIN_OPTION"]],
-			DefaultRole:    row[index["DEFAULT_ROLE"]],
-			DelegateOption: optionalGrantValue(row, index, "DELEGATE_OPTION"),
-			Common:         optionalGrantValue(row, index, "COMMON"),
-			Inherited:      optionalGrantValue(row, index, "INHERITED"),
+			Grantee:                     row[index["GRANTEE"]],
+			GranteeKind:                 row[index["GRANTEE_KIND"]],
+			GrantedRole:                 row[index["GRANTED_ROLE"]],
+			AdminOption:                 row[index["ADMIN_OPTION"]],
+			DefaultRole:                 row[index["DEFAULT_ROLE"]],
+			DelegateOption:              optionalGrantValue(row, index, "DELEGATE_OPTION"),
+			Common:                      optionalGrantValue(row, index, "COMMON"),
+			Inherited:                   optionalGrantValue(row, index, "INHERITED"),
+			GrantedRoleOracleMaintained: optionalGrantValue(row, index, "GRANTED_ROLE_ORACLE_MAINTAINED"),
 		}
 	}
 	return RoleMembershipsResult{Provenance: plan.provenance, Records: records}, nil
@@ -93,7 +105,15 @@ func ReadRoleMemberships(ctx context.Context, reader Reader, request Request) (R
 // ReadRoleMembershipsForRelease additionally accepts the observed numeric Oracle release
 // so the Oracle 12 selector can include only the available flags.
 func ReadRoleMembershipsForRelease(ctx context.Context, reader Reader, request Request, oracleRelease string) (RoleMembershipsResult, error) {
-	return readClassifiedGrants(ctx, reader, request, oracleRelease, roleMembershipsPlan, decodeRoleMemberships)
+	return readClassifiedGrants(ctx, reader, ClassifiedRequest{
+		Options:   ClassifiedOptions{Options: request.Options, OracleRelease: oracleRelease},
+		Reference: request.Reference, Limits: request.Limits,
+	}, roleMembershipsPlan, decodeRoleMemberships)
+}
+
+// ReadRoleMembershipsWithOptions reads a complete result with the selected classification scope.
+func ReadRoleMembershipsWithOptions(ctx context.Context, reader Reader, request ClassifiedRequest) (RoleMembershipsResult, error) {
+	return readClassifiedGrants(ctx, reader, request, roleMembershipsPlan, decodeRoleMemberships)
 }
 
 // RoleMembershipsRows returns the actual caller-owned native cursor. The caller owns
