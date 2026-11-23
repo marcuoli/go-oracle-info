@@ -14,6 +14,8 @@ Find the go-oracle-info checkout by its `github.com/marcuoli/go-oracle-info` mod
 - Record title, stable Oracle URL, current article ID, old Doc ID when known, Oracle revision, original capture time, current check time, and SHA-256 of any retained evidence. Match the exact product, numeric release or RU, component/home, platform, and documented restrictions. For query claims, check the required privileges, database/container state, and instance scope where applicable. Preserve distinctions between historical observations, current applicability, and live package availability.
 - Keep full articles, private inputs, and normalized private feeds outside Git and published modules. Put retained evidence in the project's approved artifact storage. Carry only the scoped, attributable facts permitted in the requested output.
 
+For a signed-in MOS refresh of all seven JSON files, copy the [reusable refresh prompt](refresh-mos-prompt.md).
+
 ## Choose the repository workflow
 
 | Requested output | Start here |
