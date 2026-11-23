@@ -77,6 +77,8 @@ releases. Existing function signatures remain supported.
 | services | Definitions |
 | identity | OracleHome, including OracleHomeJSON for the native projection |
 
+Separate from dictionary reads, the [legacy predefined account catalog](legacy-predefined-accounts.md) lists documented Oracle-supplied usernames by release.
+
 Existing families with multiple positional source selectors expose
 `StatementWithOptions`, `Decode…WithOptions`, `RowsWithOptions` and
 `JSONWithOptions` forms. This covers ASM clients, encryption, Data Guard

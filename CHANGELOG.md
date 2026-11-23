@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Catalog documented predefined Oracle accounts for 9.2 through 12.1.0.1 (#126).
+
 ## v0.26.0 (2026-11-23)
 
 - Read direct object and column privileges and role memberships for named users and roles, with release-aware grant options (#125).
