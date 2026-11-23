@@ -50,10 +50,10 @@ behavior.
 | 12cR1 | 12.1.0.2.0 | Base + COMMON | Base + COMMON | Base + COMMON, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 12cR2 | 12.2.0.1.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 18c | 18.0.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
-| 19c | 19.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed at 19.32.0.0.0 in scope below | Unqualified |
+| 19c | 19.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed at 19.32.0.0.0 in scope below | Passed at 19.32.0.0.0 in scope below |
 | 21c | 21.3.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
 | 23c/23ai before 26ai | 23.3.0.0.0 / 23.9.0.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Unqualified | Unqualified |
-| 26ai | 23.26.1.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed in scope below | Unqualified |
+| 26ai | 23.26.1.0.0 | Base + COMMON, INHERITED | Base + COMMON, INHERITED | Base + COMMON, INHERITED, DELEGATE_OPTION | Checked | Passed in scope below | Passed in scope below |
 
 The conservative major-only Oracle 12 selection projects `COMMON` alone.
 `Read…ForRelease` and `ClassifiedOptions.OracleRelease` take the observed
@@ -109,10 +109,19 @@ Enterprise Edition CDB-root sessions under SYSDBA.
 | 23.26.1.0.0 | Primary, READ WRITE | 2 | 9364 / 3 / 210 |
 | 23.26.1.0.0 | Physical standby, READ ONLY WITH APPLY | 1 | 9364 / 3 / 210 |
 
-These 12 executions qualify the unfiltered projections only in the recorded
-sessions. Row values, application filtering and reader behavior require their
-own driver/application evidence. Member identity was limited to each admitted
-session. Non-CDB, PDB, MOUNT, other RUs, named binds and other accounts/roles
-remain unqualified. Qualification requires the intended account and read access
-to every selected view in the actual connected container. Root visibility is
+These 12 executions qualify the unfiltered projections in the recorded sessions.
+
+The admitted Go driver and application independently completed all three
+collectors in two primary, READ WRITE PDB sessions as SYSTEM.
+
+| Observed numeric release | Object / column / membership rows |
+| --- | --- |
+| 19.32.0.0.0 | 8645 / 3 / 163 |
+| 23.26.1.0.0 | 9376 / 3 / 212 |
+
+The driver results qualify these exact account, version and PDB cases.
+Non-CDB, MOUNT, other RUs, named binds and other accounts or roles remain
+unqualified. Each run observes one admitted session and its connected container.
+Qualification requires the intended account and read access to every selected
+view in the actual connected container. Root visibility is
 root-scoped. [Monitoring CDBs and PDBs](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html).
