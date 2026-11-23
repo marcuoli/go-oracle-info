@@ -192,9 +192,14 @@ func (c *Client) DatabaseInfoJSON(ctx context.Context, options DatabaseInfoOptio
 	return identity.DatabaseInfoJSON(ctx, c.native(), identity.DatabaseInfoOptions{OracleMajor: major, IncludeSupplementalPL: options.IncludeSupplementalPL}, resolved)
 }
 
-// InvalidObjects returns invalid-object identity/status and creation/last-DDL
-// civil labels. Empty owners means all dictionary-visible owners, with no blacklist.
+// InvalidObjects preserves the variadic owner selection for InvalidObjectsRows.
 func (c *Client) InvalidObjects(ctx context.Context, owners ...string) (*sql.Rows, error) {
+	return c.InvalidObjectsRows(ctx, owners)
+}
+
+// InvalidObjectsRows returns invalid-object identity/status and creation/last-DDL
+// civil labels. Empty owners means all dictionary-visible owners.
+func (c *Client) InvalidObjectsRows(ctx context.Context, owners []string) (*sql.Rows, error) {
 	major, err := c.major(ctx)
 	if err != nil {
 		return nil, err
@@ -202,8 +207,13 @@ func (c *Client) InvalidObjects(ctx context.Context, owners ...string) (*sql.Row
 	return objects.InvalidDetailsRows(ctx, c.native(), major, owners...)
 }
 
-// InvalidObjectsJSON independently consumes the same exact bound owner selection.
+// InvalidObjectsJSON is the retained name for InvalidObjectsRowsJSON.
 func (c *Client) InvalidObjectsJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error) {
+	return c.InvalidObjectsRowsJSON(ctx, owners, limits...)
+}
+
+// InvalidObjectsRowsJSON independently consumes the same exact bound owner selection.
+func (c *Client) InvalidObjectsRowsJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error) {
 	resolved, err := jsonLimits(limits)
 	if err != nil {
 		return nil, err

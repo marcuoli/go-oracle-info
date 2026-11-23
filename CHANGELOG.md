@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document every public package and the retained compatibility entry points. Standardize native Client method pairs for invalid objects and GoldenGate (#137).
+
 - Move observed SGA/PGA allocations and components into memory and file-capacity facts into storage. Preserve existing imports, types and behavior (#135).
 
 ## v0.28.0 (2026-11-23)

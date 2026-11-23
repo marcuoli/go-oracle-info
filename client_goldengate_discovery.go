@@ -29,14 +29,19 @@ func (c *Client) goldenGateProcessOptions(ctx context.Context, f GoldenGateProce
 	return goldengate.ProcessOptions{OracleVersion: version, Visibility: f.Visibility, Names: f.Names}, err
 }
 
-// GoldenGateExtractsRows observes the version and returns the actual native
+// GoldenGateExtracts observes the version and returns the actual native
 // integrated Extract identity cursor. Callers own Next/Scan/Err/Close and budgets.
-func (c *Client) GoldenGateExtractsRows(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
+func (c *Client) GoldenGateExtracts(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
 	o, e := c.goldenGateProcessOptions(ctx, f)
 	if e != nil {
 		return nil, e
 	}
 	return goldengate.ExtractsRows(ctx, c.native(), o)
+}
+
+// GoldenGateExtractsRows is the retained name for GoldenGateExtracts.
+func (c *Client) GoldenGateExtractsRows(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
+	return c.GoldenGateExtracts(ctx, f)
 }
 
 // GoldenGateExtractsJSON independently returns complete bounded identity JSON.
@@ -52,14 +57,19 @@ func (c *Client) GoldenGateExtractsJSON(ctx context.Context, f GoldenGateProcess
 	return goldengate.ExtractsJSON(ctx, c.native(), o, resolved)
 }
 
-// GoldenGateReplicatsRows returns the actual native integrated inbound identity
+// GoldenGateReplicats returns the actual native integrated inbound identity
 // cursor. Callers own Next/Scan/Err/Close, source affinity, deadlines and budgets.
-func (c *Client) GoldenGateReplicatsRows(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
+func (c *Client) GoldenGateReplicats(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
 	o, e := c.goldenGateProcessOptions(ctx, f)
 	if e != nil {
 		return nil, e
 	}
 	return goldengate.ReplicatsRows(ctx, c.native(), o)
+}
+
+// GoldenGateReplicatsRows is the retained name for GoldenGateReplicats.
+func (c *Client) GoldenGateReplicatsRows(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error) {
+	return c.GoldenGateReplicats(ctx, f)
 }
 
 // GoldenGateReplicatsJSON independently returns complete bounded inbound JSON.
@@ -112,8 +122,8 @@ func (c *Client) GoldenGateHeartbeatCatalogRows(ctx context.Context, schema stri
 	return goldengate.HeartbeatCatalogRows(ctx, c.native(), o)
 }
 
-// GoldenGateHeartbeatCatalogJSON independently returns complete raw metadata JSON.
-func (c *Client) GoldenGateHeartbeatCatalogJSON(ctx context.Context, schema string, limits ...JSONLimits) (json.RawMessage, error) {
+// GoldenGateHeartbeatCatalogRowsJSON independently returns complete raw metadata JSON.
+func (c *Client) GoldenGateHeartbeatCatalogRowsJSON(ctx context.Context, schema string, limits ...JSONLimits) (json.RawMessage, error) {
 	resolved, e := jsonLimits(limits)
 	if e != nil {
 		return nil, e
@@ -125,10 +135,20 @@ func (c *Client) GoldenGateHeartbeatCatalogJSON(ctx context.Context, schema stri
 	return goldengate.HeartbeatCatalogJSON(ctx, c.native(), o, resolved)
 }
 
-// GoldenGateHeartbeatsRows returns the actual cursor for the verified source.
+// GoldenGateHeartbeatCatalogJSON is the retained name for GoldenGateHeartbeatCatalogRowsJSON.
+func (c *Client) GoldenGateHeartbeatCatalogJSON(ctx context.Context, schema string, limits ...JSONLimits) (json.RawMessage, error) {
+	return c.GoldenGateHeartbeatCatalogRowsJSON(ctx, schema, limits...)
+}
+
+// GoldenGateHeartbeats returns the actual cursor for the verified source.
 // The caller preserves its endpoint/container affinity and owns iteration/close.
-func (c *Client) GoldenGateHeartbeatsRows(ctx context.Context, o goldengate.HeartbeatsOptions) (*sql.Rows, error) {
+func (c *Client) GoldenGateHeartbeats(ctx context.Context, o goldengate.HeartbeatsOptions) (*sql.Rows, error) {
 	return goldengate.HeartbeatsRows(ctx, c.native(), o)
+}
+
+// GoldenGateHeartbeatsRows is the retained name for GoldenGateHeartbeats.
+func (c *Client) GoldenGateHeartbeatsRows(ctx context.Context, o goldengate.HeartbeatsOptions) (*sql.Rows, error) {
+	return c.GoldenGateHeartbeats(ctx, o)
 }
 
 // GoldenGateHeartbeatsJSON consumes a separate complete bounded heartbeat cursor.
@@ -141,10 +161,15 @@ func (c *Client) GoldenGateHeartbeatsJSON(ctx context.Context, o goldengate.Hear
 	return goldengate.HeartbeatsJSON(ctx, c.native(), o, resolved)
 }
 
-// GoldenGateHeartbeatLagRows returns the actual verified-view cursor; callers
+// GoldenGateHeartbeatLag returns the actual verified-view cursor; callers
 // own iteration/Err/Close, endpoint/container affinity, deadlines and budgets.
-func (c *Client) GoldenGateHeartbeatLagRows(ctx context.Context, o goldengate.HeartbeatLagOptions) (*sql.Rows, error) {
+func (c *Client) GoldenGateHeartbeatLag(ctx context.Context, o goldengate.HeartbeatLagOptions) (*sql.Rows, error) {
 	return goldengate.HeartbeatLagRows(ctx, c.native(), o)
+}
+
+// GoldenGateHeartbeatLagRows is the retained name for GoldenGateHeartbeatLag.
+func (c *Client) GoldenGateHeartbeatLagRows(ctx context.Context, o goldengate.HeartbeatLagOptions) (*sql.Rows, error) {
+	return c.GoldenGateHeartbeatLag(ctx, o)
 }
 
 // GoldenGateHeartbeatLagJSON independently returns exact lag/age text or no bytes.
