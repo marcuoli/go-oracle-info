@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## v0.25.1 (2026-11-23)
+
+- Update go-oracle-session to v0.19.0 and refresh five stable indirect dependency versions. Verify the Go 1.27.4 source and build requirements (#117).
+- Review the four Oracle catalogs and refresh their snapshot date while retaining verified facts and original capture dates (#117).
+
 - Add the repository-scoped go-oracle-info-docs skill for Oracle documentation, catalog, and MOS evidence workflows (#115).
 
 ## v0.25.0 (2026-11-22)
