@@ -53,6 +53,8 @@ type Provenance struct {
 var (
 	// ErrUnsupportedVersion rejects sources before Oracle 11g.
 	ErrUnsupportedVersion = errors.New("Oracle dictionary facts require Oracle 11g or later")
+	// ErrApplicationPublicUnavailable means the release does not qualify the maintenance classifier.
+	ErrApplicationPublicUnavailable = errors.New("qualified Oracle maintenance metadata is unavailable")
 	// ErrInvalidRequest rejects invalid scopes, limits, readers or references.
 	ErrInvalidRequest = errors.New("invalid Oracle dictionary fact request")
 	// ErrInvalidEvidence rejects malformed or partial dictionary observations.
@@ -73,6 +75,7 @@ type selection struct {
 	ownerColumn       string
 	nameColumn        string
 	classifiedGrantee bool
+	publicGrantee     bool
 
 	sql        string
 	args       []any
@@ -137,7 +140,19 @@ func columns(result session.Result, plan selection) (map[string]int, error) {
 	for _, row := range result.Rows {
 		if plan.classifiedGrantee {
 			name, kind := row[index["GRANTEE"]], row[index["GRANTEE_KIND"]]
-			if name.Null || name.Text == "" || name.Text == "PUBLIC" || kind.Null || (kind.Text != "USER" && kind.Text != "ROLE") {
+			if name.Null || name.Text == "" || kind.Null {
+				return nil, ErrInvalidEvidence
+			}
+			if name.Text == "PUBLIC" {
+				if !plan.publicGrantee || kind.Text != "PUBLIC" {
+					return nil, ErrInvalidEvidence
+				}
+			} else if kind.Text != "USER" && kind.Text != "ROLE" {
+				return nil, ErrInvalidEvidence
+			}
+		}
+		if i, projected := index["GRANTED_ROLE_ORACLE_MAINTAINED"]; projected && plan.provenance.Scope == applicationPublicScope {
+			if flag := row[i]; flag.Null || flag.Text != "N" {
 				return nil, ErrInvalidEvidence
 			}
 		}

@@ -3,7 +3,7 @@
 Oracle references checked 2026-11-23 for issue #125. Each selector reads named
 users and roles in the admitted dictionary scope. The Oracle principal
 namespace prevents a user and role from sharing a name. The join compares
-binary name keys, excludes exact `PUBLIC`, and leaves case and whitespace in
+binary name keys, excludes exact `PUBLIC` by default, and leaves case and whitespace in
 every returned identifier intact. Name and owner restrictions are bound.
 [ORA-01920](https://docs.oracle.com/en/error-help/db/ora-01920/),
 [ORA-01921](https://docs.oracle.com/en/error-help/db/ora-01921/).
@@ -16,7 +16,7 @@ every returned identifier intact. Name and owner restrictions are bound.
 | `ColumnPrivilegeGrants` | `DBA_COL_PRIVS`, `DBA_USERS`, `DBA_ROLES`, `DBA_OBJECTS` | `OWNER`, `GRANTOR`, `GRANTEE`, `GRANTEE_KIND`, `OBJECT_TYPE`, `TABLE_NAME`, `COLUMN_NAME`, `PRIVILEGE`, `GRANTABLE` |
 | `RoleMemberships` | `DBA_ROLE_PRIVS`, `DBA_USERS`, `DBA_ROLES` | `GRANTEE`, `GRANTEE_KIND`, `GRANTED_ROLE`, `ADMIN_OPTION`, `DEFAULT_ROLE` |
 
-`GRANTEE_KIND` is `USER` or `ROLE`. Object-level `OBJECT_TYPE` is the raw
+`GRANTEE_KIND` identifies a `USER`, `ROLE` or explicitly requested `PUBLIC` grantee. Object-level `OBJECT_TYPE` is the raw
 `DBA_TAB_PRIVS.TYPE` where documented and a typed SQL NULL for 11g. The column
 selector uses an exact owner and object name lookup in the same statement. It
 looks for top-level table/view/materialized-view object types and returns the
@@ -125,3 +125,49 @@ unqualified. Each run observes one admitted session and its connected container.
 Qualification requires the intended account and read access to every selected
 view in the actual connected container. Root visibility is
 root-scoped. [Monitoring CDBs and PDBs](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html).
+## Explicit PUBLIC scope
+
+Issue #129 adds explicit exact `PUBLIC` selection on the three views above.
+The named arm keeps its binary comparison, while an independent `DUAL` row
+classifies the special grantee even when it is absent from `DBA_ROLES`. A
+named dictionary match for exact `PUBLIC` cannot duplicate the row. Ordinary
+named selection keeps its previous SQL, aliases and behavior. Object and
+column callers can bind `Owners` to relevant schemas before collecting PUBLIC
+grants. The dictionary can return many grants on Oracle-owned objects.
+`ApplicationPublicOnly` requires the exact single `PUBLIC` scope and applies
+the positive `ORACLE_MAINTAINED='N'` selector in Oracle before buffering any
+rows. On Oracle 12 the selector requires precise 12.1.0.2 or 12.2.0.1 and later
+numeric release evidence. Earlier or major-only evidence returns
+`ErrApplicationPublicUnavailable` for the filtered request. Raw explicit
+PUBLIC queries retain their separate, wider coverage.
+
+| Release | Explicit PUBLIC source selection | Granted role flag | Static | Native PUBLIC SQL | PUBLIC driver/application |
+| --- | --- | --- | --- | --- | --- |
+| 9iR2, 10gR1/R2 | Existing selectors reject before SQL | Unprojected | Boundary tests | No execution | No execution |
+| 11gR1/R2 | Existing base views and PUBLIC arm | Unprojected | Scope and boundary tests | Unqualified | Unqualified |
+| 12.1.0.1 and major-only 12 | Existing Oracle 12 base views and PUBLIC arm | Unprojected | Boundary tests | Unqualified | Unqualified |
+| 12.1.0.2, 12.2.0.1, 18c | Existing projections above and PUBLIC arm | `DBA_ROLES.ORACLE_MAINTAINED` | Boundary tests | Unqualified | Unqualified |
+| 19c (19.32.0.0.0) | Existing projections above and PUBLIC arm | Same flag | Scope and decoder tests | Passed as SYSDBA in OPEN CDB root. 43,514 raw object rows, zero raw column and role rows. | Passed as SYSTEM in an OPEN PDB. 43,518 raw object grants and zero qualifying grants in all three views. |
+| 21c, 23c/23ai | Existing projections above and PUBLIC arm | Same flag | Boundary tests | Unqualified | Unqualified |
+| 26ai (23.26.1.0.0) | Numeric-major-23 projections and PUBLIC arm | Same flag | Scope and decoder tests | Passed as SYSDBA in OPEN CDB root. 38,732 raw object rows, zero raw column and role rows. | Passed as SYSTEM in an OPEN PDB. 38,738 raw object grants and zero qualifying grants in all three views. |
+
+The SQL*Plus run used the SDK generated statements with the exact PUBLIC bind,
+forced their projections and checked all counts against the direct dictionary
+views. The SDK's Go driver also read both OPEN PDBs as SYSTEM through released
+go-oracle-session v0.19.0. Filtered counts agreed with independently
+classifying raw grant rows using owner and role maintenance metadata.
+The fixtures had no qualifying grant, so positive filtered population is
+covered by static tests only. Nonempty native filtered results, native
+column and role population, MOUNT, other logins and other releases remain
+unqualified. SDK tests preserve named, PUBLIC, omitted and SQL NULL cases. The catalog records database-maintained status of
+the granted role. Attribution of an individual grant remains outside these
+dictionary projections. In particular, Oracle can record the object owner as
+the grantor when a different account exercised GRANT ANY OBJECT PRIVILEGE.
+
+Sources checked 2026-11-23.
+[Oracle 11gR2 GRANT](https://docs.oracle.com/html/E26088_02/statements_9013.htm),
+[12.1 DBA_ROLES](https://docs.oracle.com/database/121/REFRN/GUID-C8E5500E-A013-45D3-AEFB-2C9C0AC87EC7.htm),
+[12.2 DBA_ROLES](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/DBA_ROLES.html),
+[19c GRANT](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/GRANT.html),
+[19c PUBLIC role](https://docs.oracle.com/en/database/oracle/oracle-database/19/dbseg/grants-and-revokes-privileges-and-public-role.html),
+[26ai DBA_ROLE_PRIVS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_ROLE_PRIVS.html).

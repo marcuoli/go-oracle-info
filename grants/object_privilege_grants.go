@@ -9,7 +9,7 @@ import (
 	"github.com/marcuoli/go-oracle-session/session"
 )
 
-// ObjectPrivilegeGrant records direct object grants to named users and roles.
+// ObjectPrivilegeGrant records direct object grants to named principals or PUBLIC.
 // On 11g, OBJECT_TYPE is SQL NULL because DBA_TAB_PRIVS has no TYPE column.
 // A nil flag pointer means the release projection omitted that column.
 // A nonnil flag with Null set retains the source's SQL NULL.
@@ -52,8 +52,8 @@ func objectPrivilegeGrantsPlan(options ClassifiedOptions) (selection, error) {
 	fields := rawGrantColumns("OWNER", "GRANTOR", "GRANTEE")
 	fields = append(fields, grantColumn{"p.GRANTEE_KIND", "GRANTEE_KIND"}, grantColumn{objectType, "OBJECT_TYPE"})
 	fields = append(fields, rawGrantColumns("TABLE_NAME", "PRIVILEGE", "GRANTABLE", "HIERARCHY")...)
-	return selectClassifiedGrants(options.Options, "DBA_TAB_PRIVS+"+granteeSources, "DBA_TAB_PRIVS", "OWNER",
-		"t.OWNER, t.TABLE_NAME, t.GRANTEE, t.PRIVILEGE, t.GRANTOR", release.appendContainerColumns(fields)), nil
+	return selectClassifiedGrants(options, release, "DBA_TAB_PRIVS+"+granteeSources, "DBA_TAB_PRIVS", "OWNER",
+		"t.OWNER, t.TABLE_NAME, t.GRANTEE, t.PRIVILEGE, t.GRANTOR", release.appendContainerColumns(fields))
 }
 
 // DecodeObjectPrivilegeGrants validates every row and retains NULL values and duplicates.
@@ -99,7 +99,15 @@ func ReadObjectPrivilegeGrants(ctx context.Context, reader Reader, request Reque
 // ReadObjectPrivilegeGrantsForRelease additionally accepts the observed numeric Oracle release
 // so the Oracle 12 selector can include only the available flags.
 func ReadObjectPrivilegeGrantsForRelease(ctx context.Context, reader Reader, request Request, oracleRelease string) (ObjectPrivilegeGrantsResult, error) {
-	return readClassifiedGrants(ctx, reader, request, oracleRelease, objectPrivilegeGrantsPlan, decodeObjectPrivilegeGrants)
+	return readClassifiedGrants(ctx, reader, ClassifiedRequest{
+		Options:   ClassifiedOptions{Options: request.Options, OracleRelease: oracleRelease},
+		Reference: request.Reference, Limits: request.Limits,
+	}, objectPrivilegeGrantsPlan, decodeObjectPrivilegeGrants)
+}
+
+// ReadObjectPrivilegeGrantsWithOptions reads a complete result with the selected classification scope.
+func ReadObjectPrivilegeGrantsWithOptions(ctx context.Context, reader Reader, request ClassifiedRequest) (ObjectPrivilegeGrantsResult, error) {
+	return readClassifiedGrants(ctx, reader, request, objectPrivilegeGrantsPlan, decodeObjectPrivilegeGrants)
 }
 
 // ObjectPrivilegeGrantsRows returns the actual caller-owned native cursor. The caller owns

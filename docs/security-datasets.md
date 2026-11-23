@@ -105,8 +105,24 @@ from a major-version label.
 `grants.ReadRoleMemberships` provide independent, direct dictionary selections for
 named users and roles. The type of a column grant's object stays NULL when the
 dictionary cannot establish a unique type. Membership records retain direct
-role-to-role edges. These sources exclude exact `PUBLIC` and include visible
-Oracle-maintained accounts and roles. Eligibility policy stays with the caller.
+role-to-role edges. The default selection includes visible named accounts and
+roles. Set `Options.Names` to include exact `PUBLIC` when its direct grants are
+needed. The SDK returns those rows with `GRANTEE_KIND=PUBLIC` and retains any
+exact named scope alongside it. `Owners` can further scope object and column
+grants to a selected schema set.
+
+On admitted releases, a PUBLIC role-membership request also projects
+`GRANTED_ROLE_ORACLE_MAINTAINED` from `DBA_ROLES`. A SQL NULL means the lookup
+did not establish a flag. An omitted field indicates the projection lacked it.
+
+Set `ApplicationPublicOnly` in `ClassifiedOptions` to apply the maintenance
+filter before transport. This mode requires exactly `Names: []string{"PUBLIC"}`
+and qualified maintenance metadata. Object and column grants select owners
+marked `N` in `DBA_USERS`. Role grants select roles marked `N` in `DBA_ROLES`.
+The filtered selection uses the scope `connected_container_dba_application_public`.
+Use `Read…WithOptions` with `grants.ClassifiedRequest` for buffered reads.
+This metadata classifies the granted role. The grant views describe the
+privilege and recipient but do not establish whether Oracle supplied the grant.
 
 Select the family using `grants.ClassifiedOptions` in its Statement, Decode,
 Rows and JSON entry points. Buffered readers take `grants.Request`. Their
