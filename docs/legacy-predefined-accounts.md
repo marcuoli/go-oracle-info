@@ -25,3 +25,5 @@ The SDK lookup issues no SQL. Static tests cover release routing, the patch-set
 cutoff, exact identifiers and stable caller-owned results. Native SQL and
 driver qualification do not apply to this lookup. Installed account coverage
 remains dependent on the database and component configuration.
+
+For documented predefined role names, see the [legacy predefined role catalog](legacy-predefined-roles.md).
