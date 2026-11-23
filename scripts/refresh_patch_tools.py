@@ -153,7 +153,11 @@ def gold_images(docs, item):
     return dict(schema_version=1, source=document, captured_utc=captured, sections=list(sections.values()))
 
 
-def autoupgrade(docs, item, reviewed_utc, archive_repo, archive_commit, archive_sha):
+def autoupgrade(docs, item, reviewed_utc, archive_repo, archive_commit, archive_sha, *, archive_file=None):
+    if (archive_repo is None) == (archive_file is None):
+        raise ValueError("specify one local archive file or one Git archive")
+    if not re.fullmatch(r"[a-f0-9]{40}", archive_commit) or not re.fullmatch(r"[a-f0-9]{64}", archive_sha):
+        raise ValueError("expected full reviewed AutoUpgrade archive hashes")
     text, document, captured = capture(docs, item, "KB123450", "2485457.1", "AutoUpgrade Tool")
     builds = []
     for attrs, label in AutoUpgradeLinks(text).links:
@@ -175,11 +179,12 @@ def autoupgrade(docs, item, reviewed_utc, archive_repo, archive_commit, archive_
     if not builds:
         raise ValueError("no observed AutoUpgrade build links")
 
-    repo = archive_repo.resolve(strict=True).as_posix()
-    if not re.fullmatch(r"[a-f0-9]{40}", archive_commit) or not re.fullmatch(r"[a-f0-9]{64}", archive_sha):
-        raise ValueError("expected full reviewed AutoUpgrade archive hashes")
-    raw = subprocess.check_output(["git", "-c", f"safe.directory={repo}", "-C", repo, "show",
-                                   f"{archive_commit}:./assets/docs/au_2485457.1.html"])
+    if archive_file is not None:
+        raw = archive_file.read_bytes()
+    else:
+        repo = archive_repo.resolve(strict=True).as_posix()
+        raw = subprocess.check_output(["git", "-c", f"safe.directory={repo}", "-C", repo, "show",
+                                       f"{archive_commit}:./assets/docs/au_2485457.1.html"])
     text = raw.decode("utf-8-sig")
     if sha(raw) != archive_sha or not re.search(r"<title[^>]*>\s*Document\s+2485457\.1\s*</title>", text, re.I):
         raise ValueError("AutoUpgrade archive bytes do not match the reviewed Oracle article")
@@ -212,7 +217,9 @@ def autoupgrade(docs, item, reviewed_utc, archive_repo, archive_commit, archive_
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--oracle-docs", type=Path, required=True)
-    parser.add_argument("--archive-repo", type=Path, required=True, help="checkout path containing assets/docs")
+    archive = parser.add_mutually_exclusive_group(required=True)
+    archive.add_argument("--archive-file", type=Path, help="local copy of the reviewed historical AutoUpgrade HTML")
+    archive.add_argument("--archive-repo", type=Path, help="checkout path containing assets/docs")
     parser.add_argument("--archive-commit", required=True)
     parser.add_argument("--archive-sha256", required=True)
     parser.add_argument("--reviewed-utc", required=True)
@@ -232,7 +239,7 @@ def main():
         items[item["current_id"]] = item
     gold = gold_images(args.oracle_docs, items["KB153394"])
     tool = autoupgrade(args.oracle_docs, items["KB123450"], args.reviewed_utc,
-                       args.archive_repo, args.archive_commit, args.archive_sha256)
+                       args.archive_repo, args.archive_commit, args.archive_sha256, archive_file=args.archive_file)
     for name, data in (("gold-images.json", gold), ("autoupgrade-archive.json", tool)):
         (output / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"Verified {len(gold['sections'])} Gold Image sections and {len(tool['builds'])} AutoUpgrade attachments.")

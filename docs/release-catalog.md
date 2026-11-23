@@ -151,15 +151,21 @@ and download verification are separate Oracle Support operations.
 
 ### Prepare the private snapshot
 
-Use the existing approved Harvester evidence route for Oracle article
-KB188772 and archived Doc ID 555.1. Record a version 1 review with a
-`sources` array. Each entry contains `source.document` with the existing
-`Source` fields, either an absolute `capture` path for MHTML with
-`source.captured_utc` or an `archive` with `repository` and
-`path: assets/docs/555.1.html` plus `source.archive_commit`. Review each
-`sections` entry by exact `line`, `train`, `home` and `expected_rows`.
-Verify the source identification and documented scope, preserve the original
-capture hash and check date, and record any unverified scope.
+Use the project-owned private MOS evidence directory for KB188772 and
+archived Doc ID 555.1. Its `import-manifest.json` identifies the dated
+captures, archived HTML and reviewed replay inputs. Record a version 1
+review with a `sources` array. Each entry contains `source.document`
+with the existing `Source` fields and one evidence input:
+
+- An absolute `capture` path to MHTML and its `source.captured_utc`.
+- An `archive.file` path to the local archived HTML and its original
+  `source.archive_commit`. Existing reviews may also identify the Git archive
+  with `archive.repository` and `archive.path` (`assets/docs/555.1.html`).
+
+Review each `sections` entry by exact `line`, `train`, `home` and
+`expected_rows`. Preserve the reviewed source identity, scope, SHA-256,
+and check date. On another machine, point the review paths at that machine's
+private evidence copy.
 
 ```powershell
 python -B scripts/refresh_patch_recommendations.py --review <private-review.json> --output <private-recommendations.json>
@@ -178,7 +184,7 @@ scope review.
 1. Record the selected module version and the exact canonical main commit as
    `history_base`. Review the required Oracle authorities using the available
    Oracle web materials and verified original Oracle Support captures, including
-   copies retained with the local Harvester catalog. Check the relevant product,
+   copies retained in the project-owned private MOS evidence directory. Check the relevant product,
    numeric release, platform or model, and patch scope. Retain the original
    capture time, identifier, known legacy Doc ID, title and Oracle revision.
    Bind a private copy of the supporting evidence to its stable Oracle URL and
