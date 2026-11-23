@@ -374,7 +374,7 @@ func RACJSON(ctx context.Context, q rowset.Queryer, options Options, limits rows
 	if err != nil {
 		return nil, err
 	}
-	return readDatasetJSON(ctx, q, p, limits, ErrInvalidEvidence, func(r session.Result) error { _, err := DecodeRAC(r, options); return err })
+	return readDatasetJSON(ctx, q, p, limits, func(r session.Result) error { _, err := DecodeRAC(r, options); return err })
 }
 
 // RACRequest adds the caller's SQL reference to one admitted RAC selection.

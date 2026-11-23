@@ -87,9 +87,9 @@ func ReadDatafileSize(ctx context.Context, reader Reader, request DatafileSizeRe
 	if err = fileSummaryReadError(ctx, p, err); err != nil {
 		return DatafileSizeResult{}, err
 	}
-	facts, err := decodeDatasetDatafileSize(result, p)
-	if err = fileSummaryReadError(ctx, p, projection.MarkDecodeError(err)); err != nil {
-		return DatafileSizeResult{}, err
+	facts, decodeErr := decodeDatasetDatafileSize(result, p)
+	if err = fileSummaryReadError(ctx, p, decodeErr); err != nil {
+		return DatafileSizeResult{}, projection.MarkDecodeError(err, decodeErr)
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -114,7 +114,7 @@ func DatafileSizeJSON(ctx context.Context, q rowset.Queryer, options DatafileSiz
 	}
 	return readFileSummaryJSON(ctx, q, p, limits, func(r session.Result) error {
 		_, err := decodeDatasetDatafileSize(r, p)
-		return projection.MarkDecodeError(err)
+		return err
 	})
 }
 

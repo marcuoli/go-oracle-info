@@ -159,13 +159,24 @@ func datasetColumns(result session.Result, p datasetSelection, integerFields ...
 }
 
 // Only shared rowset owns cursor consumption. Domain validation precedes encoding.
-func readDatasetJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, limits rowset.Limits, invalid error, validate func(session.Result) error) (json.RawMessage, error) {
+func readDatasetJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
 	p.provenance.Complete = true
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
 		Provenance: p.provenance,
-		Validate:   projection.ValidateRowset(invalid, validate),
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
 	})
 	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+		return &DatasetError{p.provenance.Source, cause}
+	}, "limits", "header")
+}
+
+func readAllocationJSON(ctx context.Context, q rowset.Queryer, p datasetSelection, limits rowset.Limits, validate func(session.Result) error) (json.RawMessage, error) {
+	p.provenance.Complete = true
+	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
+		Provenance: p.provenance,
+		Validate:   projection.ValidateRowset(ErrInvalidObservedEvidence, validate),
+	})
+	return payload, projection.WrapMovedEnvelopeError(err, func(cause error) error {
 		return &DatasetError{p.provenance.Source, cause}
 	}, "limits", "header")
 }

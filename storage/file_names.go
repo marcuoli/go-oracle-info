@@ -90,9 +90,9 @@ func ReadFileNames(ctx context.Context, reader Reader, request FileNamesRequest)
 	if err = fileSummaryReadError(ctx, p, err); err != nil {
 		return FileNamesResult{}, err
 	}
-	facts, err := decodeDatasetFileNames(result, p)
-	if err = fileSummaryReadError(ctx, p, projection.MarkDecodeError(err)); err != nil {
-		return FileNamesResult{}, err
+	facts, decodeErr := decodeDatasetFileNames(result, p)
+	if err = fileSummaryReadError(ctx, p, decodeErr); err != nil {
+		return FileNamesResult{}, projection.MarkDecodeError(err, decodeErr)
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -117,6 +117,6 @@ func FileNamesJSON(ctx context.Context, q rowset.Queryer, options FileNamesOptio
 	}
 	return readFileSummaryJSON(ctx, q, p, limits, func(r session.Result) error {
 		_, err := decodeDatasetFileNames(r, p)
-		return projection.MarkDecodeError(err)
+		return err
 	})
 }

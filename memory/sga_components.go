@@ -164,8 +164,8 @@ func ReadSGAComponents(ctx context.Context, reader Reader, request SGARequest) (
 		return SGAComponentsResult{}, &DatasetError{plan.provenance.Source, err}
 	}
 	facts, decodeErr := decodeSGAComponents(result, plan)
-	if err = errors.Join(projection.MarkDecodeError(decodeErr), ctx.Err()); err != nil {
-		return SGAComponentsResult{}, &DatasetError{plan.provenance.Source, err}
+	if err = errors.Join(decodeErr, ctx.Err()); err != nil {
+		return SGAComponentsResult{}, projection.MarkDecodeError(&DatasetError{plan.provenance.Source, err}, decodeErr)
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -195,12 +195,12 @@ func SGAComponentsJSON(ctx context.Context, q rowset.Queryer, major int, filter 
 	plan.provenance.Complete = true
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, plan.sql, plan.args...), plan.schema, limits, rowset.EnvelopeOptions{
 		Provenance: plan.provenance,
-		Validate: projection.ValidateRowset(projection.MarkDecodeError(ErrInvalidObservedEvidence), func(result session.Result) error {
+		Validate: projection.ValidateRowset(ErrInvalidObservedEvidence, func(result session.Result) error {
 			_, err := decodeSGAComponents(result, plan)
-			return projection.MarkDecodeError(err)
+			return err
 		}),
 	})
-	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+	return payload, projection.WrapMovedEnvelopeError(err, func(cause error) error {
 		return &DatasetError{plan.provenance.Source, cause}
 	}, "limits")
 }

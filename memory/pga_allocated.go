@@ -84,9 +84,9 @@ func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRe
 	if err = datasetReadError(ctx, p, err); err != nil {
 		return PGAAllocatedResult{}, err
 	}
-	facts, err := decodeDatasetPGAAllocated(result, p)
-	if err = datasetReadError(ctx, p, projection.MarkDecodeError(err)); err != nil {
-		return PGAAllocatedResult{}, err
+	facts, decodeErr := decodeDatasetPGAAllocated(result, p)
+	if err = datasetReadError(ctx, p, decodeErr); err != nil {
+		return PGAAllocatedResult{}, projection.MarkDecodeError(err, decodeErr)
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -113,9 +113,9 @@ func PGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options PGAAllocate
 	if err != nil {
 		return nil, err
 	}
-	return readDatasetJSON(ctx, q, p, limits, projection.MarkDecodeError(ErrInvalidObservedEvidence), func(r session.Result) error {
+	return readAllocationJSON(ctx, q, p, limits, func(r session.Result) error {
 		_, err := decodeDatasetPGAAllocated(r, p)
-		return projection.MarkDecodeError(err)
+		return err
 	})
 }
 

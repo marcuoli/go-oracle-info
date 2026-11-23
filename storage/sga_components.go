@@ -91,6 +91,7 @@ func storageSGAResult(facts memory.SGAComponentsResult, err error) (SGAComponent
 }
 
 func storageSGAError(err error) error {
+	err, decoded := projection.UnwrapDecodeError(err)
 	switch err {
 	case memory.ErrUnsupportedVersion:
 		return ErrUnsupportedVersion
@@ -104,8 +105,8 @@ func storageSGAError(err error) error {
 		if cause == memory.ErrInvalidObservedEvidence {
 			// A pure decoder returns its validation error directly.
 			cause = ErrInvalidEvidence
-		} else {
-			cause = projection.MapDecodeError(cause, storageSGAError)
+		} else if decoded {
+			cause = projection.MapDecodeCause(cause, storageSGAError)
 		}
 		return &Error{failure.Source, cause}
 	}

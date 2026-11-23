@@ -151,3 +151,25 @@ func TestRelocatedFactErrorsPreserveLegacyDomainAndCallerCause(t *testing.T) {
 		t.Fatalf("legacy SGA decoder wrapper changed: %v", outer.Unwrap())
 	}
 }
+
+func TestRelocatedFactDoesNotTranslateCallerReturnedDecodeCause(t *testing.T) {
+	ref, err := reference.NewReference("unit", "ownership", "foreign", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, _ := testsql.New(t, testsql.Step{Columns: []string{"VALUE"}})
+	_, failure := memory.SGAAllocatedJSON(t.Context(), db, memory.SGAAllocatedOptions{OracleMajor: 19}, rowset.Limits{})
+	foreign := errors.Unwrap(failure)
+	if foreign == nil {
+		t.Fatalf("fixture did not expose a decoder cause: %v", failure)
+	}
+	reader := ownershipReader(func(context.Context, session.Statement) (session.Result, error) {
+		return session.Result{}, foreign
+	})
+	_, err = database.ReadSGAAllocated(t.Context(), reader, database.SGAAllocatedRequest{
+		Options: database.SGAAllocatedOptions{OracleMajor: 19}, Reference: ref,
+	})
+	if !errors.Is(err, foreign) || errors.Is(err, database.ErrInvalidEvidence) {
+		t.Fatalf("legacy adapter changed the caller's original cause: %v", err)
+	}
+}

@@ -84,9 +84,9 @@ func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRe
 	if err = datasetReadError(ctx, p, err); err != nil {
 		return SGAAllocatedResult{}, err
 	}
-	facts, err := decodeDatasetSGAAllocated(result, p)
-	if err = datasetReadError(ctx, p, projection.MarkDecodeError(err)); err != nil {
-		return SGAAllocatedResult{}, err
+	facts, decodeErr := decodeDatasetSGAAllocated(result, p)
+	if err = datasetReadError(ctx, p, decodeErr); err != nil {
+		return SGAAllocatedResult{}, projection.MarkDecodeError(err, decodeErr)
 	}
 	facts.Provenance.Complete = true
 	return facts, nil
@@ -113,9 +113,9 @@ func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocate
 	if err != nil {
 		return nil, err
 	}
-	return readDatasetJSON(ctx, q, p, limits, projection.MarkDecodeError(ErrInvalidObservedEvidence), func(r session.Result) error {
+	return readAllocationJSON(ctx, q, p, limits, func(r session.Result) error {
 		_, err := decodeDatasetSGAAllocated(r, p)
-		return projection.MarkDecodeError(err)
+		return err
 	})
 }
 

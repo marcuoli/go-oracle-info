@@ -9,6 +9,7 @@ import (
 // Each adapter restores the database package's published errors while retaining
 // the original native query, driver and cancellation causes.
 func legacyMemoryDatasetError(err error) error {
+	err, decoded := projection.UnwrapDecodeError(err)
 	switch err {
 	case memory.ErrUnsupportedVersion:
 		return ErrUnsupportedVersion
@@ -18,12 +19,17 @@ func legacyMemoryDatasetError(err error) error {
 		return ErrInvalidEvidence
 	}
 	if failure, ok := err.(*memory.DatasetError); ok {
-		return &DatasetError{failure.Source, projection.MapDecodeError(failure.Unwrap(), legacyMemoryDatasetError)}
+		cause := failure.Unwrap()
+		if decoded {
+			cause = projection.MapDecodeCause(cause, legacyMemoryDatasetError)
+		}
+		return &DatasetError{failure.Source, cause}
 	}
 	return err
 }
 
 func legacyStorageDatasetError(err error) error {
+	err, decoded := projection.UnwrapDecodeError(err)
 	switch err {
 	case storage.ErrUnsupportedVersion:
 		return ErrUnsupportedVersion
@@ -33,7 +39,11 @@ func legacyStorageDatasetError(err error) error {
 		return ErrInvalidEvidence
 	}
 	if failure, ok := err.(*storage.Error); ok {
-		return &DatasetError{failure.Source, projection.MapDecodeError(failure.Unwrap(), legacyStorageDatasetError)}
+		cause := failure.Unwrap()
+		if decoded {
+			cause = projection.MapDecodeCause(cause, legacyStorageDatasetError)
+		}
+		return &DatasetError{failure.Source, cause}
 	}
 	return err
 }

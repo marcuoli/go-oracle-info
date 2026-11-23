@@ -204,9 +204,9 @@ func readFileSummaryJSON(ctx context.Context, q rowset.Queryer, p selection, lim
 	p.provenance.Complete = true
 	payload, err := rowset.QueryEnvelopeJSON(ctx, rowset.OpenQuery(q, p.sql, p.args...), p.schema, limits, rowset.EnvelopeOptions{
 		Provenance: p.provenance,
-		Validate:   projection.ValidateRowset(projection.MarkDecodeError(ErrInvalidEvidence), validate),
+		Validate:   projection.ValidateRowset(ErrInvalidEvidence, validate),
 	})
-	return payload, projection.WrapEnvelopeErrorExcept(err, func(cause error) error {
+	return payload, projection.WrapMovedEnvelopeError(err, func(cause error) error {
 		return &Error{p.provenance.Source, cause}
 	}, "limits", "header")
 }
