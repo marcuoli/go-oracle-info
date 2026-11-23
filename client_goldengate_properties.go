@@ -52,14 +52,19 @@ func (c *Client) GoldenGateJSON(ctx context.Context, limits ...JSONLimits) (json
 	return data, nil
 }
 
-// GoldenGateAdministratorsRows returns the actual native administrator cursor.
+// GoldenGateAdministrators returns the actual native administrator cursor.
 // Caller owns Next/Scan/Err/Close, affinity, deadlines and finite stream budgets.
-func (c *Client) GoldenGateAdministratorsRows(ctx context.Context) (*sql.Rows, error) {
+func (c *Client) GoldenGateAdministrators(ctx context.Context) (*sql.Rows, error) {
 	version, err := c.goldenGateVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return goldengate.AdministratorsRows(ctx, c.native(), version)
+}
+
+// GoldenGateAdministratorsRows is the retained name for GoldenGateAdministrators.
+func (c *Client) GoldenGateAdministratorsRows(ctx context.Context) (*sql.Rows, error) {
+	return c.GoldenGateAdministrators(ctx)
 }
 
 // GoldenGateAdministratorsJSON independently returns complete selected native

@@ -1,7 +1,8 @@
 # Complete source fact APIs
 
-Issue #65 adds or completes 56 source fact families. Existing selectors,
-properties, pure decoders and immutable releases remain available. The
+The [public Go API reference](api-reference.md) lists exact exported signatures,
+public fields, and constants across all importable packages. This inventory
+identifies the recommended fact and Client entry points. The
 [common pattern](implementation-pattern.md) defines ownership and completion;
 [compatibility evidence](fact-api-compatibility.md) separates documentation,
 static selection/decoding, native SQL and driver/application qualification.
@@ -26,6 +27,14 @@ data, err := performance.BlockersJSON(ctx, admittedNativeHandle, options,
 // Check err before publishing the bounded standard JSON.
 ~~~
 
+For a bound selection, `XStatement(options)` returns `(string, []any, error)`.
+Some fixed selections, including `containers.InventoryStatement`, return
+`(string, error)`. Decode takes a complete `session.Result` followed by the
+selection. Read takes `(ctx, reader, request)`. Rows takes `(ctx, queryer, options)`
+and returns `(*sql.Rows, error)`. JSON takes the same inputs followed by
+`rowset.Limits` and returns `(json.RawMessage, error)`. Types and exact signatures
+for each family are in its linked reference section.
+
 The caller supplies SQL references and numeric version/capability evidence.
 No connection, credential/driver selection, destination/container change,
 capability cache, retry or report/scoring policy is introduced. Native rows are
@@ -40,39 +49,93 @@ sample remains a sample even when it exactly fills its SQL limit.
 
 ## Families
 
-Substitute each ordinary family name for X in the five methods above. Each
-package owns one frozen SQL/schema/provenance selection. Owned paths validate
-every row before publishing. Buffered readers remain usable without extracting
-private native cursors from a Session lease.
+Each ordinary family has Statement, Decode, Read, Rows and JSON operations.
+Use the named forms in this table. Prefer an options-based selector or
+`WithOptions` form when documented and available. Each package's reference
+lists both forms and preserves the exact filter, version, and reference types.
 
-| Package | Complete families |
+| Package | Canonical fact families |
 | --- | --- |
-| alertlog | Entries, Counts |
-| backup | Jobs |
-| database | Configuration, Endian, CharacterSet, CPUCount, Products, EncryptionCounts, PDBCount, SessionParameters, SessionParametersWithDefaults, NLSInstance |
-| dataguard | Status, Lag |
-| engineeredsystem/catalog | Metadata, Configuration, VisibleCellCount, Cells, Alerts, ConnectedCells |
-| grants | ObjectPrivilegeGrants, ColumnPrivilegeGrants, RoleMemberships ([compatibility](classified-grants-compatibility.md)) |
-| identity | DatabaseIdentity, InstanceIdentity, ExecutionIdentity, NameSource, RoleSource, VersionSource, EditionSource, BannersSource, Snapshot, ContainerSource, FullVersionSource, PDBOpenMode, ConnectedArchitecture, VersionBootstrap, LogicalDatabase |
-| instances | Visibility |
-| memory | SGAAllocated, PGAAllocated, SGAComponents |
-| storage | DatafileSize, FileNames |
-| parameters | ScalarSystem |
-| objects | InvalidObjects, ObjectInventory, Schema, ObjectTotals, Tables, Table, TableCount, TablesStatistics, TableStatistics, OldestStatistics |
-| performance | Blockers, ResourceLimits |
-| scheduler | Jobs |
-| services | Names |
+| [alertlog](api-reference.md#alertlog) | `Counts`, `Entries` |
+| [asm](api-reference.md#asm) | `Clients` |
+| [backup](api-reference.md#backup) | `Jobs` |
+| [containers](api-reference.md#containers) | `Inventory`, `ResourceSamples`, `ResourceUsage`, `SavedStates` |
+| [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `SessionParameters`, `SessionParametersWithDefaults` |
+| [dataguard](api-reference.md#dataguard) | `ArchiveDestinationStatus`, `ArchiveDestinations`, `ArchiveGaps`, `ArchiveProgress`, `DatabaseContext`, `Lag`, `Processes`, `RecoveryProgress`, `StandbyLogs`, `Status` |
+| [dblinks](api-reference.md#dblinks) | `Inventory` |
+| [directories](api-reference.md#directories) | `Inventory` |
+| [engineeredsystem/catalog](api-reference.md#engineeredsystemcatalog) | `Alerts`, `Cells`, `Configuration`, `ConnectedCells`, `Metadata`, `VisibleCellCount` |
+| [goldengate](api-reference.md#goldengate) | `Administrators`, `ApplyCoordinators`, `Capture`, `Extracts`, `HeartbeatCatalog`, `HeartbeatLag`, `Heartbeats`, `Replicats` |
+| [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleMemberships` |
+| [identity](api-reference.md#identity) | `BannersSource`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
+| [instances](api-reference.md#instances) | `Inventory`, `Versions`, `Visibility` |
+| [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
+| [metadata](api-reference.md#metadata) | `Object` |
+| [networkacl](api-reference.md#networkacl) | `Inventory` |
+| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `ObjectInventory`, `ObjectTotals`, `OldestStatistics`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
+| [parameters](api-reference.md#parameters) | `ContainerSystem`, `Effective`, `Hidden`, `HiddenCatalog`, `HiddenContext`, `SPFile`, `ScalarSystem`, `System` |
+| [passwordfile](api-reference.md#passwordfile) | `Info` |
+| [patches](api-reference.md#patches) | `History`, `SQLPatch` |
+| [performance](api-reference.md#performance) | `Blockers`, `ResourceLimits` |
+| [redo](api-reference.md#redo) | `ArchivedLogs`, `Clock`, `Groups`, `History`, `Members` |
+| [registry](api-reference.md#registry) | `Components` |
+| [scheduler](api-reference.md#scheduler) | `Jobs` |
+| [sequences](api-reference.md#sequences) | `Inventory` |
+| [services](api-reference.md#services) | `Definitions`, `Names` |
+| [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
+| [storage](api-reference.md#storage) | `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileNames`, `FreeExtents`, `LongColumns`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
+| [triggers](api-reference.md#triggers) | `Inventory` |
+| [users](api-reference.md#users) | `AccountCount`, `Inventory`, `TableMetadata`, `TablespaceQuotas` |
 
-The existing `database.SGAAllocated`, `database.PGAAllocated`,
-`database.DatafileSize`, `database.Storage` and `storage.SGAComponents`
-families remain available with their published types, errors and JSON. The
-new owner of `database.Storage` is `storage.FileNames`. The moved families
-retain the same release and scope gates.
+### Facade, pure APIs and procedural sources
 
-### Named families for existing APIs
+- [`oracleinfo.Client`](api-reference.md#oracleinfo) provides non-owning native
+  queries, bounded JSON and scalar or typed observations. See the method pairs
+  below.
+- [`engineeredsystem`](api-reference.md#engineeredsystem) models and decodes
+  database-visible payloads. Its query operations are in `engineeredsystem/catalog`.
+- [`releases`](api-reference.md#releases) loads offline release catalogs and
+  decodes reviewed patch metadata. The account and role lookups in `users` and
+  `grants`, parameter persistence, patch consistency and redo time calculations
+  are also pure operations over supplied evidence or offline data.
+- `identity.ReadOracleHome` is the typed property and can try several sources.
+  The native Oracle Home cursor and its JSON companion use the selected
+  single SQL projection. `OracleHomeEnvironmentStatement` uses procedural
+  OUT binds. See [Oracle Home source contracts](identity-properties.md).
 
-The named functions select the same sources as the generic functions from prior
-releases. Existing function signatures remain supported.
+## Canonical Client methods
+
+Use `X(ctx, filter)` for a native cursor and `XJSON(ctx, filter, limits...)` for
+its bounded JSON companion. Omit the filter when the operation takes none.
+Where `X` already has a separate typed or legacy contract, use `XRows`
+and `XRowsJSON`. The caller owns the native cursor. JSON opens and finalizes
+its own cursor. The original methods below continue to accept their original
+arguments.
+
+| Canonical cursor | Canonical JSON | Compatibility methods |
+| --- | --- | --- |
+| `InvalidObjectsRows(ctx, owners []string)` | `InvalidObjectsRowsJSON(ctx, owners []string, limits ...JSONLimits)` | `InvalidObjects(ctx, owners ...string)`, `InvalidObjectsJSON(ctx, owners []string, limits ...JSONLimits)` |
+| `GoldenGateExtracts(ctx, f GoldenGateProcessFilter)` | `GoldenGateExtractsJSON(ctx, f GoldenGateProcessFilter, limits ...JSONLimits)` | `GoldenGateExtractsRows` |
+| `GoldenGateReplicats(ctx, f GoldenGateProcessFilter)` | `GoldenGateReplicatsJSON(ctx, f GoldenGateProcessFilter, limits ...JSONLimits)` | `GoldenGateReplicatsRows` |
+| `GoldenGateHeartbeats(ctx, o goldengate.HeartbeatsOptions)` | `GoldenGateHeartbeatsJSON(ctx, o goldengate.HeartbeatsOptions, limits ...JSONLimits)` | `GoldenGateHeartbeatsRows` |
+| `GoldenGateHeartbeatLag(ctx, o goldengate.HeartbeatLagOptions)` | `GoldenGateHeartbeatLagJSON(ctx, o goldengate.HeartbeatLagOptions, limits ...JSONLimits)` | `GoldenGateHeartbeatLagRows` |
+| `GoldenGateAdministrators(ctx)` | `GoldenGateAdministratorsJSON(ctx, limits ...JSONLimits)` | `GoldenGateAdministratorsRows` |
+| `GoldenGateHeartbeatCatalogRows(ctx, schema string)` | `GoldenGateHeartbeatCatalogRowsJSON(ctx, schema string, limits ...JSONLimits)` | `GoldenGateHeartbeatCatalogJSON` |
+| `OracleHomeRows(ctx)` | `OracleHomeRowsJSON(ctx, limits ...JSONLimits)` | `OracleHome` and `OracleHomeJSON` are the separate typed observation pair. |
+
+~~~go
+owners := []string{"APP"}
+rows, err := client.InvalidObjectsRows(ctx, owners)
+// Check err, then iterate and close rows.
+data, err := client.InvalidObjectsRowsJSON(ctx, owners, oracleinfo.JSONLimits{MaxRows: 1000})
+~~~
+
+## Compatibility aliases
+
+The named families below select the same sources as the generic
+`Statement`, `Decode`, `Read`, `Rows` and `JSON` functions from prior releases.
+For example, `directories.Statement` corresponds to
+`directories.InventoryStatement`. The original signatures remain supported.
 
 | Package | Named family |
 | --- | --- |
@@ -84,6 +147,17 @@ releases. Existing function signatures remain supported.
 | registry | Components |
 | services | Definitions |
 | identity | OracleHome, including OracleHomeJSON for the native projection |
+
+The former `database.SGAAllocated`, `database.PGAAllocated`,
+`database.DatafileSize`, `database.Storage` and `storage.SGAComponents`
+families delegate to `memory.SGAAllocated`, `memory.PGAAllocated`,
+`storage.DatafileSize`, `storage.FileNames` and `memory.SGAComponents`,
+respectively. Their original types and errors remain at the old imports.
+The [selector dispositions](implementation-coverage.md#compatibility-selector-dispositions)
+map older SQL constants and property projections to their related facts. In
+`grants`, `Read…ForRelease` retains the compatibility request. Use
+`Read…WithOptions` with `ClassifiedRequest` for the same options accepted by the
+selector, decoder, native cursor and JSON.
 
 Separate from dictionary reads, the [legacy predefined account catalog](legacy-predefined-accounts.md) lists documented Oracle-supplied usernames by release.
 
@@ -123,7 +197,7 @@ legacy presentation/report selection where necessary:
   RAC/Single Instance display labels.
 - Products returns all visible registered component IDs. The old six-component
   allowlist belongs to reports; registration is not licensing evidence.
-- Storage returns data/temp file names and source kinds. Consumers format
+- `storage.FileNames` returns data/temp file names and source kinds. Consumers format
   classifications from raw facts; unknown names remain NULL.
 - DatafileSize, SGAAllocated and PGAAllocated explicitly retain observed,
   source-rounded GiB text (three-decimal SQL rounding), not exact raw bytes or

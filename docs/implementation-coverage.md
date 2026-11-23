@@ -38,6 +38,7 @@ separate from source review and fixture coverage.
 | `alertlog` | Bound-window entries sample and grouped counts | Full Entries/Counts families; bounds, offsets and sample retained |
 | `asm` | Client facts with member filtering | Full fact pipeline; retain domain integer/member checks |
 | `backup` | Bounded RMAN control-file job sample | Full Jobs family; bounded sample and DATE meaning retained |
+| `containers` | Observed PDB inventory, saved states, resource usage and resource samples | Four complete families with release and scope admission |
 | `database` | NLS/options/encryption facts plus compatibility SQL | Full typed and compatibility-source families; mappings below |
 | `dataguard` | Eight admitted datasets, snapshot/latest pure helpers, old status/lag SQL | Full pipelines including Status/Lag plus pure helpers |
 | `dblinks` | Admitted dictionary inventory | Full fact pipeline; no remote connection |
@@ -47,7 +48,7 @@ separate from source review and fixture coverage.
 | `goldengate` | Capture/apply/administrator facts and database properties | Full fact pipeline; configured GGSCHEMA remains explicitly unavailable from admitted DB source |
 | `grants` | Direct/object/column/role grant facts | Full fact pipeline; raw grants do not imply effective access |
 | `identity` | Scalar/bootstrap properties and complete database/session datasets | Complete source datasets plus preserved bootstrap/property contracts |
-| `instances` | Qualified visible-member context | Full fact pipeline; visibility is not physical RAC completeness |
+| `instances` | Qualified inventory, per-member versions and visibility | Full fact pipeline; visibility is not physical RAC completeness |
 | `memory` | Admitted configured-memory collection, RAC aggregation and observed SGA/PGA allocations | Complete scoped/PDB/RAC source adapters plus unchanged aggregate/property contracts |
 | `metadata` | Explicit object DDL/CLOB capture | Full fact pipeline; shared conversion plus local complete CLOB validation |
 | `networkacl` | ACL dictionary facts | Full fact pipeline; no network probes |
@@ -57,6 +58,7 @@ separate from source review and fixture coverage.
 | `patches` | Patch history facts and pure release-level evaluation | Full pipeline plus pure evaluation; unknown/parity limits preserved |
 | `performance` | Current blocker and instance resource-limit SQL | Full Blockers/ResourceLimits families; no workload/history inference |
 | `redo` | Redo groups/members/archive facts and pure clock helpers | Full fact pipelines; retain exact SCN, DATE and reporter checks |
+| `releases` | Offline Oracle release and patch package catalogs, recommendations and tool metadata | Pure lookup/decode APIs |
 | `registry` | Registered component facts | Full fact pipeline; no licensing inference |
 | `scheduler` | Exact-owner job metadata SQL | Full exact-owner Jobs family; no job execution |
 | `sequences` | Sequence dictionary facts | Full fact pipeline; observed metadata is not a future value guarantee |
@@ -82,58 +84,18 @@ release matrix; runtime and source-review coverage remain independent.
 
 ## Uniform file layout
 
-Issue #76 applies the common layout across the 41 Go packages at baseline
-`ac6b5b615bf15266fe2c15b5e523b842c791b219`. The 125 complete named families
-below each keep their Statement, Decode, Read, Rows and JSON APIs in one
-file. Options-based forms live with their original entry points. Shared
-contracts live in `contract.go` when used across facts.
+Issue #76 standardized the ownership and file layout at baseline
+`ac6b5b615bf15266fe2c15b5e523b842c791b219`. The live
+[fact API inventory](fact-apis.md#families) lists the named families by package,
+including the container facts and the relocated memory and storage families.
+The [source API reference](api-reference.md) lists their exact signatures,
+methods, types, and aliases along with the internal packages and examples.
 
-| Package | Families | Fact files |
-| --- | ---: | --- |
-| `alertlog` | 2 | `entries.go`, `counts.go` |
-| `asm` | 1 | `clients.go` |
-| `backup` | 1 | `jobs.go` |
-| `database` | 13 | `configuration.go`, `character_set.go`, `cpu_count.go`, `encryption_counts.go`, `encryption.go`, `endian.go`, `nls_database.go`, `nls_instance.go`, `options.go`, `pdb_count.go`, `products.go`, `session_parameters.go`, `session_parameters_with_defaults.go` |
-| `dataguard` | 10 | `archive_destination_status.go`, `archive_destinations.go`, `archive_progress.go`, `archive_gaps.go`, `database_context.go`, `status.go`, `processes.go`, `standby_logs.go`, `recovery_progress.go`, `lag.go` |
-| `dblinks` | 1 | `inventory.go` |
-| `directories` | 1 | `inventory.go` |
-| `engineeredsystem/catalog` | 6 | `cells.go`, `configuration.go`, `alerts.go`, `connected_cells.go`, `visible_cell_count.go`, `metadata.go` |
-| `goldengate` | 8 | `replicats.go`, `apply_coordinators.go`, `capture_processes.go`, `heartbeat_lag.go`, `administrators.go`, `extracts.go`, `heartbeats.go`, `heartbeat_catalog.go` |
-| `grants` | 7 | `direct.go`, `direct_column.go`, `role.go`, `direct_system.go`, `object_privilege_grants.go`, `column_privilege_grants.go`, `role_memberships.go` |
-| `identity` | 17 | `banners_source.go`, `connected_architecture.go`, `container_source.go`, `database_info.go`, `database_identity.go`, `edition_source.go`, `execution_identity.go`, `full_version_source.go`, `instance_identity.go`, `name_source.go`, `oracle_home.go`, `pdb_open_mode.go`, `version_source.go`, `version_bootstrap.go`, `role_source.go`, `snapshot.go`, `session_context.go` |
-| `instances` | 2 | `inventory.go`, `versions.go` |
-| `memory` | 6 | `parameter.go`, `pdb.go`, `rac.go`, `sga_allocated.go`, `pga_allocated.go`, `sga_components.go` |
-| `metadata` | 1 | `metadata.go` |
-| `networkacl` | 1 | `inventory.go` |
-| `objects` | 11 | `invalid_objects.go`, `invalid_details.go`, `object_inventory.go`, `object_totals.go`, `schema.go`, `oldest_statistics.go`, `tables_statistics.go`, `table.go`, `tables.go`, `table_count.go`, `table_statistics.go` |
-| `parameters` | 6 | `system.go`, `spfile.go`, `hidden_catalog.go`, `effective.go`, `hidden_context.go`, `hidden.go` |
-| `passwordfile` | 1 | `info.go` |
-| `patches` | 2 | `sql_patch.go`, `history.go` |
-| `performance` | 2 | `resource_limits.go`, `blockers.go` |
-| `redo` | 5 | `archived_logs.go`, `clock.go`, `groups.go`, `members.go`, `history.go` |
-| `registry` | 1 | `components.go` |
-| `scheduler` | 1 | `jobs.go` |
-| `sequences` | 1 | `inventory.go` |
-| `services` | 2 | `names.go`, `definitions.go` |
-| `sqlplan` | 2 | `baseline.go`, `profile.go` |
-| `storage` | 12 | `default_temporary.go`, `database_files.go`, `data_files.go`, `long_columns.go`, `segments.go`, `free_extents.go`, `datafile_size.go`, `file_names.go`, `temporary_groups.go`, `tablespaces.go`, `temp_files.go`, `temp_free_space.go` |
-| `triggers` | 1 | `inventory.go` |
-| `users` | 4 | `table_metadata.go`, `tablespace_quotas.go`, `inventory.go`, `account_count.go` |
-
-The 12 other audited packages have different responsibilities. The root
-`oracleinfo` package is the non-owning client facade. `engineeredsystem`
-models and normalizes admitted payloads. Its SQL catalog is the separate
-subpackage above. `internal/datetime`, `internal/numeric`,
-`internal/projection` and `internal/testsql` remain focused helper
-packages. The six `examples` packages retain their executable `main.go` files.
-
-Compatibility selectors in `identity` (Banners, Database, Edition, Execution,
-Instance, Name, OracleHomeEnvironment, Version and Role) and `objects`
-(Invalid, Inventory and Count) retain their original contracts. They live
-with their related source facts or, for standalone edition/version lookups,
-in the corresponding property file. The [API inventory](fact-apis.md) maps
-compatibility names to their complete source families. Pure, procedural and
-compatibility-only operations keep their existing contracts.
+Keep each complete fact in its own source file with the five named operations.
+Shared contracts live in `contract.go` when several facts use them. Keep
+compatibility selectors with the corresponding fact or in an explicit adapter.
+Generate the reference with `go run ./scripts/api_reference.go` and use
+`go run ./scripts/api_reference.go -check` to verify it against the current source.
 
 ## Compatibility selector dispositions
 

@@ -28,18 +28,8 @@ func TestGoldenGatePropertiesAndCompanions(t *testing.T) {
 		}
 	})
 	t.Run("native", func(t *testing.T) {
-		db, _ := testsql.New(t, append(versionSteps("19"), administratorStep(t))...)
-		spy := &nativeSpy{db: db}
-		rows, err := info.New(spy).GoldenGateAdministratorsRows(t.Context())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if rows != spy.last || !rows.Next() {
-			t.Fatalf("native cursor replaced/closed: %v", rows.Err())
-		}
-		if err = rows.Close(); err != nil {
-			t.Fatal(err)
-		}
+		checkClientCursorPair(t, append(versionSteps("19"), administratorStep(t)),
+			(*info.Client).GoldenGateAdministratorsRows, (*info.Client).GoldenGateAdministrators)
 	})
 	t.Run("propertiesJSON", func(t *testing.T) {
 		db, _ := testsql.New(t, append(versionSteps("19"), administratorStep(t))...)

@@ -1,6 +1,7 @@
 package oracleinfo_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -247,5 +248,38 @@ func TestServicesFacadeUsesPatchsetEditionBoundary(t *testing.T) {
 				t.Fatalf("%s selection: %s %v", version, payload, err)
 			}
 		})
+	}
+}
+
+func TestCanonicalInvalidObjectsClientPair(t *testing.T) {
+	owners := []string{"Case'Owner"}
+	invalid, _, err := objects.InvalidDetailsStatement(19, owners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	step := testsql.Step{
+		SQL:     invalid,
+		Columns: []string{"OWNER", "OBJECT_TYPE", "OBJECT_NAME", "STATUS", "CREATED", "LAST_DDL_TIME"},
+		Values:  [][]driver.Value{{owners[0], "PACKAGE BODY", "Mixed Name", "INVALID", "2020-01-01T01:02:03", nil}},
+	}
+	steps := append(versionSteps("19"), step)
+	checkClientCursorPair(t, steps,
+		func(c *info.Client, ctx context.Context) (*sql.Rows, error) { return c.InvalidObjects(ctx, owners...) },
+		func(c *info.Client, ctx context.Context) (*sql.Rows, error) { return c.InvalidObjectsRows(ctx, owners) },
+	)
+	db, oldState := testsql.New(t, steps...)
+	legacy, err := info.New(db).InvalidObjectsJSON(t.Context(), owners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, newState := testsql.New(t, steps...)
+	now, err := info.New(db).InvalidObjectsRowsJSON(t.Context(), owners, info.JSONLimits{MaxRows: 1, MaxBytes: len(legacy)})
+	if err != nil || !bytes.Equal(legacy, now) || !reflect.DeepEqual(oldState.Calls(), newState.Calls()) || newState.Closed() != len(steps) {
+		t.Fatalf("JSON or cursor handling changed: %s %v", now, err)
+	}
+	db, newState = testsql.New(t, steps...)
+	tooLarge, err := info.New(db).InvalidObjectsRowsJSON(t.Context(), owners, info.JSONLimits{MaxBytes: len(legacy) - 1})
+	if tooLarge != nil || !errors.Is(err, rowset.ErrCapacity) || newState.Closed() != len(steps) {
+		t.Fatalf("failed payload, cause or cursor close: %s %v", tooLarge, err)
 	}
 }
