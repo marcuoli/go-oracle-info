@@ -254,6 +254,71 @@ Calendar tests verify the selected SQL construction; they do not execute an Orac
 session with an alternate calendar. Native 11g+,19c EE and 26ai EE qualification,
 including alternate calendars, remains a separate acceptance gate.
 
+## Datafile storage hardware
+
+`asm.DatafileStorageHardwareStatement`, `DecodeDatafileStorageHardware`,
+`ReadDatafileStorageHardware`, `DatafileStorageHardwareRows` and
+`DatafileStorageHardwareJSON` share the SQL below. The root client exposes the
+native cursor through `Client.DatafileStorageHardware` and the bounded JSON
+result through `Client.DatafileStorageHardwareJSON`.
+
+```sql
+SELECT CASE WHEN COUNT(*) > 0 THEN 'EXADATA_STORAGE' ELSE 'UNKNOWN' END AS HARDWARE_TYPE,
+       COUNT(*) AS EXADATA_DISK_COUNT
+FROM V$ASM_DISK_STAT d
+JOIN V$ASM_DISKGROUP_STAT g ON g.GROUP_NUMBER = d.GROUP_NUMBER
+WHERE d.GROUP_NUMBER > 0
+  AND d.PATH LIKE 'o/%'
+  AND EXISTS (
+      SELECT 1
+      FROM V$DATAFILE f
+      WHERE UPPER(SUBSTR(f.NAME, 1, LENGTH(g.NAME) + 2)) = '+' || UPPER(g.NAME) || '/'
+  );
+```
+
+Run in the standby database's CDB root or non-CDB using an admitted session
+with SELECT access to the three views. Oracle documents [`o/` paths for
+Exadata grid disks](https://docs.oracle.com/en/engineered-systems/exadata-database-machine/sagug/creating-oracle-asm-disk-groups.html)
+and the [non-discovering disk STAT view](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-ASM_DISK_STAT.html).
+[`V$DATAFILE.NAME`](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-DATAFILE.html)
+links the visible group name to a datafile recorded in the control file. The
+probe requires a complete group-name match and never counts disks in another
+group based on a common name prefix.
+
+`EXADATA_STORAGE` means at least one grid-disk row was visible in a group
+referenced by a datafile. `UNKNOWN` preserves a successful zero count. SQL,
+permission, transport, and validation errors remain errors. This observation
+covers the local database instance and its visible ASM datafile groups. It
+cannot identify the database server model, the placement of file extents,
+Exascale-only storage, or full RAC coverage. Oracle documents empty
+`V$ASM_DISK_STAT` results from a PDB in [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-ASM_DISK_STAT.html)
+and [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ASM_DISK_STAT.html).
+Use a CDB root connection for the probe.
+
+Oracle references checked on 2026-11-24. Every admitted numeric release uses
+the same projection. The selector does not infer a hardware release or RU.
+
+| Numeric release | Oracle reference and static selection | Native SQL evidence |
+| --- | --- | --- |
+| 9.2, 10.1 | Reject before execution. [10.2 introduces the STAT views](https://docs.oracle.com/cd/B19306_01/server.102/b14237/whatsnew.htm). | Unsupported |
+| 10.2 | Select common columns. [Disk STAT](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1020.htm), [group STAT](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1022.htm) | Unqualified |
+| 11.1, 11.2 | Select common columns. [11.1 ASM guide](https://docs.oracle.com/cd/B28359_01/server.111/b31107.pdf), [11.2 ASM views](https://docs.oracle.com/cd/E18675_01/doc/server.112/e16102/asmviews.htm) | Unqualified |
+| 12.1, 12.2 | Select common columns without optional container columns. [12.1 ASM views](https://docs.oracle.com/database/121/OSTMG/GUID-7CAB3FBA-5B76-4F30-A13F-C4C16BD59147.htm), [12.2 ASM views](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/ostmg/views-asm-info.html) | Unqualified |
+| 18 | Select common columns. [18c disk STAT](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/V-ASM_DISK_STAT.html) | Unqualified |
+| 19 | Select common columns. [19c ASM views](https://docs.oracle.com/en/database/oracle/oracle-database/19/ostmg/part-ii-oracle-asm-instances-and-disk-groups/using-views-to-display-oracle-asm-information.html) | 19.32.0.0.0 SYSDBA CDB root, READ WRITE primary, zero matches |
+| 21 | Select common columns. [21c disk STAT](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-ASM_DISK_STAT.html) | Unqualified |
+| 23/23ai | Select common columns. [23ai ASM guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/ostmg/automatic-storage-management-administrators-guide.pdf) | Unqualified |
+| 26ai (numeric 23.26) | Select common columns. [26ai ASM views](https://docs.oracle.com/en/database/oracle/oracle-database/26/ostmg/views-asm-info.html) | 23.26.1.0.0 SYSDBA CDB root, READ WRITE primary and READ ONLY WITH APPLY physical standby, zero matches |
+
+Fixtures cover positive counts, exact count decoding, unknown, inconsistent
+rows and cursor errors. An Oracle SQL fixture with synthetic disk and datafile
+rows returned one match for two files in the same group and excluded disks
+in other groups. The SQL*Plus runs above against the actual views returned
+zero matches. The SDK's native rows and bounded JSON both returned the same
+result on the 23.26.1.0.0 physical standby using go-oracle-session v0.25.0
+with go-ora V2. Native positive Exadata, MOUNT, non-CDB, direct PDB,
+restricted grants and multi-instance RAC remain unqualified.
+
 ## Source-clock SQL qualification
 
 On 2026-11-15 the exact generated `ClockStatement` projections were fully fetched

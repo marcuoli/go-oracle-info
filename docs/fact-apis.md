@@ -57,7 +57,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | Package | Canonical fact families |
 | --- | --- |
 | [alertlog](api-reference.md#alertlog) | `Counts`, `Entries` |
-| [asm](api-reference.md#asm) | `Clients`, [`DiskGroupCapacity`](redo-storage-asm.md#asm-disk-group-capacity) |
+| [asm](api-reference.md#asm) | `Clients`, [`DiskGroupCapacity`](redo-storage-asm.md#asm-disk-group-capacity), [`DatafileStorageHardware`](redo-storage-asm.md#datafile-storage-hardware) |
 | [backup](api-reference.md#backup) | `Jobs`, `RestorePoints` |
 | [containers](api-reference.md#containers) | `InvalidObjectCounts`, `Inventory`, `LegacyAuditTablePlacement`, [`PlugInViolations`](upgrade-readiness.md#recorded-pdb-plug-in-violations), `RegistryComponents`, `ResourceSamples`, `ResourceUsage`, `SQLPatchHistory`, `SavedStates` |
 | [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `Properties`, `SessionParameters`, `SessionParametersWithDefaults`, `TimeZoneFiles` |
