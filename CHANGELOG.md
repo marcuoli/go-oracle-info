@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read raw object status for a finite batch of exact dictionary keys while retaining subobject and edition evidence (#145).
+
 - Read exact Oracle-maintained role metadata from the connected dictionary without depending on role grants (#143).
 
 ## v0.29.1 (2026-11-23)
