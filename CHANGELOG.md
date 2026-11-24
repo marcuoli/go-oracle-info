@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## v0.40.0 (2026-11-24)
+
 - Inventory declared columns using either Oracle time-zone-aware TIMESTAMP type, preserving exact metadata and observed container scope (#191).
+- Refresh go-oracle-session to v0.25.1 and verify Go 1.27.4 for the module, build and selected-dependency source compatibility (#193).
 
 ## v0.39.0 (2026-11-24)
 
