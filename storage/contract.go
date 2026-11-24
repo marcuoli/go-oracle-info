@@ -8,9 +8,13 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 	"unicode/utf8"
 
+	"github.com/marcuoli/go-oracle-info/internal/datetime"
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
+	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -228,4 +232,139 @@ type TempfileOptions struct {
 type TempfileRequest struct {
 	Options   TempfileOptions
 	Reference reference.Reference
+}
+
+const (
+	fileSourceInstanceSQL  = "TO_NUMBER(SYS_CONTEXT('USERENV','INSTANCE'))"
+	fileSourceContainerSQL = "TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID'))"
+)
+
+// FileHealthOptions uses the caller-observed numeric database release. Oracle
+// determines visible rows from the already-admitted handle and its privileges.
+type FileHealthOptions struct {
+	OracleVersion string
+}
+
+// FileHealthRequest adds a caller-owned statement reference and buffered limits.
+type FileHealthRequest struct {
+	Options   FileHealthOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+
+// FileHealthIdentity keeps a file's container separate from its observer.
+// Nil container fields denote the pre-multitenant projection.
+type FileHealthIdentity struct {
+	FileID              session.Value
+	ReportingInstanceID session.Value
+	ContainerID         *session.Value
+	SourceContainerID   *session.Value
+}
+
+type fileHealthField struct {
+	name, expression string
+	kind             rowset.Kind
+	exactInteger     bool
+}
+
+func fileHealthRaw(name string) fileHealthField {
+	return fileHealthField{name: name, expression: "v." + name, kind: rowset.Text}
+}
+
+func fileHealthExact(expr, name string) fileHealthField {
+	return fileHealthField{
+		name: name, expression: "TO_CHAR(" + expr + ", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')",
+		kind: rowset.Text, exactInteger: true,
+	}
+}
+
+func fileHealthDate(expr, name string) fileHealthField {
+	return fileHealthField{name: name, expression: datetime.GregorianDate(expr), kind: rowset.Text}
+}
+
+func fileHealthSelection(options FileHealthOptions, source, scope, reporter string, fields []fileHealthField) (selection, error) {
+	major, ok := oracleversion.LegacyFactMajor(options.OracleVersion)
+	if !ok {
+		return selection{}, ErrUnsupportedVersion
+	}
+	fields = append([]fileHealthField{
+		{name: "FILE_ID", expression: "v.FILE#", kind: rowset.Integer},
+		{name: "INST_ID", expression: reporter, kind: rowset.Integer},
+	}, fields...)
+	provenance := Provenance{Source: source, OracleMajor: major, Scope: scope}
+	if major >= 12 {
+		fields = append(fields,
+			fileHealthField{name: "CON_ID", expression: "v.CON_ID", kind: rowset.Integer},
+			fileHealthField{name: "SOURCE_CON_ID", expression: fileSourceContainerSQL, kind: rowset.Integer})
+		provenance.OptionalColumns = []string{"CON_ID", "SOURCE_CON_ID"}
+	}
+	p := selection{provenance: provenance}
+	expressions := make([]string, 0, len(fields))
+	for _, f := range fields {
+		expressions = append(expressions, f.expression+" AS "+f.name)
+		p.schema = append(p.schema, rowset.Column{Name: f.name, Kind: f.kind})
+		if f.exactInteger {
+			p.integerText = append(p.integerText, f.name)
+		}
+	}
+	p.sql = "SELECT " + strings.Join(expressions, ", ") + " FROM " + source + " v"
+	return p, nil
+}
+
+func fileHealthOrder(p selection) string {
+	if p.provenance.OracleMajor >= 12 {
+		return "CON_ID, FILE_ID, INST_ID"
+	}
+	return "FILE_ID, INST_ID"
+}
+
+func fileHealthIndex(result session.Result, p selection) (map[string]int, error) {
+	index, err := columns(result, p)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range result.Rows {
+		f := row[index["FILE_ID"]]
+		n, err := strconv.ParseInt(f.Text, 10, 64)
+		if f.Null || err != nil || n < 1 {
+			return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
+		}
+		if i, ok := index["SOURCE_CON_ID"]; ok && row[i].Null {
+			return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
+		}
+	}
+	return index, nil
+}
+
+func fileHealthIdentity(row []session.Value, index map[string]int) FileHealthIdentity {
+	return FileHealthIdentity{
+		FileID: row[index["FILE_ID"]], ReportingInstanceID: row[index["INST_ID"]],
+		ContainerID: optional(row, index, "CON_ID"), SourceContainerID: optional(row, index, "SOURCE_CON_ID"),
+	}
+}
+
+func readFileHealth(ctx context.Context, reader Reader, request FileHealthRequest, p selection) (session.Result, error) {
+	if !validFileSummaryReader(reader) {
+		return session.Result{}, ErrInvalidRequest
+	}
+	limits, err := rowset.Resolve(request.Limits)
+	if err != nil {
+		return session.Result{}, err
+	}
+	result, err := query(ctx, reader, request.Reference, p)
+	if err != nil {
+		return session.Result{}, err
+	}
+	if !projection.FitsBufferedLimits(result, limits) {
+		return session.Result{}, &Error{p.provenance.Source, errors.Join(rowset.ErrCapacity, ctx.Err())}
+	}
+	return result, nil
+}
+
+func validFileHealthDate(v session.Value) bool {
+	if v.Null {
+		return true
+	}
+	_, err := time.Parse("2006-01-02T15:04:05", v.Text)
+	return err == nil && len(v.Text) == len("2006-01-02T15:04:05")
 }
