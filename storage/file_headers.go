@@ -29,9 +29,9 @@ func FileHeadersStatement(options FileHealthOptions) (string, error) {
 }
 
 func fileHeadersPlan(options FileHealthOptions) (selection, error) {
-	p, err := fileHealthSelection(options, "V$DATAFILE_HEADER", "visible_local_file_headers", fileSourceInstanceSQL, []fileHealthField{
-		fileHealthRaw("ERROR"), fileHealthRaw("RECOVER"), fileHealthRaw("FUZZY"),
-		fileHealthExact("v.CHECKPOINT_CHANGE#", "CHECKPOINT_SCN"), fileHealthDate("v.CHECKPOINT_TIME", "CHECKPOINT_TIME"),
+	p, err := fileHealthSelection(options, "V$DATAFILE_HEADER", "visible_local_file_headers", fileSourceInstanceSQL, []storageField{
+		storageRaw("ERROR"), storageRaw("RECOVER"), storageRaw("FUZZY"),
+		storageExact("v.CHECKPOINT_CHANGE#", "CHECKPOINT_SCN"), storageDate("v.CHECKPOINT_TIME", "CHECKPOINT_TIME"),
 	})
 	if err != nil {
 		return selection{}, err
@@ -75,7 +75,7 @@ func ReadFileHeaders(ctx context.Context, reader Reader, request FileHealthReque
 	if err != nil {
 		return FileHeadersResult{}, err
 	}
-	result, err := readFileHealth(ctx, reader, request, p)
+	result, err := readBoundedStorage(ctx, reader, request.Reference, request.Limits, p)
 	if err != nil {
 		return FileHeadersResult{}, err
 	}

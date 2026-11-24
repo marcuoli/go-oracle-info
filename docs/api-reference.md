@@ -121,6 +121,8 @@ func (c *Client) DataGuardStandbyLogs(ctx context.Context, filter DataGuardFilte
 func (c *Client) DataGuardStandbyLogsJSON(ctx context.Context, filter DataGuardFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DatabaseFiles(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatabaseFilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) DatabaseIncarnations(ctx context.Context) (*sql.Rows, error)
+func (c *Client) DatabaseIncarnationsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DatabaseInfo(ctx context.Context, options DatabaseInfoOptions) (*sql.Rows, error)
 func (c *Client) DatabaseInfoJSON(ctx context.Context, options DatabaseInfoOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DatabaseLinks(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -207,6 +209,10 @@ func (c *Client) PasswordFileInfo(ctx context.Context, options PasswordFileOptio
 func (c *Client) PasswordFileInfoJSON(ctx context.Context, options PasswordFileOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PatchHistory(ctx context.Context, options PatchHistoryOptions) (*sql.Rows, error)
 func (c *Client) PatchHistoryJSON(ctx context.Context, options PatchHistoryOptions, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RecoveryArea(ctx context.Context) (*sql.Rows, error)
+func (c *Client) RecoveryAreaJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RecoveryAreaUsage(ctx context.Context) (*sql.Rows, error)
+func (c *Client) RecoveryAreaUsageJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoClock(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RedoClockJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoGroups(ctx context.Context, filter RedoFilter) (*sql.Rows, error)
@@ -215,6 +221,8 @@ func (c *Client) RedoHistory(ctx context.Context, filter RedoHistoryFilter) (*sq
 func (c *Client) RedoHistoryJSON(ctx context.Context, filter RedoHistoryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoMembers(ctx context.Context, filter RedoFilter) (*sql.Rows, error)
 func (c *Client) RedoMembersJSON(ctx context.Context, filter RedoFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RestorePoints(ctx context.Context) (*sql.Rows, error)
+func (c *Client) RestorePointsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RoleObjectGrants(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) RoleObjectGrantsJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SGAComponents(ctx context.Context, filter SGAComponentFilter) (*sql.Rows, error)
@@ -235,6 +243,8 @@ func (c *Client) Services(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ServicesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SessionContext(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionContextJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) StandbyPromotionSCN(ctx context.Context) (*sql.Rows, error)
+func (c *Client) StandbyPromotionSCNJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SystemParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
 func (c *Client) SystemParametersJSON(ctx context.Context, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TableMetadata(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -247,6 +257,8 @@ func (c *Client) Tempfiles(ctx context.Context, options TempfileOptions) (*sql.R
 func (c *Client) TempfilesJSON(ctx context.Context, options TempfileOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TemporaryGroups(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TemporaryGroupsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) TimeZoneFiles(ctx context.Context) (*sql.Rows, error)
+func (c *Client) TimeZoneFilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Triggers(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) TriggersJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) UserAccountCount(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -483,17 +495,37 @@ type Provenance struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RestorePoint struct {
+	Name, SCN, DatabaseIncarnation, GuaranteeFlashbackDatabase, StorageSize, Time      session.Value
+	RestorePointTime, Preserved, PDBRestorePoint, CleanPDBRestorePoint, PDBIncarnation *session.Value
+	ContainerID, SourceContainerID                                                     *session.Value
+}
+type RestorePointsOptions struct{ OracleVersion string }
+type RestorePointsRequest struct {
+	Options   RestorePointsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type RestorePointsResult struct {
+	Provenance Provenance
+	Rows       []RestorePoint
+}
 ~~~
 
 ### Functions
 
 ~~~go
 func DecodeJobs(result session.Result, options JobsOptions) (JobsResult, error)
+func DecodeRestorePoints(result session.Result, options RestorePointsOptions) (RestorePointsResult, error)
 func JobsJSON(ctx context.Context, q rowset.Queryer, options JobsOptions, limits rowset.Limits) (json.RawMessage, error)
 func JobsRows(ctx context.Context, q rowset.Queryer, options JobsOptions) (*sql.Rows, error)
 func JobsSQL(maxRows int) (string, error)
 func JobsStatement(options JobsOptions) (string, []any, error)
 func ReadJobs(ctx context.Context, reader Reader, request JobsRequest) (JobsResult, error)
+func ReadRestorePoints(ctx context.Context, reader Reader, request RestorePointsRequest) (RestorePointsResult, error)
+func RestorePointsJSON(ctx context.Context, q rowset.Queryer, options RestorePointsOptions, limits rowset.Limits) (json.RawMessage, error)
+func RestorePointsRows(ctx context.Context, q rowset.Queryer, options RestorePointsOptions) (*sql.Rows, error)
+func RestorePointsStatement(options RestorePointsOptions) (string, error)
 ~~~
 
 ### Methods
@@ -958,6 +990,20 @@ type StorageRow struct {
 	FileName session.Value
 	Kind     session.Value
 }
+type TimeZoneFile struct {
+	Version                                  session.Value
+	Filename, ContainerID, SourceContainerID *session.Value
+}
+type TimeZoneFilesOptions struct{ OracleVersion string }
+type TimeZoneFilesRequest struct {
+	Options   TimeZoneFilesOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type TimeZoneFilesResult struct {
+	Provenance DatasetProvenance
+	Rows       []TimeZoneFile
+}
 ~~~
 
 ### Functions
@@ -993,6 +1039,7 @@ func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGA
 func DecodeSessionParameters(result session.Result, options SessionParametersOptions) (SessionParametersResult, error)
 func DecodeSessionParametersWithDefaults(result session.Result, options SessionParametersWithDefaultsOptions) (SessionParametersWithDefaultsResult, error)
 func DecodeStorage(result session.Result, options StorageOptions) (StorageResult, error)
+func DecodeTimeZoneFiles(result session.Result, options TimeZoneFilesOptions) (TimeZoneFilesResult, error)
 func EncryptionCountsJSON(ctx context.Context, q rowset.Queryer, options EncryptionCountsOptions, limits rowset.Limits) (json.RawMessage, error)
 func EncryptionCountsRows(ctx context.Context, q rowset.Queryer, options EncryptionCountsOptions) (*sql.Rows, error)
 func EncryptionCountsStatement(options EncryptionCountsOptions) (string, []any, error)
@@ -1040,6 +1087,7 @@ func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRe
 func ReadSessionParameters(ctx context.Context, reader Reader, request SessionParametersRequest) (SessionParametersResult, error)
 func ReadSessionParametersWithDefaults(ctx context.Context, reader Reader, request SessionParametersWithDefaultsRequest) (SessionParametersWithDefaultsResult, error)
 func ReadStorage(ctx context.Context, reader Reader, request StorageRequest) (StorageResult, error)
+func ReadTimeZoneFiles(ctx context.Context, reader Reader, request TimeZoneFilesRequest) (TimeZoneFilesResult, error)
 func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error)
 func SGAAllocatedRows(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions) (*sql.Rows, error)
 func SGAAllocatedStatement(options SGAAllocatedOptions) (string, []any, error)
@@ -1052,6 +1100,9 @@ func SessionParametersWithDefaultsStatement(options SessionParametersWithDefault
 func StorageJSON(ctx context.Context, q rowset.Queryer, options StorageOptions, limits rowset.Limits) (json.RawMessage, error)
 func StorageRows(ctx context.Context, q rowset.Queryer, options StorageOptions) (*sql.Rows, error)
 func StorageStatement(options StorageOptions) (string, []any, error)
+func TimeZoneFilesJSON(ctx context.Context, q rowset.Queryer, options TimeZoneFilesOptions, limits rowset.Limits) (json.RawMessage, error)
+func TimeZoneFilesRows(ctx context.Context, q rowset.Queryer, options TimeZoneFilesOptions) (*sql.Rows, error)
+func TimeZoneFilesStatement(options TimeZoneFilesOptions) (string, error)
 ~~~
 
 ### Methods
@@ -1223,6 +1274,15 @@ type DatabaseContextResult struct {
 	Provenance Provenance
 	Rows       []DatabaseContext
 }
+type DatabaseIncarnation struct {
+	ResetlogsChange, ResetlogsTime, PriorResetlogsChange, PriorResetlogsTime     session.Value
+	Incarnation, PriorIncarnation, ResetlogsID, Status, FlashbackDatabaseAllowed *session.Value
+	ContainerID, SourceContainerID                                               *session.Value
+}
+type DatabaseIncarnationsResult struct {
+	Provenance Provenance
+	Rows       []DatabaseIncarnation
+}
 type DatasetError struct {
 	Source string
 
@@ -1296,6 +1356,11 @@ type Provenance struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RecoveryIdentityRequest struct {
+	OracleVersion string
+	Reference     reference.Reference
+	Limits        rowset.Limits
+}
 type RecoveryProgress struct {
 	InstanceID  session.Value
 	StartTime   session.Value
@@ -1343,6 +1408,14 @@ type StandbyLog struct {
 type StandbyLogsResult struct {
 	Provenance Provenance
 	Rows       []StandbyLog
+}
+type StandbyPromotion struct {
+	SCN                            session.Value
+	ContainerID, SourceContainerID *session.Value
+}
+type StandbyPromotionSCNResult struct {
+	Provenance Provenance
+	Rows       []StandbyPromotion
 }
 type StatusOptions struct{ OracleMajor int }
 type StatusRequest struct {
@@ -1392,6 +1465,9 @@ func ArchiveProgressStatementWithOptions(options ArchiveProgressSourceOptions) (
 func DatabaseContextJSON(ctx context.Context, q rowset.Queryer, version string, limits rowset.Limits) (json.RawMessage, error)
 func DatabaseContextRows(ctx context.Context, q rowset.Queryer, version string) (*sql.Rows, error)
 func DatabaseContextStatement(version string) (string, []any, error)
+func DatabaseIncarnationsJSON(ctx context.Context, q rowset.Queryer, version string, limits rowset.Limits) (json.RawMessage, error)
+func DatabaseIncarnationsRows(ctx context.Context, q rowset.Queryer, version string) (*sql.Rows, error)
+func DatabaseIncarnationsStatement(version string) (string, error)
 func DecodeArchiveDestinationStatus(result session.Result, version string, filter Filter) (ArchiveDestinationStatusResult, error)
 func DecodeArchiveDestinationStatusWithOptions(result session.Result, options ScopeOptions) (ArchiveDestinationStatusResult, error)
 func DecodeArchiveDestinations(result session.Result, version string, filter Filter) (ArchiveDestinationsResult, error)
@@ -1401,6 +1477,7 @@ func DecodeArchiveGapsWithOptions(result session.Result, options ScopeOptions) (
 func DecodeArchiveProgress(result session.Result, version string, filter ArchiveProgressOptions) (ArchiveProgressResult, error)
 func DecodeArchiveProgressWithOptions(result session.Result, options ArchiveProgressSourceOptions) (ArchiveProgressResult, error)
 func DecodeDatabaseContext(result session.Result, version string) (DatabaseContextResult, error)
+func DecodeDatabaseIncarnations(result session.Result, version string) (DatabaseIncarnationsResult, error)
 func DecodeLag(result session.Result, options LagOptions) (LagResult, error)
 func DecodeProcesses(result session.Result, version string, filter Filter) (ProcessesResult, error)
 func DecodeProcessesWithOptions(result session.Result, options ScopeOptions) (ProcessesResult, error)
@@ -1408,6 +1485,7 @@ func DecodeRecoveryProgress(result session.Result, version string, filter Filter
 func DecodeRecoveryProgressWithOptions(result session.Result, options ScopeOptions) (RecoveryProgressResult, error)
 func DecodeStandbyLogs(result session.Result, version string, filter Filter) (StandbyLogsResult, error)
 func DecodeStandbyLogsWithOptions(result session.Result, options ScopeOptions) (StandbyLogsResult, error)
+func DecodeStandbyPromotionSCN(result session.Result, version string) (StandbyPromotionSCNResult, error)
 func DecodeStatus(result session.Result, options StatusOptions) (StatusResult, error)
 func LagJSON(ctx context.Context, q rowset.Queryer, options LagOptions, limits rowset.Limits) (json.RawMessage, error)
 func LagRows(ctx context.Context, q rowset.Queryer, options LagOptions) (*sql.Rows, error)
@@ -1424,10 +1502,12 @@ func ReadArchiveDestinations(ctx context.Context, reader Reader, request Request
 func ReadArchiveGaps(ctx context.Context, reader Reader, request Request) (ArchiveGapsResult, error)
 func ReadArchiveProgress(ctx context.Context, reader Reader, request ArchiveProgressRequest) (ArchiveProgressResult, error)
 func ReadDatabaseContext(ctx context.Context, reader Reader, request DatabaseContextRequest) (DatabaseContextResult, error)
+func ReadDatabaseIncarnations(ctx context.Context, reader Reader, request RecoveryIdentityRequest) (DatabaseIncarnationsResult, error)
 func ReadLag(ctx context.Context, reader Reader, request LagRequest) (LagResult, error)
 func ReadProcesses(ctx context.Context, reader Reader, request Request) (ProcessesResult, error)
 func ReadRecoveryProgress(ctx context.Context, reader Reader, request Request) (RecoveryProgressResult, error)
 func ReadStandbyLogs(ctx context.Context, reader Reader, request Request) (StandbyLogsResult, error)
+func ReadStandbyPromotionSCN(ctx context.Context, reader Reader, request RecoveryIdentityRequest) (StandbyPromotionSCNResult, error)
 func ReadStatus(ctx context.Context, reader Reader, request StatusRequest) (StatusResult, error)
 func RecoveryProgressJSON(ctx context.Context, q rowset.Queryer, version string, filter Filter, limits rowset.Limits) (json.RawMessage, error)
 func RecoveryProgressJSONWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions, limits rowset.Limits) (json.RawMessage, error)
@@ -1441,6 +1521,9 @@ func StandbyLogsRows(ctx context.Context, q rowset.Queryer, version string, filt
 func StandbyLogsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ScopeOptions) (*sql.Rows, error)
 func StandbyLogsStatement(version string, filter Filter) (string, []any, error)
 func StandbyLogsStatementWithOptions(options ScopeOptions) (string, []any, error)
+func StandbyPromotionSCNJSON(ctx context.Context, q rowset.Queryer, version string, limits rowset.Limits) (json.RawMessage, error)
+func StandbyPromotionSCNRows(ctx context.Context, q rowset.Queryer, version string) (*sql.Rows, error)
+func StandbyPromotionSCNStatement(version string) (string, error)
 func StatusJSON(ctx context.Context, q rowset.Queryer, options StatusOptions, limits rowset.Limits) (json.RawMessage, error)
 func StatusRows(ctx context.Context, q rowset.Queryer, options StatusOptions) (*sql.Rows, error)
 func StatusStatement(options StatusOptions) (string, []any, error)
@@ -5711,6 +5794,30 @@ type Provenance struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RecoveryAreaOptions struct{ OracleVersion string }
+type RecoveryAreaRequest struct {
+	Options   RecoveryAreaOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type RecoveryAreaResult struct {
+	Provenance Provenance
+	Rows       []RecoveryAreaRow
+}
+type RecoveryAreaRow struct {
+	Name, SpaceLimit, SpaceUsed, SpaceReclaimable, FileCount session.Value
+	ReportingInstanceID                                      session.Value
+	ContainerID, SourceContainerID                           *session.Value
+}
+type RecoveryAreaUsageResult struct {
+	Provenance Provenance
+	Rows       []RecoveryAreaUsageRow
+}
+type RecoveryAreaUsageRow struct {
+	FileType, PercentSpaceUsed, PercentSpaceReclaimable, FileCount session.Value
+	ReportingInstanceID                                            session.Value
+	ContainerID, SourceContainerID                                 *session.Value
+}
 type Request struct {
 	OracleMajor int
 	Reference   reference.Reference
@@ -5870,6 +5977,8 @@ func DecodeFileRecovery(result session.Result, options FileHealthOptions) (FileR
 func DecodeFileStatuses(result session.Result, options FileHealthOptions) (FileStatusesResult, error)
 func DecodeFreeExtents(result session.Result, major int) (FreeExtentsResult, error)
 func DecodeLongColumns(result session.Result, major int) (LongColumnsResult, error)
+func DecodeRecoveryArea(result session.Result, options RecoveryAreaOptions) (RecoveryAreaResult, error)
+func DecodeRecoveryAreaUsage(result session.Result, options RecoveryAreaOptions) (RecoveryAreaUsageResult, error)
 func DecodeSGAComponents(result session.Result, major int, filter InstanceFilter) (SGAComponentsResult, error)
 func DecodeSGAComponentsWithOptions(result session.Result, options SGAComponentsOptions) (SGAComponentsResult, error)
 func DecodeSegments(result session.Result, major int) (SegmentsResult, error)
@@ -5913,12 +6022,20 @@ func ReadFileRecovery(ctx context.Context, reader Reader, request FileHealthRequ
 func ReadFileStatuses(ctx context.Context, reader Reader, request FileHealthRequest) (FileStatusesResult, error)
 func ReadFreeExtents(ctx context.Context, reader Reader, request Request) (FreeExtentsResult, error)
 func ReadLongColumns(ctx context.Context, reader Reader, request Request) (LongColumnsResult, error)
+func ReadRecoveryArea(ctx context.Context, reader Reader, request RecoveryAreaRequest) (RecoveryAreaResult, error)
+func ReadRecoveryAreaUsage(ctx context.Context, reader Reader, request RecoveryAreaRequest) (RecoveryAreaUsageResult, error)
 func ReadSGAComponents(ctx context.Context, reader Reader, request SGARequest) (SGAComponentsResult, error)
 func ReadSegments(ctx context.Context, reader Reader, request Request) (SegmentsResult, error)
 func ReadTablespaces(ctx context.Context, reader Reader, request Request) (TablespacesResult, error)
 func ReadTempFreeSpace(ctx context.Context, reader Reader, req TempFreeSpaceRequest) (TempFreeSpaceResult, error)
 func ReadTempfiles(ctx context.Context, reader Reader, request TempfileRequest) (TempfilesResult, error)
 func ReadTemporaryGroups(ctx context.Context, reader Reader, request Request) (TemporaryGroupsResult, error)
+func RecoveryAreaJSON(ctx context.Context, q rowset.Queryer, options RecoveryAreaOptions, limits rowset.Limits) (json.RawMessage, error)
+func RecoveryAreaRows(ctx context.Context, q rowset.Queryer, options RecoveryAreaOptions) (*sql.Rows, error)
+func RecoveryAreaStatement(options RecoveryAreaOptions) (string, error)
+func RecoveryAreaUsageJSON(ctx context.Context, q rowset.Queryer, options RecoveryAreaOptions, limits rowset.Limits) (json.RawMessage, error)
+func RecoveryAreaUsageRows(ctx context.Context, q rowset.Queryer, options RecoveryAreaOptions) (*sql.Rows, error)
+func RecoveryAreaUsageStatement(options RecoveryAreaOptions) (string, error)
 func SGAComponentsJSON(ctx context.Context, q rowset.Queryer, major int, filter InstanceFilter, limits rowset.Limits) (json.RawMessage, error)
 func SGAComponentsJSONWithOptions(ctx context.Context, q rowset.Queryer, options SGAComponentsOptions, limits rowset.Limits) (json.RawMessage, error)
 func SGAComponentsRows(ctx context.Context, q rowset.Queryer, major int, filter InstanceFilter) (*sql.Rows, error)

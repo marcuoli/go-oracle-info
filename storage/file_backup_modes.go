@@ -29,8 +29,8 @@ func FileBackupModesStatement(options FileHealthOptions) (string, error) {
 }
 
 func fileBackupModesPlan(options FileHealthOptions) (selection, error) {
-	p, err := fileHealthSelection(options, "GV$BACKUP", "visible_reporting_members", "v.INST_ID", []fileHealthField{
-		fileHealthRaw("STATUS"), fileHealthExact("v.CHANGE#", "START_SCN"), fileHealthDate("v.TIME", "START_TIME"),
+	p, err := fileHealthSelection(options, "GV$BACKUP", "visible_reporting_members", "v.INST_ID", []storageField{
+		storageRaw("STATUS"), storageExact("v.CHANGE#", "START_SCN"), storageDate("v.TIME", "START_TIME"),
 	})
 	if err != nil {
 		return selection{}, err
@@ -73,7 +73,7 @@ func ReadFileBackupModes(ctx context.Context, reader Reader, request FileHealthR
 	if err != nil {
 		return FileBackupModesResult{}, err
 	}
-	result, err := readFileHealth(ctx, reader, request, p)
+	result, err := readBoundedStorage(ctx, reader, request.Reference, request.Limits, p)
 	if err != nil {
 		return FileBackupModesResult{}, err
 	}

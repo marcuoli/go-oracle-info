@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add separate FRA, restore-point, incarnation, promotion-SCN, and time zone file observations (#152).
+
 ## v0.32.0 (2026-11-24)
 
 - Add independent control-file status, recovery, backup-mode, and datafile-header facts (#151).

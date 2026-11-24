@@ -29,8 +29,8 @@ func FileRecoveryStatement(options FileHealthOptions) (string, error) {
 }
 
 func fileRecoveryPlan(options FileHealthOptions) (selection, error) {
-	p, err := fileHealthSelection(options, "V$RECOVER_FILE", "visible_media_recovery", fileSourceInstanceSQL, []fileHealthField{
-		fileHealthRaw("ERROR"), fileHealthExact("v.CHANGE#", "RECOVERY_SCN"), fileHealthDate("v.TIME", "RECOVERY_TIME"),
+	p, err := fileHealthSelection(options, "V$RECOVER_FILE", "visible_media_recovery", fileSourceInstanceSQL, []storageField{
+		storageRaw("ERROR"), storageExact("v.CHANGE#", "RECOVERY_SCN"), storageDate("v.TIME", "RECOVERY_TIME"),
 	})
 	if err != nil {
 		return selection{}, err
@@ -73,7 +73,7 @@ func ReadFileRecovery(ctx context.Context, reader Reader, request FileHealthRequ
 	if err != nil {
 		return FileRecoveryResult{}, err
 	}
-	result, err := readFileHealth(ctx, reader, request, p)
+	result, err := readBoundedStorage(ctx, reader, request.Reference, request.Limits, p)
 	if err != nil {
 		return FileRecoveryResult{}, err
 	}

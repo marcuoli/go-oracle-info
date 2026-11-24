@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -261,41 +262,48 @@ type FileHealthIdentity struct {
 	SourceContainerID   *session.Value
 }
 
-type fileHealthField struct {
+type storageField struct {
 	name, expression string
 	kind             rowset.Kind
 	exactInteger     bool
 }
 
-func fileHealthRaw(name string) fileHealthField {
-	return fileHealthField{name: name, expression: "v." + name, kind: rowset.Text}
+func storageRaw(name string) storageField {
+	return storageField{name: name, expression: "v." + name, kind: rowset.Text}
 }
 
-func fileHealthExact(expr, name string) fileHealthField {
-	return fileHealthField{
-		name: name, expression: "TO_CHAR(" + expr + ", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')",
-		kind: rowset.Text, exactInteger: true,
-	}
+func storageNumber(expr, name string) storageField {
+	return storageField{name: name, expression: "TO_CHAR(" + expr + ", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')", kind: rowset.Text}
 }
 
-func fileHealthDate(expr, name string) fileHealthField {
-	return fileHealthField{name: name, expression: datetime.GregorianDate(expr), kind: rowset.Text}
+func storageExact(expr, name string) storageField {
+	f := storageNumber(expr, name)
+	f.exactInteger = true
+	return f
 }
 
-func fileHealthSelection(options FileHealthOptions, source, scope, reporter string, fields []fileHealthField) (selection, error) {
+func storageDate(expr, name string) storageField {
+	return storageField{name: name, expression: datetime.GregorianDate(expr), kind: rowset.Text}
+}
+
+func fileHealthSelection(options FileHealthOptions, source, scope, reporter string, fields []storageField) (selection, error) {
 	major, ok := oracleversion.LegacyFactMajor(options.OracleVersion)
 	if !ok {
 		return selection{}, ErrUnsupportedVersion
 	}
-	fields = append([]fileHealthField{
+	fields = append([]storageField{
 		{name: "FILE_ID", expression: "v.FILE#", kind: rowset.Integer},
 		{name: "INST_ID", expression: reporter, kind: rowset.Integer},
 	}, fields...)
+	return storageView(major, source, scope, fields), nil
+}
+
+func storageView(major int, source, scope string, fields []storageField) selection {
 	provenance := Provenance{Source: source, OracleMajor: major, Scope: scope}
 	if major >= 12 {
 		fields = append(fields,
-			fileHealthField{name: "CON_ID", expression: "v.CON_ID", kind: rowset.Integer},
-			fileHealthField{name: "SOURCE_CON_ID", expression: fileSourceContainerSQL, kind: rowset.Integer})
+			storageField{name: "CON_ID", expression: "v.CON_ID", kind: rowset.Integer},
+			storageField{name: "SOURCE_CON_ID", expression: fileSourceContainerSQL, kind: rowset.Integer})
 		provenance.OptionalColumns = []string{"CON_ID", "SOURCE_CON_ID"}
 	}
 	p := selection{provenance: provenance}
@@ -308,7 +316,7 @@ func fileHealthSelection(options FileHealthOptions, source, scope, reporter stri
 		}
 	}
 	p.sql = "SELECT " + strings.Join(expressions, ", ") + " FROM " + source + " v"
-	return p, nil
+	return p
 }
 
 func fileHealthOrder(p selection) string {
@@ -343,15 +351,15 @@ func fileHealthIdentity(row []session.Value, index map[string]int) FileHealthIde
 	}
 }
 
-func readFileHealth(ctx context.Context, reader Reader, request FileHealthRequest, p selection) (session.Result, error) {
+func readBoundedStorage(ctx context.Context, reader Reader, ref reference.Reference, bounds rowset.Limits, p selection) (session.Result, error) {
 	if !validFileSummaryReader(reader) {
 		return session.Result{}, ErrInvalidRequest
 	}
-	limits, err := rowset.Resolve(request.Limits)
+	limits, err := rowset.Resolve(bounds)
 	if err != nil {
 		return session.Result{}, err
 	}
-	result, err := query(ctx, reader, request.Reference, p)
+	result, err := query(ctx, reader, ref, p)
 	if err != nil {
 		return session.Result{}, err
 	}
@@ -367,4 +375,51 @@ func validFileHealthDate(v session.Value) bool {
 	}
 	_, err := time.Parse("2006-01-02T15:04:05", v.Text)
 	return err == nil && len(v.Text) == len("2006-01-02T15:04:05")
+}
+
+// RecoveryAreaOptions admits the caller-observed numeric database release.
+// Oracle determines visibility from the admitted connection and database state.
+type RecoveryAreaOptions struct {
+	OracleVersion string
+}
+
+// RecoveryAreaRequest supplies the caller's SQL reference and buffered bounds.
+type RecoveryAreaRequest struct {
+	Options   RecoveryAreaOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+
+func recoveryAreaMajor(options RecoveryAreaOptions) (int, error) {
+	major, ok := oracleversion.LegacyFactMajor(options.OracleVersion)
+	if !ok || major < 10 {
+		return 0, ErrUnsupportedVersion
+	}
+	return major, nil
+}
+
+func recoveryAreaSelection(major int, source string, fields []storageField) selection {
+	fields = append([]storageField{{name: "INST_ID", expression: fileSourceInstanceSQL, kind: rowset.Integer}}, fields...)
+	return storageView(major, source, "visible_recovery_area", fields)
+}
+
+func recoveryAreaIndex(result session.Result, p selection) (map[string]int, error) {
+	index, err := columns(result, p)
+	if err != nil {
+		return nil, err
+	}
+	if i, ok := index["SOURCE_CON_ID"]; ok {
+		for _, row := range result.Rows {
+			if row[i].Null {
+				return nil, &Error{p.provenance.Source, ErrInvalidEvidence}
+			}
+		}
+	}
+	return index, nil
+}
+
+var recoveryAreaPercent = regexp.MustCompile(`^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[Ee][+-]?[0-9]+)?$`)
+
+func validRecoveryAreaPercent(v session.Value) bool {
+	return v.Null || recoveryAreaPercent.MatchString(v.Text)
 }

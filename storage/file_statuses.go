@@ -29,10 +29,10 @@ func FileStatusesStatement(options FileHealthOptions) (string, error) {
 }
 
 func fileStatusesPlan(options FileHealthOptions) (selection, error) {
-	fields := []fileHealthField{
+	fields := []storageField{
 		{name: "FILE_TYPE", expression: "'DATAFILE'", kind: rowset.Text},
 		{name: "FILE_NAME", expression: "v.NAME", kind: rowset.Text},
-		fileHealthRaw("STATUS"),
+		storageRaw("STATUS"),
 	}
 	data, err := fileHealthSelection(options, "V$DATAFILE", "visible_controlfile", fileSourceInstanceSQL, fields)
 	if err != nil {
@@ -82,7 +82,7 @@ func ReadFileStatuses(ctx context.Context, reader Reader, request FileHealthRequ
 	if err != nil {
 		return FileStatusesResult{}, err
 	}
-	result, err := readFileHealth(ctx, reader, request, p)
+	result, err := readBoundedStorage(ctx, reader, request.Reference, request.Limits, p)
 	if err != nil {
 		return FileStatusesResult{}, err
 	}

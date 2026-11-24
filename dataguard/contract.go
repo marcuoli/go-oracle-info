@@ -230,6 +230,10 @@ func selectView(version string, filter Filter, source string, fields []field, wh
 	if !reviewedVersion(version) {
 		return selection{}, ErrUnsupportedVersion
 	}
+	return selectAdmittedView(version, filter, source, fields, where, order)
+}
+
+func selectAdmittedView(version string, filter Filter, source string, fields []field, where, order string) (selection, error) {
 	clause, args, err := instanceClause(filter.Instances)
 	if err != nil {
 		return selection{}, err
@@ -368,4 +372,44 @@ func readJSON(ctx context.Context, q rowset.Queryer, p selection, limits rowset.
 type ScopeOptions struct {
 	OracleVersion string
 	Filter        Filter
+}
+
+// RecoveryIdentityRequest supplies the observed release, caller reference and
+// buffered bounds for database incarnation and promotion evidence.
+type RecoveryIdentityRequest struct {
+	OracleVersion string
+	Reference     reference.Reference
+	Limits        rowset.Limits
+}
+
+func appendRecoveryContainer(fields []field) []field {
+	return append(fields, integer("CON_ID", "v.CON_ID"),
+		integer("SOURCE_CON_ID", "TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID'))"))
+}
+
+func recoveryOptional(row []session.Value, index map[string]int, name string) *session.Value {
+	i, ok := index[name]
+	if !ok {
+		return nil
+	}
+	value := row[i]
+	return &value
+}
+
+func readRecoveryIdentity(ctx context.Context, reader Reader, request RecoveryIdentityRequest, p selection) (session.Result, error) {
+	if !validDatasetReader(reader) {
+		return session.Result{}, ErrInvalidRequest
+	}
+	limits, err := rowset.Resolve(request.Limits)
+	if err != nil {
+		return session.Result{}, err
+	}
+	result, err := query(ctx, reader, request.Reference, p)
+	if err != nil {
+		return session.Result{}, err
+	}
+	if !projection.FitsBufferedLimits(result, limits) {
+		return session.Result{}, &Error{p.provenance.Source, errors.Join(rowset.ErrCapacity, ctx.Err())}
+	}
+	return result, nil
 }

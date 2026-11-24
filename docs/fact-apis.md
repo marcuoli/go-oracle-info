@@ -58,10 +58,10 @@ lists both forms and preserves the exact filter, version, and reference types.
 | --- | --- |
 | [alertlog](api-reference.md#alertlog) | `Counts`, `Entries` |
 | [asm](api-reference.md#asm) | `Clients` |
-| [backup](api-reference.md#backup) | `Jobs` |
+| [backup](api-reference.md#backup) | `Jobs`, `RestorePoints` |
 | [containers](api-reference.md#containers) | `Inventory`, [`PlugInViolations`](upgrade-readiness.md#recorded-pdb-plug-in-violations), `ResourceSamples`, `ResourceUsage`, `SavedStates` |
-| [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `SessionParameters`, `SessionParametersWithDefaults` |
-| [dataguard](api-reference.md#dataguard) | `ArchiveDestinationStatus`, `ArchiveDestinations`, `ArchiveGaps`, `ArchiveProgress`, `DatabaseContext`, `Lag`, `Processes`, `RecoveryProgress`, `StandbyLogs`, `Status` |
+| [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `SessionParameters`, `SessionParametersWithDefaults`, `TimeZoneFiles` |
+| [dataguard](api-reference.md#dataguard) | `ArchiveDestinationStatus`, `ArchiveDestinations`, `ArchiveGaps`, `ArchiveProgress`, `DatabaseContext`, `DatabaseIncarnations`, `Lag`, `Processes`, `RecoveryProgress`, `StandbyLogs`, `StandbyPromotionSCN`, `Status` |
 | [dblinks](api-reference.md#dblinks) | `Inventory` |
 | [directories](api-reference.md#directories) | `Inventory` |
 | [engineeredsystem/catalog](api-reference.md#engineeredsystemcatalog) | `Alerts`, `Cells`, `Configuration`, `ConnectedCells`, `Metadata`, `VisibleCellCount` |
@@ -83,7 +83,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [sequences](api-reference.md#sequences) | `Inventory` |
 | [services](api-reference.md#services) | `Definitions`, `Names` |
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
-| [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileBackupModes`, `FileHeaders`, `FileNames`, `FileRecovery`, `FileStatuses`, `FreeExtents`, `LongColumns`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
+| [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileBackupModes`, `FileHeaders`, `FileNames`, `FileRecovery`, `FileStatuses`, `FreeExtents`, `LongColumns`, `RecoveryArea`, `RecoveryAreaUsage`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
 | [triggers](api-reference.md#triggers) | `Inventory` |
 | [users](api-reference.md#users) | `AccountCount`, `Inventory`, `TableMetadata`, `TablespaceQuotas` |
 

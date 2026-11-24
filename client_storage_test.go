@@ -31,6 +31,12 @@ func TestStorageFacadeReturnsActualNativeRows(t *testing.T) {
 		{"tempfiles", "DBA_TEMP_FILES", func(c *info.Client) (*sql.Rows, error) {
 			return c.Tempfiles(t.Context(), info.TempfileOptions{IncludeLocal: true})
 		}},
+		{"recovery-area", "V$RECOVERY_FILE_DEST", func(c *info.Client) (*sql.Rows, error) { return c.RecoveryArea(t.Context()) }},
+		{"recovery-usage", "V$RECOVERY_AREA_USAGE", func(c *info.Client) (*sql.Rows, error) { return c.RecoveryAreaUsage(t.Context()) }},
+		{"restore-points", "V$RESTORE_POINT", func(c *info.Client) (*sql.Rows, error) { return c.RestorePoints(t.Context()) }},
+		{"incarnations", "V$DATABASE_INCARNATION", func(c *info.Client) (*sql.Rows, error) { return c.DatabaseIncarnations(t.Context()) }},
+		{"promotion", "V$DATABASE", func(c *info.Client) (*sql.Rows, error) { return c.StandbyPromotionSCN(t.Context()) }},
+		{"timezone", "V$TIMEZONE_FILE", func(c *info.Client) (*sql.Rows, error) { return c.TimeZoneFiles(t.Context()) }},
 		{"file-statuses", "V$DATAFILE", func(c *info.Client) (*sql.Rows, error) { return c.FileStatuses(t.Context()) }},
 		{"file-recovery", "V$RECOVER_FILE", func(c *info.Client) (*sql.Rows, error) { return c.FileRecovery(t.Context()) }},
 		{"file-backup-modes", "GV$BACKUP", func(c *info.Client) (*sql.Rows, error) { return c.FileBackupModes(t.Context()) }},
