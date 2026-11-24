@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read recorded PDB plug-in violations with exact nullable fields and release-aware container scope (#150).
+
 ## v0.31.0 (2026-11-24)
 
 - Add bounded CDB root PDB visibility, session location, and per-PDB CDB_USERS account selectors. (#149)

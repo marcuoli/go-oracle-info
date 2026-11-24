@@ -59,7 +59,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [alertlog](api-reference.md#alertlog) | `Counts`, `Entries` |
 | [asm](api-reference.md#asm) | `Clients` |
 | [backup](api-reference.md#backup) | `Jobs` |
-| [containers](api-reference.md#containers) | `Inventory`, `ResourceSamples`, `ResourceUsage`, `SavedStates` |
+| [containers](api-reference.md#containers) | `Inventory`, [`PlugInViolations`](upgrade-readiness.md#recorded-pdb-plug-in-violations), `ResourceSamples`, `ResourceUsage`, `SavedStates` |
 | [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `SessionParameters`, `SessionParametersWithDefaults` |
 | [dataguard](api-reference.md#dataguard) | `ArchiveDestinationStatus`, `ArchiveDestinations`, `ArchiveGaps`, `ArchiveProgress`, `DatabaseContext`, `Lag`, `Processes`, `RecoveryProgress`, `StandbyLogs`, `Status` |
 | [dblinks](api-reference.md#dblinks) | `Inventory` |
