@@ -3545,6 +3545,36 @@ type ObjectInventoryRow struct {
 	Status session.Value
 	Count  session.Value
 }
+type ObjectStatusKey struct {
+	Owner         string         `json:"owner"`
+	ObjectType    string         `json:"object_type"`
+	ObjectName    string         `json:"object_name"`
+	SubobjectName *session.Value `json:"subobject_name,omitempty"`
+}
+type ObjectStatusOptions struct {
+	OracleRelease string
+	Keys          []ObjectStatusKey
+}
+type ObjectStatusProvenance struct {
+	Source        string            `json:"source"`
+	OracleRelease string            `json:"oracle_release"`
+	Scope         string            `json:"scope"`
+	Keys          []ObjectStatusKey `json:"keys"`
+	Complete      bool              `json:"complete"`
+}
+type ObjectStatusRequest struct {
+	Options   ObjectStatusOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ObjectStatusResult struct {
+	Provenance ObjectStatusProvenance
+	Rows       []ObjectStatusRow
+}
+type ObjectStatusRow struct {
+	Owner, ObjectType, ObjectName, SubobjectName, Status session.Value
+	EditionName                                          *session.Value
+}
 type ObjectTotalsOptions struct {
 	OracleMajor int
 	Owner       string
@@ -3707,6 +3737,7 @@ func DecodeInvalidDetails(result session.Result, major int, owners ...string) (I
 func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error)
 func DecodeInvalidObjects(result session.Result, options InvalidObjectsOptions) (InvalidObjectsResult, error)
 func DecodeObjectInventory(result session.Result, options ObjectInventoryOptions) (ObjectInventoryResult, error)
+func DecodeObjectStatus(result session.Result, options ObjectStatusOptions) (ObjectStatusResult, error)
 func DecodeObjectTotals(result session.Result, options ObjectTotalsOptions) (ObjectTotalsResult, error)
 func DecodeOldestStatistics(result session.Result, options StatisticsOptions, owners ...string) (OldestStatisticsResult, error)
 func DecodeOldestStatisticsWithOptions(result session.Result, options OldestStatisticsOptions) (OldestStatisticsResult, error)
@@ -3731,6 +3762,9 @@ func InventoryStatement(owners ...string) (string, []any)
 func ObjectInventoryJSON(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func ObjectInventoryRows(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions) (*sql.Rows, error)
 func ObjectInventoryStatement(options ObjectInventoryOptions) (string, []any, error)
+func ObjectStatusJSON(ctx context.Context, q rowset.Queryer, options ObjectStatusOptions, limits rowset.Limits) (json.RawMessage, error)
+func ObjectStatusRows(ctx context.Context, q rowset.Queryer, options ObjectStatusOptions) (*sql.Rows, error)
+func ObjectStatusStatement(options ObjectStatusOptions) (string, []any, error)
 func ObjectTotalsJSON(ctx context.Context, q rowset.Queryer, options ObjectTotalsOptions, limits rowset.Limits) (json.RawMessage, error)
 func ObjectTotalsRows(ctx context.Context, q rowset.Queryer, options ObjectTotalsOptions) (*sql.Rows, error)
 func ObjectTotalsStatement(options ObjectTotalsOptions) (string, []any, error)
@@ -3744,6 +3778,7 @@ func QuoteIdentifier(value string) (string, error)
 func ReadInvalidDetails(ctx context.Context, reader Reader, request InvalidDetailsRequest) (InvalidDetailsResult, error)
 func ReadInvalidObjects(ctx context.Context, reader Reader, request InvalidObjectsRequest) (InvalidObjectsResult, error)
 func ReadObjectInventory(ctx context.Context, reader Reader, request ObjectInventoryRequest) (ObjectInventoryResult, error)
+func ReadObjectStatus(ctx context.Context, reader Reader, request ObjectStatusRequest) (ObjectStatusResult, error)
 func ReadObjectTotals(ctx context.Context, reader Reader, request ObjectTotalsRequest) (ObjectTotalsResult, error)
 func ReadOldestStatistics(ctx context.Context, reader Reader, request OldestStatisticsRequest) (OldestStatisticsResult, error)
 func ReadSchema(ctx context.Context, reader Reader, request SchemaRequest) (SchemaResult, error)
@@ -3783,6 +3818,7 @@ func (e *ReadError) Unwrap() error
 
 ### Constants
 
+- `MaxObjectStatusKeys`
 - `MaxParallelDegree`
 - `MaxStatisticsOwners`
 - `MaxStatisticsRows`

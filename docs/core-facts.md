@@ -116,3 +116,45 @@ RAC remain unqualified for the new projections until separately evidenced.
 The linked page/view names are the current identifiers; no MOS article content or
 identifier migration was verified. Existing registry selection references remain
 in [edition/version/registry contracts](edition-version-registry.md).
+
+## Exact-key object status (#145)
+
+`objects.ReadObjectStatus` and its Statement, Decode, Rows and JSON companions
+select raw `STATUS` for one batch of 1 to 100 exact owner, type and object
+name keys from `DBA_OBJECTS`. The caller supplies the observed numeric release,
+reference, admitted reader or native handle and finite limits as applicable.
+The selector binds every key value. Its semijoin avoids duplicating dictionary
+rows when overlapping inputs match the same object. Native Rows leaves cursor
+iteration and close to the caller. Read and JSON return no successful prefix
+after access, cancellation, budget, cursor or validation failure.
+
+A nil key `SubobjectName` leaves subobject identity unobserved and admits any
+matching candidate under that triple. A nonnil SQL NULL selects rows with a NULL subobject name.
+A nonnil name selects the exact subobject. The result preserves duplicate rows,
+raw status and SQL NULL. An unmatched key has no result row. A unique row
+describes only its admitted container and current-edition visibility.
+
+The existing invalid-detail selector keeps its original projection. It cannot
+attest a source subobject or edition. A consumer using that evidence can
+request the triple and inspect all candidates. It needs independently matched
+source identity for a named subobject or cross-edition inference. Oracle's
+`EDITION_NAME` identifies the edition in which the object is actual.
+[Oracle edition visibility](https://docs.oracle.com/en/database/oracle/oracle-database/26/adfns/editions.html)
+
+| Numeric release | Oracle reference and projection | Static | Native SQL | SDK driver |
+| --- | --- | --- | --- | --- |
+| 9.2, 10.1, 10.2 | Unsupported before the invalid-detail comparison floor | Pass | No execution | No execution |
+| 11.1 | [11.1 ALL_OBJECTS](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_1145.htm) documents the five base columns. Edition is reserved and omitted. [11.1 SELECT grammar](https://docs.oracle.com/cd/B28359_01/server.111/b28286/img_text/subquery_factoring_clause.htm) uses aliases inside the factored SELECT. | Pass | Unqualified | Unqualified |
+| 11.2 | [11.2 ALL_OBJECTS](https://docs.oracle.com/cd/E18283_01/server.112/e17110/statviews_1155.htm) documents the six columns including edition. | Pass | Unqualified | Unqualified |
+| 12.1.0.1, 12.1.0.2, 12.2.0.1 | Six columns in [12.1](https://docs.oracle.com/database/121/REFRN/GUID-AA6DEF8B-F04F-482A-8440-DBCB18F6C976.htm) and [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/ALL_OBJECTS.html). | Pass | Unqualified | Unqualified |
+| 18c, 19c, 21c | Six columns in [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/ALL_OBJECTS.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/ALL_OBJECTS.html), and [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/ALL_OBJECTS.html). | Pass | Unqualified | Unqualified |
+| 23c/23ai | Numeric 23 projection. The live 23 reference redirects to 26ai. | Pass | Unqualified | Unqualified |
+| 26ai, 23.26.1.0.0 | [26ai ALL_OBJECTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/ALL_OBJECTS.html), same six columns. | Pass | Exact SQL and direct comparison passed in SYSDBA CDB roots, OPEN READ WRITE and OPEN READ ONLY WITH APPLY. | Go 1.27.4 and go-oracle-session v0.23.0 V2 buffered read passed on both roots. |
+
+Both native roots returned one `VALID` row for the same 100-key, 398-bind
+batch. The exact SQL NULL subobject matched and the case and named subobject
+nonmatches produced successful empty results. Fixture tests exercise distinct
+edition candidates, duplicates, malformed metadata, SQL NULL and other status
+text. Native positive named subobjects, edition ambiguity, Rows and JSON,
+PDB, non-CDB, MOUNT, other accounts and other RUs remain unqualified.
+Oracle references checked 2026-11-23.
