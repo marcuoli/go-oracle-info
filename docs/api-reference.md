@@ -96,6 +96,8 @@ func New(queryer Queryer) *Client
 ~~~go
 func (c *Client) ASMClients(ctx context.Context, filter ASMClientFilter) (*sql.Rows, error)
 func (c *Client) ASMClientsJSON(ctx context.Context, filter ASMClientFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) ActiveServices(ctx context.Context) (*sql.Rows, error)
+func (c *Client) ActiveServicesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Architecture(ctx context.Context) (identity.ArchitectureObservation, error)
 func (c *Client) ArchivedLogs(ctx context.Context, filter RedoHistoryFilter) (*sql.Rows, error)
 func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter, limits ...JSONLimits) (json.RawMessage, error)
@@ -205,6 +207,8 @@ func (c *Client) MetadataDDL(ctx context.Context, options MetadataOptions) (*sql
 func (c *Client) MetadataDDLJSON(ctx context.Context, options MetadataOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) NetworkACL(ctx context.Context, dataset networkacl.Dataset) (*sql.Rows, error)
 func (c *Client) NetworkACLJSON(ctx context.Context, dataset networkacl.Dataset, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) ObjectIdentities(ctx context.Context, owners []string) (*sql.Rows, error)
+func (c *Client) ObjectIdentitiesJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) OracleHome(ctx context.Context) (identity.OracleHomeObservation, error)
 func (c *Client) OracleHomeJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) OracleHomeRows(ctx context.Context) (*sql.Rows, error)
@@ -227,6 +231,8 @@ func (c *Client) RedoHistory(ctx context.Context, filter RedoHistoryFilter) (*sq
 func (c *Client) RedoHistoryJSON(ctx context.Context, filter RedoHistoryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoMembers(ctx context.Context, filter RedoFilter) (*sql.Rows, error)
 func (c *Client) RedoMembersJSON(ctx context.Context, filter RedoFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RedoThreads(ctx context.Context, databaseRole string) (*sql.Rows, error)
+func (c *Client) RedoThreadsJSON(ctx context.Context, databaseRole string, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RestorePoints(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RestorePointsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RoleObjectGrants(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -3696,6 +3702,23 @@ type MaterializedViewsResult struct {
 	Provenance DatasetProvenance
 	Rows       []MaterializedView
 }
+type ObjectIdentitiesOptions struct {
+	OracleVersion string
+	Owners        []string
+}
+type ObjectIdentitiesRequest struct {
+	Options   ObjectIdentitiesOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ObjectIdentitiesResult struct {
+	Provenance DatasetProvenance
+	Rows       []ObjectIdentity
+}
+type ObjectIdentity struct {
+	Owner, Name, SubobjectName, ObjectType, ObjectID session.Value
+	EditionName, SourceContainerID                   *session.Value
+}
 type ObjectInventoryOptions struct {
 	OracleMajor int
 	Owners      []string
@@ -3921,6 +3944,7 @@ func DecodeInvalidDetails(result session.Result, major int, owners ...string) (I
 func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error)
 func DecodeInvalidObjects(result session.Result, options InvalidObjectsOptions) (InvalidObjectsResult, error)
 func DecodeMaterializedViews(result session.Result, options MaterializedViewsOptions) (MaterializedViewsResult, error)
+func DecodeObjectIdentities(result session.Result, options ObjectIdentitiesOptions) (ObjectIdentitiesResult, error)
 func DecodeObjectInventory(result session.Result, options ObjectInventoryOptions) (ObjectInventoryResult, error)
 func DecodeObjectStatus(result session.Result, options ObjectStatusOptions) (ObjectStatusResult, error)
 func DecodeObjectTotals(result session.Result, options ObjectTotalsOptions) (ObjectTotalsResult, error)
@@ -3948,6 +3972,9 @@ func InventoryStatement(owners ...string) (string, []any)
 func MaterializedViewsJSON(ctx context.Context, q rowset.Queryer, options MaterializedViewsOptions, limits rowset.Limits) (json.RawMessage, error)
 func MaterializedViewsRows(ctx context.Context, q rowset.Queryer, options MaterializedViewsOptions) (*sql.Rows, error)
 func MaterializedViewsStatement(options MaterializedViewsOptions) (string, error)
+func ObjectIdentitiesJSON(ctx context.Context, q rowset.Queryer, options ObjectIdentitiesOptions, limits rowset.Limits) (json.RawMessage, error)
+func ObjectIdentitiesRows(ctx context.Context, q rowset.Queryer, options ObjectIdentitiesOptions) (*sql.Rows, error)
+func ObjectIdentitiesStatement(options ObjectIdentitiesOptions) (string, []any, error)
 func ObjectInventoryJSON(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func ObjectInventoryRows(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions) (*sql.Rows, error)
 func ObjectInventoryStatement(options ObjectInventoryOptions) (string, []any, error)
@@ -3967,6 +3994,7 @@ func QuoteIdentifier(value string) (string, error)
 func ReadInvalidDetails(ctx context.Context, reader Reader, request InvalidDetailsRequest) (InvalidDetailsResult, error)
 func ReadInvalidObjects(ctx context.Context, reader Reader, request InvalidObjectsRequest) (InvalidObjectsResult, error)
 func ReadMaterializedViews(ctx context.Context, reader Reader, request MaterializedViewsRequest) (MaterializedViewsResult, error)
+func ReadObjectIdentities(ctx context.Context, reader Reader, request ObjectIdentitiesRequest) (ObjectIdentitiesResult, error)
 func ReadObjectInventory(ctx context.Context, reader Reader, request ObjectInventoryRequest) (ObjectInventoryResult, error)
 func ReadObjectStatus(ctx context.Context, reader Reader, request ObjectStatusRequest) (ObjectStatusResult, error)
 func ReadObjectTotals(ctx context.Context, reader Reader, request ObjectTotalsRequest) (ObjectTotalsResult, error)
@@ -4986,6 +5014,23 @@ type Request struct {
 	Filter      Filter
 	Reference   reference.Reference
 }
+type Thread struct {
+	ThreadNumber, Status, Enabled, InstanceName, SourceInstanceID session.Value
+	ContainerID, SourceContainerID                                *session.Value
+}
+type ThreadsOptions struct {
+	OracleVersion string
+	DatabaseRole  string
+}
+type ThreadsRequest struct {
+	Options   ThreadsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ThreadsResult struct {
+	Provenance Provenance
+	Rows       []Thread
+}
 ~~~
 
 ### Functions
@@ -5009,6 +5054,7 @@ func DecodeHistory(result session.Result, major int, filter HistoryFilter) (Hist
 func DecodeHistoryWithOptions(result session.Result, options HistoryOptions) (HistoryResult, error)
 func DecodeMembers(result session.Result, major int, filter Filter) (MembersResult, error)
 func DecodeMembersWithOptions(result session.Result, options LogOptions) (MembersResult, error)
+func DecodeThreads(result session.Result, options ThreadsOptions) (ThreadsResult, error)
 func GroupsJSON(ctx context.Context, q rowset.Queryer, major int, filter Filter, limits rowset.Limits) (json.RawMessage, error)
 func GroupsJSONWithOptions(ctx context.Context, q rowset.Queryer, options LogOptions, limits rowset.Limits) (json.RawMessage, error)
 func GroupsRows(ctx context.Context, q rowset.Queryer, major int, filter Filter) (*sql.Rows, error)
@@ -5032,6 +5078,10 @@ func ReadClock(ctx context.Context, reader Reader, request Request) (ClockResult
 func ReadGroups(ctx context.Context, reader Reader, request Request) (GroupsResult, error)
 func ReadHistory(ctx context.Context, reader Reader, request HistoryRequest) (HistoryResult, error)
 func ReadMembers(ctx context.Context, reader Reader, request Request) (MembersResult, error)
+func ReadThreads(ctx context.Context, reader Reader, request ThreadsRequest) (ThreadsResult, error)
+func ThreadsJSON(ctx context.Context, q rowset.Queryer, options ThreadsOptions, limits rowset.Limits) (json.RawMessage, error)
+func ThreadsRows(ctx context.Context, q rowset.Queryer, options ThreadsOptions) (*sql.Rows, error)
+func ThreadsStatement(options ThreadsOptions) (string, error)
 ~~~
 
 ### Methods
@@ -5045,6 +5095,7 @@ func (e *Error) Unwrap() error
 
 - `ErrInvalidEvidence`
 - `ErrInvalidRequest`
+- `ErrUnsupportedScope`
 - `ErrUnsupportedVersion`
 
 ## registry
@@ -5520,6 +5571,20 @@ func (e *Error) Unwrap() error
 ### Types
 
 ~~~go
+type ActiveService struct {
+	InstanceID, Name, NetworkName  session.Value
+	ContainerID, SourceContainerID *session.Value
+}
+type ActiveServicesOptions struct{ OracleVersion string }
+type ActiveServicesRequest struct {
+	Options   ActiveServicesOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ActiveServicesResult struct {
+	Provenance DatasetProvenance
+	Rows       []ActiveService
+}
 type DatasetError struct {
 	Source string
 
@@ -5594,7 +5659,11 @@ type ServiceNameRow struct{ Name session.Value }
 ### Functions
 
 ~~~go
+func ActiveServicesJSON(ctx context.Context, q rowset.Queryer, options ActiveServicesOptions, limits rowset.Limits) (json.RawMessage, error)
+func ActiveServicesRows(ctx context.Context, q rowset.Queryer, options ActiveServicesOptions) (*sql.Rows, error)
+func ActiveServicesStatement(options ActiveServicesOptions) (string, error)
 func Decode(result session.Result, major int, includeEdition ...bool) (Result, error)
+func DecodeActiveServices(result session.Result, options ActiveServicesOptions) (ActiveServicesResult, error)
 func DecodeDefinitions(result session.Result, options DefinitionsOptions) (Result, error)
 func DecodeNames(result session.Result, options NamesOptions) (NamesResult, error)
 func DefinitionsJSON(ctx context.Context, q rowset.Queryer, options DefinitionsOptions, limits rowset.Limits) (json.RawMessage, error)
@@ -5605,6 +5674,7 @@ func NamesJSON(ctx context.Context, q rowset.Queryer, options NamesOptions, limi
 func NamesRows(ctx context.Context, q rowset.Queryer, options NamesOptions) (*sql.Rows, error)
 func NamesStatement(options NamesOptions) (string, []any, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
+func ReadActiveServices(ctx context.Context, reader Reader, request ActiveServicesRequest) (ActiveServicesResult, error)
 func ReadDefinitions(ctx context.Context, reader Reader, request DefinitionsRequest) (Result, error)
 func ReadNames(ctx context.Context, reader Reader, request NamesRequest) (NamesResult, error)
 func Rows(ctx context.Context, q rowset.Queryer, major int, includeEdition ...bool) (*sql.Rows, error)
