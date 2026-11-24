@@ -90,7 +90,9 @@ func factReadError(ctx context.Context, err error) error {
 	return nil
 }
 
-const statisticsColumns = "SELECT TABLE_NAME, TO_CHAR(NUM_ROWS, 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS ROW_COUNT, TO_CHAR(LAST_ANALYZED, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN') AS LAST_ANALYZED"
+const statisticsColumns = "SELECT TABLE_NAME, " + statisticsValues
+
+const statisticsValues = "TO_CHAR(NUM_ROWS, 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS ROW_COUNT, TO_CHAR(LAST_ANALYZED, 'YYYY-MM-DD\"T\"HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN') AS LAST_ANALYZED"
 
 // DatasetProvenance records the admitted source, numeric release and visibility.
 // Complete is selected-transport completion, never physical RAC, history or

@@ -4062,6 +4062,25 @@ type StatisticsOptions struct {
 	Limit                     int
 	OracleMaintainedAvailable bool
 }
+type SubobjectStatisticsOptions struct {
+	OracleMajor int
+	Owner       string
+}
+type SubobjectStatisticsRequest struct {
+	Options   SubobjectStatisticsOptions
+	Reference reference.Reference
+}
+type SubobjectStatisticsResult struct {
+	Provenance DatasetProvenance
+	Rows       []SubobjectStatisticsRow
+}
+type SubobjectStatisticsRow struct {
+	Name          session.Value
+	Partition     session.Value
+	Subpartition  session.Value
+	EstimatedRows session.Value
+	LastAnalyzed  session.Value
+}
 type TableCountOptions struct {
 	OracleMajor    int
 	Owner          string
@@ -4160,6 +4179,7 @@ type TimeZoneColumnsResult struct {
 ~~~go
 func CountStatement(owner, table string) (string, error)
 func CountStatementWithOptions(owner, table string, options CountOptions) (string, error)
+func CountSubobjectStatement(owner, table, partition, subpartition string, options CountOptions) (string, error)
 func DecodeInvalidDetails(result session.Result, major int, owners ...string) (InvalidDetailsResult, error)
 func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error)
 func DecodeInvalidObjects(result session.Result, options InvalidObjectsOptions) (InvalidObjectsResult, error)
@@ -4173,6 +4193,7 @@ func DecodeOldestStatisticsWithOptions(result session.Result, options OldestStat
 func DecodeRecycleBinCounts(result session.Result, options RecycleBinCountsOptions) (RecycleBinCountsResult, error)
 func DecodeSchema(result session.Result, options SchemaOptions) (SchemaResult, error)
 func DecodeStatistics(result session.Result, major, limit int) ([]Statistics, error)
+func DecodeSubobjectStatistics(result session.Result, options SubobjectStatisticsOptions) (SubobjectStatisticsResult, error)
 func DecodeTable(result session.Result, options TableOptions) (TableResult, error)
 func DecodeTableCount(result session.Result, options TableCountOptions) (TableCountResult, error)
 func DecodeTableStatistics(result session.Result, options TableStatisticsOptions) (TableStatisticsResult, error)
@@ -4222,6 +4243,7 @@ func ReadObjectTotals(ctx context.Context, reader Reader, request ObjectTotalsRe
 func ReadOldestStatistics(ctx context.Context, reader Reader, request OldestStatisticsRequest) (OldestStatisticsResult, error)
 func ReadRecycleBinCounts(ctx context.Context, reader Reader, request RecycleBinCountsRequest) (RecycleBinCountsResult, error)
 func ReadSchema(ctx context.Context, reader Reader, request SchemaRequest) (SchemaResult, error)
+func ReadSubobjectStatistics(ctx context.Context, reader Reader, request SubobjectStatisticsRequest) (SubobjectStatisticsResult, error)
 func ReadTable(ctx context.Context, reader Reader, request TableRequest) (TableResult, error)
 func ReadTableCount(ctx context.Context, reader Reader, request TableCountRequest) (TableCountResult, error)
 func ReadTableStatistics(ctx context.Context, reader Reader, request TableStatisticsRequest) (TableStatisticsResult, error)
@@ -4234,6 +4256,9 @@ func RecycleBinCountsStatement(options RecycleBinCountsOptions) (string, error)
 func SchemaJSON(ctx context.Context, q rowset.Queryer, options SchemaOptions, limits rowset.Limits) (json.RawMessage, error)
 func SchemaRows(ctx context.Context, q rowset.Queryer, options SchemaOptions) (*sql.Rows, error)
 func SchemaStatement(options SchemaOptions) (string, []any, error)
+func SubobjectStatisticsJSON(ctx context.Context, q rowset.Queryer, options SubobjectStatisticsOptions, limits rowset.Limits) (json.RawMessage, error)
+func SubobjectStatisticsRows(ctx context.Context, q rowset.Queryer, options SubobjectStatisticsOptions) (*sql.Rows, error)
+func SubobjectStatisticsStatement(options SubobjectStatisticsOptions) (string, []any, error)
 func TableCountJSON(ctx context.Context, q rowset.Queryer, options TableCountOptions, limits rowset.Limits) (json.RawMessage, error)
 func TableCountRows(ctx context.Context, q rowset.Queryer, options TableCountOptions) (*sql.Rows, error)
 func TableCountStatement(options TableCountOptions) (string, []any, error)

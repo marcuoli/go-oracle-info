@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.41.0 (2026-11-24)
+
+- Add exact-owner optimizer statistics and exact count statement builders for table partitions and subpartitions (#190).
+
 ## v0.40.0 (2026-11-24)
 
 - Inventory declared columns using either Oracle time-zone-aware TIMESTAMP type, preserving exact metadata and observed container scope (#191).
