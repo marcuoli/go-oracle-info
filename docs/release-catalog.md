@@ -1,10 +1,16 @@
 # Oracle release and patch catalog
 
 `releases.Load(releases.Database)`, `releases.Load(releases.Exadata)`,
-`releases.Load(releases.ODA)`, and `releases.Load(releases.SuperCluster)` read the snapshots bundled in
-[`releases/data`](../releases/data). All catalog JSON files live in that
-directory. The loader reads embedded data and does not open a database
-connection, query Oracle Support, or select an upgrade target.
+`releases.Load(releases.ODA)`, and `releases.Load(releases.SuperCluster)` read
+the four product snapshots bundled in [`releases/data`](../releases/data).
+The loader reads embedded data and does not open a database connection, query
+Oracle Support, or select an upgrade target.
+
+`gold-images.json`, `autoupgrade-archive.json`, and the reviewed recommendation
+snapshot are caller-supplied private datasets. The preparation commands write
+them to a private output directory.
+[Gold Images and AutoUpgrade](patch-tools.md#prepare-a-local-review-input)
+[Patch recommendations](#prepare-the-private-snapshot)
 
 ## Evidence and scope
 
@@ -33,8 +39,10 @@ connection, query Oracle Support, or select an upgrade target.
 - **SuperCluster:** Oracle Support KB117594 supplies the QFSDP bundle table,
   including final bundle Q1 2026 (patch 38658593). Its `full-stack` observations
   retain Oracle's quarter or month label and use artifact scope for model labels
-  in the Platform Firmware column. Release dates use only explicitly documented
-  release or reissue dates. Hardware support end dates are tracked separately in
+  in the Platform Firmware column. Release dates use explicitly documented dates
+  in KB117594 or exact QFSDP patch matches in proactive patch notes. Each
+  supplemental date retains its corroborating document IDs. Hardware support
+  end dates are tracked separately in
   PNEWS2744. The original imported observations retain their associated Database
   release levels and sources. The November 24, 2026 capture displays legacy Doc ID
   1569461.1 for KB117594. An earlier Oracle guide cites Doc ID 2056975.1 for the

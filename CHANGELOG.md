@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Record 36 SuperCluster QFSDP dates from the refreshed Oracle Support proactive patch notes (#170).
 - Add 55 Oracle Support SuperCluster QFSDP observations with hardware model scope and documented release dates, including the final Q1 2026 bundle (#167).
 - Add separate FRA, restore-point, incarnation, promotion-SCN, and time zone file observations (#152).
 
