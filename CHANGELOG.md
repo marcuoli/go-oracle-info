@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document the TDE keystore collection boundary and the requirements for importing dated status evidence (#166).
+
 ## v0.38.0 (2026-11-24)
 
 - Add release-aware ASM disk-group capacity from the local STAT view, with exact MB values, explicit database or ASM scope, and native rows and bounded JSON APIs (#156).
