@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.32.0 (2026-11-24)
+
 - Add independent control-file status, recovery, backup-mode, and datafile-header facts (#151).
 
 - Refresh Oracle Database and Exadata patch metadata from the November 24 MOS captures. Add confirmed numbers and dates for 27 Oracle 11.2.0.4 Grid Infrastructure PSUs (#160).
