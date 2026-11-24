@@ -45,6 +45,7 @@ type Request struct {
 type Provenance struct {
 	Source      string   `json:"source"`
 	OracleMajor int      `json:"oracle_major"`
+	ContainerID int      `json:"container_id,omitempty"`
 	Scope       string   `json:"scope"`
 	Owners      []string `json:"owners,omitempty"`
 	Names       []string `json:"names,omitempty"`
