@@ -105,6 +105,8 @@ The three #154 families have a separate [release and qualification matrix](upgra
 
 The #155 dictionary observations have a separate [release and qualification matrix](upgrade-readiness.md#connected-dictionary-and-root-rollups).
 
+#156 adds a separate [ASM disk-group capacity matrix](redo-storage-asm.md#asm-disk-group-capacity).
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen
