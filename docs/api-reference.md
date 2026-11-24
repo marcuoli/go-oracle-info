@@ -535,7 +535,37 @@ type InventoryResult struct {
 	Provenance Provenance
 	Rows       []Container
 }
+type Location struct {
+	Name        session.Value
+	ContainerID session.Value
+	InstanceID  session.Value
+}
 type Outcome string
+type PlugInViolation struct {
+	Time        session.Value
+	Name        session.Value
+	Cause       session.Value
+	Type        session.Value
+	ErrorNumber session.Value
+	Line        session.Value
+	Message     session.Value
+	Status      session.Value
+	Action      session.Value
+	ContainerID *session.Value
+}
+type PlugInViolationsOptions struct {
+	OracleVersion string
+	Scope         Scope
+}
+type PlugInViolationsRequest struct {
+	Options   PlugInViolationsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type PlugInViolationsResult struct {
+	Provenance Provenance
+	Rows       []PlugInViolation
+}
 type Provenance struct {
 	Source          string   `json:"source"`
 	OracleVersion   string   `json:"oracle_version"`
@@ -617,22 +647,37 @@ type SavedStatesResult struct {
 	Rows       []SavedState
 }
 type Scope string
+type VisiblePDB struct {
+	ContainerID session.Value
+	Name        session.Value
+	OpenMode    session.Value
+	InstanceID  session.Value
+}
 ~~~
 
 ### Functions
 
 ~~~go
 func DecodeInventory(result session.Result, options InventoryOptions) (InventoryResult, error)
+func DecodePlugInViolations(result session.Result, options PlugInViolationsOptions) (PlugInViolationsResult, error)
 func DecodeResourceSamples(result session.Result, options ResourceOptions) (ResourceSamplesResult, error)
 func DecodeResourceUsage(result session.Result, options ResourceOptions) (ResourceUsageResult, error)
 func DecodeSavedStates(result session.Result, options SavedStatesOptions) (SavedStatesResult, error)
+func DecodeSessionLocation(result session.Result, version string) ([]Location, error)
+func DecodeVisiblePDBs(result session.Result, version string) ([]VisiblePDB, error)
 func InventoryJSON(ctx context.Context, q rowset.Queryer, options InventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func InventoryRows(ctx context.Context, q rowset.Queryer, options InventoryOptions) (*sql.Rows, error)
 func InventoryStatement(options InventoryOptions) (string, error)
+func PlugInViolationsJSON(ctx context.Context, q rowset.Queryer, options PlugInViolationsOptions, limits rowset.Limits) (json.RawMessage, error)
+func PlugInViolationsRows(ctx context.Context, q rowset.Queryer, options PlugInViolationsOptions) (*sql.Rows, error)
+func PlugInViolationsStatement(options PlugInViolationsOptions) (string, error)
 func ReadInventory(ctx context.Context, reader Reader, request InventoryRequest) (InventoryResult, error)
+func ReadPlugInViolations(ctx context.Context, reader Reader, request PlugInViolationsRequest) (PlugInViolationsResult, error)
 func ReadResourceSamples(ctx context.Context, reader Reader, request ResourceSamplesRequest) (ResourceSamplesResult, error)
 func ReadResourceUsage(ctx context.Context, reader Reader, request ResourceUsageRequest) (ResourceUsageResult, error)
 func ReadSavedStates(ctx context.Context, reader Reader, request SavedStatesRequest) (SavedStatesResult, error)
+func ReadSessionLocation(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]Location, error)
+func ReadVisiblePDBs(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]VisiblePDB, error)
 func ResourceSamplesJSON(ctx context.Context, q rowset.Queryer, options ResourceOptions, limits rowset.Limits) (json.RawMessage, error)
 func ResourceSamplesRows(ctx context.Context, q rowset.Queryer, options ResourceOptions) (*sql.Rows, error)
 func ResourceSamplesStatement(options ResourceOptions) (string, error)
@@ -642,6 +687,12 @@ func ResourceUsageStatement(options ResourceOptions) (string, error)
 func SavedStatesJSON(ctx context.Context, q rowset.Queryer, options SavedStatesOptions, limits rowset.Limits) (json.RawMessage, error)
 func SavedStatesRows(ctx context.Context, q rowset.Queryer, options SavedStatesOptions) (*sql.Rows, error)
 func SavedStatesStatement(options SavedStatesOptions) (string, error)
+func SessionLocationJSON(ctx context.Context, q rowset.Queryer, version string, limits rowset.Limits) (json.RawMessage, error)
+func SessionLocationRows(ctx context.Context, q rowset.Queryer, version string) (*sql.Rows, error)
+func SessionLocationStatement(version string) (string, error)
+func VisiblePDBsJSON(ctx context.Context, q rowset.Queryer, version string, limits rowset.Limits) (json.RawMessage, error)
+func VisiblePDBsRows(ctx context.Context, q rowset.Queryer, version string) (*sql.Rows, error)
+func VisiblePDBsStatement(version string) (string, error)
 ~~~
 
 ### Methods
@@ -5926,9 +5977,23 @@ type Options struct {
 	Owners      []string
 	Names       []string
 }
+type PDBAccount struct {
+	Username         session.Value
+	OracleMaintained session.Value
+}
+type PDBAccountsOptions struct {
+	OracleVersion string
+	ContainerID   int
+}
+type PDBAccountsRequest struct {
+	Options   PDBAccountsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
 type Provenance struct {
 	Source      string   `json:"source"`
 	OracleMajor int      `json:"oracle_major"`
+	ContainerID int      `json:"container_id,omitempty"`
 	Scope       string   `json:"scope"`
 	Owners      []string `json:"owners,omitempty"`
 	Names       []string `json:"names,omitempty"`
@@ -6011,6 +6076,7 @@ func AccountCountStatement(options Options) (string, []any, error)
 func Decode(result session.Result, options Options) (Result, error)
 func DecodeAccountCount(result session.Result, options Options) (AccountCountResult, error)
 func DecodeInventory(result session.Result, options Options) (Result, error)
+func DecodePDBAccounts(result session.Result, options PDBAccountsOptions) ([]PDBAccount, error)
 func DecodeTableMetadata(result session.Result, options Options) (TableMetadataResult, error)
 func DecodeTablespaceQuotas(result session.Result, options Options) (TablespaceQuotasResult, error)
 func InventoryJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error)
@@ -6018,9 +6084,13 @@ func InventoryRows(ctx context.Context, q rowset.Queryer, options Options) (*sql
 func InventoryStatement(options Options) (string, []any, error)
 func JSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error)
 func LookupLegacyPredefinedAccounts(version string) (LegacyPredefinedAccounts, bool)
+func PDBAccountsJSON(ctx context.Context, q rowset.Queryer, options PDBAccountsOptions, limits rowset.Limits) (json.RawMessage, error)
+func PDBAccountsRows(ctx context.Context, q rowset.Queryer, options PDBAccountsOptions) (*sql.Rows, error)
+func PDBAccountsStatement(options PDBAccountsOptions) (string, []any, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
 func ReadAccountCount(ctx context.Context, reader Reader, request Request) (AccountCountResult, error)
 func ReadInventory(ctx context.Context, reader Reader, request Request) (Result, error)
+func ReadPDBAccounts(ctx context.Context, reader Reader, request PDBAccountsRequest) ([]PDBAccount, error)
 func ReadTableMetadata(ctx context.Context, reader Reader, request Request) (TableMetadataResult, error)
 func ReadTablespaceQuotas(ctx context.Context, reader Reader, request Request) (TablespaceQuotasResult, error)
 func Rows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error)

@@ -5,8 +5,18 @@ package datetime
 // Oracle DATE has whole seconds and no timezone; NULL stays SQL NULL.
 // The expression must be a fixed reviewed DATE source, never caller-supplied SQL.
 func GregorianDate(expression string) string {
+	return gregorianCivil(expression, "FM00")
+}
+
+// GregorianTimestamp6 preserves the six fractional digits of a reviewed
+// TIMESTAMP(6) source without introducing a timezone or relying on NLS_CALENDAR.
+func GregorianTimestamp6(expression string) string {
+	return gregorianCivil(expression, "FM00D000000")
+}
+
+func gregorianCivil(expression, secondFormat string) string {
 	stamp := "CAST(" + expression + " AS TIMESTAMP)"
-	fields := []struct{ name, format string }{{"YEAR", "FM0000"}, {"MONTH", "FM00"}, {"DAY", "FM00"}, {"HOUR", "FM00"}, {"MINUTE", "FM00"}, {"SECOND", "FM00"}}
+	fields := []struct{ name, format string }{{"YEAR", "FM0000"}, {"MONTH", "FM00"}, {"DAY", "FM00"}, {"HOUR", "FM00"}, {"MINUTE", "FM00"}, {"SECOND", secondFormat}}
 	separators := []string{"-", "-", "T", ":", ":"}
 	text := "CASE WHEN " + expression + " IS NULL THEN NULL ELSE "
 	for i, field := range fields {
