@@ -30,12 +30,17 @@ connection, query Oracle Support, or select an upgrade target.
   source row lists multiple versions without one explicit package version,
   the original label is retained and the exact version field is empty.
 
-- **SuperCluster:** Local patch export records explicitly labeled QFSDP_SUPERCLUSTER
-  seed the distinct catalog. Line and version values describe associated
-  database releases. The Oracle [SuperCluster M8/M7 guide](https://docs.oracle.com/cd/E58626_01/html/E58636/z400034a1004245704.html)
-  establishes the patch family. Selected Oracle announcements corroborate
-  package numbers; the seed does not establish the latest applicable bundle
-  for every model.
+- **SuperCluster:** Oracle Support KB117594 supplies the QFSDP bundle table,
+  including final bundle Q1 2026 (patch 38658593). Its `full-stack` observations
+  retain Oracle's quarter or month label and use artifact scope for model labels
+  in the Platform Firmware column. Release dates use only explicitly documented
+  release or reissue dates. Hardware support end dates are tracked separately in
+  PNEWS2744. The original imported observations retain their associated Database
+  release levels and sources. The November 24, 2026 capture displays legacy Doc ID
+  1569461.1 for KB117594. An earlier Oracle guide cites Doc ID 2056975.1 for the
+  table; use the current KB ID to open it.
+  [Oracle Support QFSDP table](https://support.oracle.com/support/?documentId=KB117594)
+  [Earlier Oracle implementation guide](https://www.oracle.com/technetwork/server-storage/hardware-solutions/e98618-5069636.pdf)
 
 A record's `source` references an entry in `sources`. Use that entry to identify
 the input or cite the Oracle document. `local-patch-export` identifies the imported
