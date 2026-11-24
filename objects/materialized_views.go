@@ -95,6 +95,9 @@ func decodeMaterializedViews(result session.Result, p datasetSelection) (Materia
 			Staleness:    row[index["STALENESS"]],
 			CompileState: row[index["COMPILE_STATE"]],
 		}
+		if v.Owner.Text == "" || v.Name.Text == "" {
+			return MaterializedViewsResult{}, ErrInvalidEvidence
+		}
 		if j, ok := index["SOURCE_CON_ID"]; ok {
 			source := row[j]
 			if source.Null || !numeric.IsUnsignedInteger(source.Text) {

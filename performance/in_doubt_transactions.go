@@ -118,6 +118,10 @@ func decodeInDoubtTransactions(result session.Result, p selection) (InDoubtTrans
 			RetryTime:           row[index["RETRY_TIME"]],
 			CommitNumber:        row[index["COMMIT_NUMBER"]],
 		}
+		// Oracle requires a local identity, state and both recovery timestamps.
+		if v.LocalTransactionID.Text == "" || v.State.Text == "" || v.FailTime.Null || v.RetryTime.Null {
+			return InDoubtTransactionsResult{}, ErrInvalidEvidence
+		}
 		for _, date := range []session.Value{v.FailTime, v.ForceTime, v.RetryTime} {
 			if !date.Null {
 				const civil = "2006-01-02T15:04:05"

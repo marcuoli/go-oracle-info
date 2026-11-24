@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
@@ -85,14 +86,20 @@ func decodeRecycleBinCounts(result session.Result, p datasetSelection) (RecycleB
 		return RecycleBinCountsResult{}, err
 	}
 	rows := make([]RecycleBinCount, len(result.Rows))
+	owners := make(map[string]struct{}, len(result.Rows))
 	for i, row := range result.Rows {
 		v := RecycleBinCount{
 			Owner: row[index["OWNER"]],
 			Count: row[index["OBJECT_COUNT"]],
 		}
-		if v.Count.Null || !numeric.IsUnsignedInteger(v.Count.Text) {
+		// The query emits exactly one positive count for each exact owner group.
+		if v.Owner.Text == "" || !numeric.IsUnsignedInteger(v.Count.Text) || !strings.ContainsAny(v.Count.Text, "123456789") {
 			return RecycleBinCountsResult{}, ErrInvalidEvidence
 		}
+		if _, exists := owners[v.Owner.Text]; exists {
+			return RecycleBinCountsResult{}, ErrInvalidEvidence
+		}
+		owners[v.Owner.Text] = struct{}{}
 		if j, ok := index["SOURCE_CON_ID"]; ok {
 			source := row[j]
 			if source.Null || !numeric.IsUnsignedInteger(source.Text) {

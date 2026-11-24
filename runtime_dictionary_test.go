@@ -223,7 +223,7 @@ func TestRuntimeDictionaryTypedValuesAndBounds(t *testing.T) {
 	null := session.Value{Null: true}
 
 	txCols := []string{"LOCAL_TRAN_ID", "GLOBAL_TRAN_ID", "STATE", "MIXED", "ADVICE", "FAIL_TIME", "FORCE_TIME", "RETRY_TIME", "COMMIT_NUMBER", "SOURCE_CON_ID"}
-	txRow := []session.Value{txt("1.2.3"), txt("remote.xid"), txt("forced commit"), txt("no"), null, txt("2026-11-24T03:04:05"), null, null, txt("42.7"), txt("1")}
+	txRow := []session.Value{txt("1.2.3"), txt("remote.xid"), txt("forced commit"), txt("no"), null, txt("2026-11-24T03:04:05"), null, txt("2026-11-24T03:06:07"), txt("42.7"), txt("1")}
 	txOptions := performance.InDoubtTransactionsOptions{OracleVersion: modern}
 	tx, err := performance.DecodeInDoubtTransactions(session.Result{Columns: txCols, Rows: [][]session.Value{txRow}}, txOptions)
 	if err != nil || tx.Provenance.Complete || len(tx.Rows) != 1 || tx.Rows[0].State.Text != "forced commit" || !tx.Rows[0].Advice.Null ||
@@ -293,5 +293,52 @@ func TestRuntimeDictionaryTypedValuesAndBounds(t *testing.T) {
 	db, state := testsql.New(t, testsql.Step{SQL: stmt, Columns: recycleCols, Values: [][]driver.Value{{"APP", "-1", int64(1)}}})
 	if blob, err := objects.RecycleBinCountsJSON(t.Context(), db, recycleOptions, rowset.Limits{}); blob != nil || !errors.Is(err, objects.ErrInvalidEvidence) || state.Closed() != 1 {
 		t.Fatalf("malformed count published evidence: %s %v", blob, err)
+	}
+}
+
+func TestRuntimeDictionaryRejectsImpossibleEvidence(t *testing.T) {
+	const version = "23.26.1.0.0"
+	value := func(text string) session.Value { return session.Value{Text: text} }
+	null := session.Value{Null: true}
+
+	transactionColumns := []string{"LOCAL_TRAN_ID", "GLOBAL_TRAN_ID", "STATE", "MIXED", "ADVICE", "FAIL_TIME", "FORCE_TIME", "RETRY_TIME", "COMMIT_NUMBER", "SOURCE_CON_ID"}
+	transaction := []session.Value{value("1.2.3"), null, value("prepared"), null, null,
+		value("2026-11-24T03:04:05"), null, value("2026-11-24T03:05:06"), null, value("1")}
+	for _, position := range []int{0, 2, 5, 7} {
+		t.Run(transactionColumns[position], func(t *testing.T) {
+			late := slices.Clone(transaction)
+			late[position] = null
+			result, err := performance.DecodeInDoubtTransactions(
+				session.Result{Columns: transactionColumns, Rows: [][]session.Value{transaction, late}},
+				performance.InDoubtTransactionsOptions{OracleVersion: version})
+			if result.Rows != nil || !errors.Is(err, performance.ErrInvalidEvidence) {
+				t.Fatalf("impossible required transaction value returned evidence: %+v %v", result, err)
+			}
+		})
+	}
+	views, err := objects.DecodeMaterializedViews(session.Result{
+		Columns: []string{"OWNER", "MVIEW_NAME", "STALENESS", "COMPILE_STATE", "SOURCE_CON_ID"},
+		Rows:    [][]session.Value{{value("APP"), null, value("STALE"), null, value("1")}},
+	}, objects.MaterializedViewsOptions{OracleVersion: version})
+	if views.Rows != nil || !errors.Is(err, objects.ErrInvalidEvidence) {
+		t.Errorf("nameless materialized view returned evidence: %+v %v", views, err)
+	}
+	for _, tc := range []struct {
+		name string
+		row  []session.Value
+	}{
+		{"owner-null", []session.Value{null, value("5"), value("1")}},
+		{"zero-count", []session.Value{value("OTHER"), value("000"), value("1")}},
+		{"duplicate-owner", []session.Value{value("APP"), value("25"), value("1")}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := objects.DecodeRecycleBinCounts(session.Result{
+				Columns: []string{"OWNER", "OBJECT_COUNT", "SOURCE_CON_ID"},
+				Rows:    [][]session.Value{{value("APP"), value("20"), value("1")}, tc.row},
+			}, objects.RecycleBinCountsOptions{OracleVersion: version})
+			if result.Rows != nil || !errors.Is(err, objects.ErrInvalidEvidence) {
+				t.Fatalf("impossible grouped count returned evidence: %+v %v", result, err)
+			}
+		})
 	}
 }
