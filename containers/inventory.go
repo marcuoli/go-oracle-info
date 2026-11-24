@@ -80,7 +80,7 @@ func inventoryPlan(options InventoryOptions) (selection, error) {
 			raw("APPLICATION_ROOT_CON_ID", rowset.Integer))
 	}
 	provenance := Provenance{Source: "GV$CONTAINERS", OracleVersion: options.OracleVersion, Scope: options.Scope}
-	return selectFields(provenance, fields, extras, memberPredicate(options.Scope), "v.CON_ID, v.INST_ID"), nil
+	return selectFields(provenance.Source, provenance, fields, extras, memberPredicate(options.Scope), "v.CON_ID, v.INST_ID"), nil
 }
 
 // DecodeInventory validates all supplied rows and preserves their raw evidence.

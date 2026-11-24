@@ -130,7 +130,7 @@ func exact(name string) field {
 	return projected(name, "TO_CHAR(v."+name+", 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''')", rowset.Text)
 }
 
-func selectFields(p Provenance, fields, extras []field, predicate, order string) selection {
+func selectFields(view string, p Provenance, fields, extras []field, predicate, order string) selection {
 	columns := make([]rowset.Column, 0, len(fields)+len(extras))
 	names := make([]string, 0, cap(columns))
 	for _, f := range append(fields, extras...) {
@@ -141,7 +141,7 @@ func selectFields(p Provenance, fields, extras []field, predicate, order string)
 		p.OptionalColumns = append(p.OptionalColumns, f.column.Name)
 	}
 	return selection{
-		sql:    "SELECT " + strings.Join(names, ", ") + " FROM " + p.Source + " v WHERE " + predicate + " ORDER BY " + order,
+		sql:    "SELECT " + strings.Join(names, ", ") + " FROM " + view + " v WHERE " + predicate + " ORDER BY " + order,
 		schema: columns, provenance: p,
 	}
 }
@@ -276,7 +276,7 @@ func resourceSelection(options ResourceOptions, source string, fields []field, o
 		return selection{}, ErrUnsupportedVersion
 	}
 	p := Provenance{Source: source, OracleVersion: options.OracleVersion, Scope: options.Scope}
-	return selectFields(p, append([]field{
+	return selectFields(p.Source, p, append([]field{
 		raw("INST_ID", rowset.Integer), raw("CON_ID", rowset.Integer),
 		projected("SOURCE_CON_ID", connectedContainer, rowset.Integer),
 	}, fields...), nil, memberPredicate(options.Scope), order), nil

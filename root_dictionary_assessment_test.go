@@ -76,7 +76,7 @@ func TestRootDictionaryReleaseMatrix(t *testing.T) {
 					}
 					continue
 				}
-				if err != nil || !strings.Contains(sql, " FROM "+v.view+" v WHERE TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID')) = 1") {
+				if err != nil || !strings.Contains(sql, " FROM SYS."+v.view+" v WHERE TO_NUMBER(SYS_CONTEXT('USERENV','CON_ID')) = 1") {
 					t.Fatalf("%s source scope: %q %v", v.view, sql, err)
 				}
 				if (v.view == "CDB_REGISTRY" && tc.full) != strings.Contains(sql, " AS VERSION_FULL") {
@@ -208,5 +208,37 @@ func TestConnectedDictionaryNullableProjection(t *testing.T) {
 	if err != nil || json.Unmarshal(raw, &data) != nil || !data.Provenance.Complete || len(data.Data.Rows) != 1 ||
 		len(data.Data.Rows[0]) != 3 || string(data.Data.Rows[0][1]) != "null" {
 		t.Fatalf("nullable legacy property result %s %v", raw, err)
+	}
+}
+func TestRootDictionaryRequiredSourceValues(t *testing.T) {
+	root := containers.RootDictionaryOptions{OracleVersion: "23.26.1.0.0", Scope: containers.Root}
+	columns := []string{"CON_ID", "PATCH_ID", "PATCH_UID", "ACTION", "STATUS", "ACTION_TIME", "DESCRIPTION"}
+	valid := []session.Value{
+		{Text: "3"}, {Text: "17"}, {Text: "21"}, {Text: "APPLY"}, {Text: "SUCCESS"},
+		{Text: "2026-11-24T13:00:00.123456"}, {Null: true},
+	}
+	for _, index := range []int{1, 2, 3, 4, 5} {
+		row := append([]session.Value(nil), valid...)
+		row[index] = session.Value{Null: true}
+		facts, err := containers.DecodeSQLPatchHistory(session.Result{Columns: columns, Rows: [][]session.Value{valid, row}}, root)
+		if facts.Rows != nil || !errors.Is(err, containers.ErrInvalidEvidence) {
+			t.Errorf("required %s accepted SQL NULL: %+v %v", columns[index], facts, err)
+		}
+	}
+	legacy := root
+	legacy.OracleVersion = "12.1.0.2.0"
+	legacyRow := append([]session.Value(nil), valid...)
+	legacyRow[4] = session.Value{Null: true}
+	facts, err := containers.DecodeSQLPatchHistory(session.Result{Columns: columns, Rows: [][]session.Value{legacyRow}}, legacy)
+	if err != nil || len(facts.Rows) != 1 || !facts.Rows[0].Status.Null {
+		t.Errorf("legacy nullable status was lost: %+v %v", facts, err)
+	}
+
+	components, err := containers.DecodeRegistryComponents(session.Result{
+		Columns: []string{"CON_ID", "COMP_ID", "COMP_NAME", "VERSION", "VERSION_FULL", "STATUS", "MODIFIED"},
+		Rows:    [][]session.Value{{{Text: "1"}, {Null: true}, {Text: "Catalog"}, {Text: "23"}, {Null: true}, {Text: "VALID"}, {Null: true}}},
+	}, root)
+	if components.Rows != nil || !errors.Is(err, containers.ErrInvalidEvidence) {
+		t.Errorf("required COMP_ID accepted SQL NULL: %+v %v", components, err)
 	}
 }

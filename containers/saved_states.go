@@ -64,7 +64,7 @@ func savedStatesPlan(options SavedStatesOptions) (selection, error) {
 		raw("STATE", rowset.Text), raw("RESTRICTED", rowset.Text),
 	}
 	provenance := Provenance{Source: "DBA_PDB_SAVED_STATES", OracleVersion: options.OracleVersion, Scope: options.Scope}
-	return selectFields(provenance, fields, nil, "v.CON_ID >= 2 AND "+connectedContainer+" = 1", "v.CON_ID, v.INSTANCE_NAME"), nil
+	return selectFields(provenance.Source, provenance, fields, nil, "v.CON_ID >= 2 AND "+connectedContainer+" = 1", "v.CON_ID, v.INSTANCE_NAME"), nil
 }
 
 // DecodeSavedStates validates all rows without assigning a live reporting ID.

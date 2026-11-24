@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/marcuoli/go-oracle-info/internal/datetime"
+	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
 	"github.com/marcuoli/go-oracle-session/rowset"
 	"github.com/marcuoli/go-oracle-session/session"
@@ -41,11 +42,11 @@ type SQLPatchHistoryResult struct {
 
 // SQLPatchHistoryStatement selects the reviewed source without SQL truncation.
 func SQLPatchHistoryStatement(options RootDictionaryOptions) (string, error) {
-	p, err := sQLPatchHistoryPlan(options)
+	p, err := sqlPatchHistoryPlan(options)
 	return p.sql, err
 }
 
-func sQLPatchHistoryPlan(options RootDictionaryOptions) (selection, error) {
+func sqlPatchHistoryPlan(options RootDictionaryOptions) (selection, error) {
 	r, err := rootDictionaryProfile(options)
 	if err != nil {
 		return selection{}, err
@@ -63,13 +64,13 @@ func sQLPatchHistoryPlan(options RootDictionaryOptions) (selection, error) {
 		projected("ACTION_TIME", datetime.GregorianTimestamp6("v.ACTION_TIME"), rowset.Text),
 		raw("DESCRIPTION", rowset.Text),
 	}
-	result := selectFields(p, fields, nil, rootDictionaryPredicate, "v.CON_ID, v.ACTION_TIME, v.PATCH_ID, v.PATCH_UID, v.ACTION")
+	result := selectFields("SYS."+p.Source, p, fields, nil, rootDictionaryPredicate, "v.CON_ID, v.ACTION_TIME, v.PATCH_ID, v.PATCH_UID, v.ACTION")
 	return result, nil
 }
 
 // DecodeSQLPatchHistory validates the supplied complete shape before returning any rows.
 func DecodeSQLPatchHistory(result session.Result, options RootDictionaryOptions) (SQLPatchHistoryResult, error) {
-	p, err := sQLPatchHistoryPlan(options)
+	p, err := sqlPatchHistoryPlan(options)
 	if err != nil {
 		return SQLPatchHistoryResult{}, err
 	}
@@ -81,6 +82,7 @@ func decodeSQLPatchHistory(result session.Result, p selection) (SQLPatchHistoryR
 	if err != nil {
 		return SQLPatchHistoryResult{}, err
 	}
+	major, _ := oracleversion.LegacyFactMajor(p.provenance.OracleVersion)
 	rows := make([]SQLPatchAttempt, len(result.Rows))
 	for i, row := range result.Rows {
 		item := SQLPatchAttempt{
@@ -95,14 +97,14 @@ func decodeSQLPatchHistory(result session.Result, p selection) (SQLPatchHistoryR
 		if item.ContainerID.Null || !unsigned(item.ContainerID) {
 			return SQLPatchHistoryResult{}, ErrInvalidEvidence
 		}
-		if !unsigned(item.PatchID) || !unsigned(item.PatchUID) {
+		if item.PatchID.Null || item.PatchUID.Null || !unsigned(item.PatchID) || !unsigned(item.PatchUID) ||
+			!requiredText(item.Action) || (major >= 18 && !requiredText(item.Status)) {
 			return SQLPatchHistoryResult{}, ErrInvalidEvidence
 		}
-		if !item.ActionTime.Null {
-			const civil = "2006-01-02T15:04:05.000000"
-			if _, err := time.Parse(civil, item.ActionTime.Text); err != nil || len(item.ActionTime.Text) != len(civil) || item.ActionTime.Text[19] != '.' {
-				return SQLPatchHistoryResult{}, ErrInvalidEvidence
-			}
+		const civil = "2006-01-02T15:04:05.000000"
+		if _, err := time.Parse(civil, item.ActionTime.Text); item.ActionTime.Null || err != nil ||
+			len(item.ActionTime.Text) != len(civil) || item.ActionTime.Text[19] != '.' {
+			return SQLPatchHistoryResult{}, ErrInvalidEvidence
 		}
 		rows[i] = item
 	}
@@ -111,7 +113,7 @@ func decodeSQLPatchHistory(result session.Result, p selection) (SQLPatchHistoryR
 
 // ReadSQLPatchHistory executes once over the caller's admitted bounded reader.
 func ReadSQLPatchHistory(ctx context.Context, reader Reader, request SQLPatchHistoryRequest) (SQLPatchHistoryResult, error) {
-	p, err := sQLPatchHistoryPlan(request.Options)
+	p, err := sqlPatchHistoryPlan(request.Options)
 	if err != nil {
 		return SQLPatchHistoryResult{}, err
 	}
@@ -136,7 +138,7 @@ func ReadSQLPatchHistory(ctx context.Context, reader Reader, request SQLPatchHis
 
 // SQLPatchHistoryRows transfers the actual native cursor to its owner.
 func SQLPatchHistoryRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error) {
-	p, err := sQLPatchHistoryPlan(options)
+	p, err := sqlPatchHistoryPlan(options)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +151,7 @@ func SQLPatchHistoryRows(ctx context.Context, q rowset.Queryer, options RootDict
 
 // SQLPatchHistoryJSON consumes a separate complete bounded cursor.
 func SQLPatchHistoryJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error) {
-	p, err := sQLPatchHistoryPlan(options)
+	p, err := sqlPatchHistoryPlan(options)
 	if err != nil {
 		return nil, err
 	}

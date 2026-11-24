@@ -47,7 +47,7 @@ func invalidObjectCountsPlan(options RootDictionaryOptions) (selection, error) {
 	return selection{
 		sql: "SELECT v.CON_ID AS CON_ID, " +
 			"TO_CHAR(COUNT(CASE WHEN v.STATUS = 'INVALID' THEN 1 END), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS INVALID_COUNT " +
-			"FROM CDB_OBJECTS v WHERE " + rootDictionaryPredicate + " GROUP BY v.CON_ID ORDER BY v.CON_ID",
+			"FROM SYS.CDB_OBJECTS v WHERE " + rootDictionaryPredicate + " GROUP BY v.CON_ID ORDER BY v.CON_ID",
 		schema:     []rowset.Column{{Name: "CON_ID", Kind: rowset.Integer}, {Name: "INVALID_COUNT", Kind: rowset.Text}},
 		provenance: provenance,
 	}, nil

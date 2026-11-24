@@ -50,7 +50,7 @@ func legacyAuditTablePlacementPlan(options RootDictionaryOptions) (selection, er
 	}
 	const legacyKeys = "NLSSORT(v.OWNER, 'NLS_SORT=BINARY') = NLSSORT('SYS', 'NLS_SORT=BINARY')" +
 		" AND NLSSORT(v.TABLE_NAME, 'NLS_SORT=BINARY') IN (NLSSORT('AUD$', 'NLS_SORT=BINARY'), NLSSORT('FGA_LOG$', 'NLS_SORT=BINARY'))"
-	return selectFields(p, fields, nil, rootDictionaryPredicate+" AND "+legacyKeys, "v.CON_ID, v.OWNER, v.TABLE_NAME"), nil
+	return selectFields("SYS."+p.Source, p, fields, nil, rootDictionaryPredicate+" AND "+legacyKeys, "v.CON_ID, v.OWNER, v.TABLE_NAME"), nil
 }
 
 // DecodeLegacyAuditTablePlacement validates the supplied complete shape before returning any rows.

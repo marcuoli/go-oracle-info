@@ -61,7 +61,7 @@ func registryComponentsPlan(options RootDictionaryOptions) (selection, error) {
 		p.OptionalColumns = []string{"VERSION_FULL"}
 	}
 	fields = append(fields, raw("STATUS", rowset.Text), raw("MODIFIED", rowset.Text))
-	return selectFields(p, fields, nil, rootDictionaryPredicate, "v.CON_ID, v.COMP_ID"), nil
+	return selectFields("SYS."+p.Source, p, fields, nil, rootDictionaryPredicate, "v.CON_ID, v.COMP_ID"), nil
 }
 
 // DecodeRegistryComponents validates the supplied complete shape before returning any rows.
@@ -89,7 +89,7 @@ func decodeRegistryComponents(result session.Result, p selection) (RegistryCompo
 			Modified:    row[index["MODIFIED"]],
 			VersionFull: optional(row, index, "VERSION_FULL"),
 		}
-		if item.ContainerID.Null || !unsigned(item.ContainerID) {
+		if item.ContainerID.Null || !unsigned(item.ContainerID) || !requiredText(item.ID) {
 			return RegistryComponentsResult{}, ErrInvalidEvidence
 		}
 		rows[i] = item

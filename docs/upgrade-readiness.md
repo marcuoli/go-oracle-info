@@ -266,7 +266,7 @@ correlating them with a separate container inventory.
 | `containers.LegacyAuditTablePlacement` | `CDB_TABLES` returns row `CON_ID`, owner, table name and nullable tablespace for the exact `SYS.AUD$` and `SYS.FGA_LOG$` identities. A nullable tablespace remains a nullable metadata observation. Current-container callers can use the existing owner- and name-bound `users.TableMetadata` API. |
 
 The root families require `RootDictionaryOptions` with caller-admitted
-`containers.Root` on the exact connection. The SQL also guards execution
+`containers.Root` on the exact connection. The SQL uses SYS-qualified CDB views and guards execution
 visibility with connected container ID 1. Oracle `CONTAINER_DATA`, dictionary
 grants, PDB open or restricted state, and instance reachability determine which
 rows are visible. The row `CON_ID` stays separate from the root's admission
@@ -285,7 +285,9 @@ unobserved containers explicitly. Audit placement describes table metadata.
 Oracle's 12.1.0.1 PSU example qualifies the local DBA SQL patch source
 with a narrower projection. The 12.1.0.2 root example and the corresponding
 Oracle Reference definitions establish the conservative floor for the new
-root patch projection. The online 23ai reference routes to 26ai. Oracle column
+root patch projection. Oracle documents required component IDs and patch ID, UID, action and time.
+Patch status can be SQL NULL on 12.1 and 12.2 and is required from 18c.
+The online 23ai reference routes to 26ai. Oracle column
 references were checked on 2026-11-24. Fixtures cover numerical admission
 through 23.26.4, root scope rejection, visible zero, absent groups, exact
 numbers and timestamps, capacity, invalid evidence, and access and terminal
