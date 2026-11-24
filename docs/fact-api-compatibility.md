@@ -107,6 +107,8 @@ The #155 dictionary observations have a separate [release and qualification matr
 
 #156 adds a separate [ASM disk-group capacity matrix](redo-storage-asm.md#asm-disk-group-capacity).
 
+#185 adds a separate [DBTIMEZONE release and scope matrix](upgrade-readiness.md#connected-database-time-zone).
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen
