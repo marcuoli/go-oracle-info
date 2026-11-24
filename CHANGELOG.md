@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- Add a read-only database time zone fact with exact DBTIMEZONE text, native rows and bounded JSON (#185).
+## v0.39.0 (2026-11-24)
 
+- Add a read-only database time zone fact with exact DBTIMEZONE text, native rows and bounded JSON (#185).
 - Expose database-visible Exadata storage evidence from ASM datafile groups through a read-only selector and native rows and bounded JSON APIs (#183).
 - Document the TDE keystore collection boundary and the requirements for importing dated status evidence (#166).
 
