@@ -171,7 +171,13 @@ database or closed PDB to fixed tables and views. This fact does not select a
 different source for those states. The scalar is independent of session time
 zone, the active time zone file version, and host-clock behavior.
 
-Native execution remains unqualified at this checkpoint. Static fixtures verify offset and region values, SQL NULL, zero rows, scope, malformed results and terminal failures.
+Native SQL and all three SDK paths returned one row with `+00:00` on both
+OPEN READ WRITE primary PDBs. Qualification used SYSTEM on Oracle 19.32.0.0.0
+and 23.26.1.0.0, Go 1.27.4 on Windows amd64, go-oracle-session v0.25.0 and go-ora
+V2. Each value matched the independent scalar SQL. Offset and region handling,
+SQL NULL, zero rows, malformed results and terminal failures also have static
+fixtures. Native region names, legacy releases, non-CDB, root, MOUNT, RAC and
+other login scopes remain unqualified for this fact.
 
 - Oracle SQL references for [9.2](https://docs.oracle.com/cd/A97630_01/server.920/a96540/functions32a.htm), [10.1](https://docs.oracle.com/cd/B13789_01/server.101/b10759/functions035.htm), [10.2](https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions039.htm), [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28286/functions041.htm), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e41084/functions048.htm), [12.1](https://docs.oracle.com/database/121/SQLRF/functions056.htm), [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/DBTIMEZONE.html), [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/DBTIMEZONE.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/DBTIMEZONE.html), [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/DBTIMEZONE.html) and [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/DBTIMEZONE.html).
 - Oracle scope references for [DUAL access](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/Selecting-from-the-DUAL-Table.html), [12.2 PDB time zone](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-PLUGGABLE-DATABASE.html), [26ai PDB time zone](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/ALTER-PLUGGABLE-DATABASE.html), [closed sources](https://docs.oracle.com/en/error-help/db/ora-01219/) and [host-clock behavior](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/TIME_AT_DBTIMEZONE.html).
