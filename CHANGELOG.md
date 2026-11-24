@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add independent control-file status, recovery, backup-mode, and datafile-header facts (#151).
+
 - Read recorded database block corruption ranges with exact file, block and change numbers through the storage API and Client (#158).
 
 - Read recorded PDB plug-in violations with exact nullable fields and release-aware container scope (#150).

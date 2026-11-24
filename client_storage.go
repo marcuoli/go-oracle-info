@@ -451,3 +451,95 @@ func (c *Client) storageVersion(ctx context.Context) (string, error) {
 	}
 	return version.Value, nil
 }
+
+// FileStatuses returns the actual native cursor from the observed database release.
+// Callers retain ownership of cursor iteration, close, and budgets.
+func (c *Client) FileStatuses(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileStatusesRows(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version})
+}
+
+// FileStatusesJSON returns a complete bounded dataset using its separate cursor.
+func (c *Client) FileStatusesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	bounds, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileStatusesJSON(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version}, bounds)
+}
+
+// FileRecovery returns the actual native cursor from the observed database release.
+// Callers retain ownership of cursor iteration, close, and budgets.
+func (c *Client) FileRecovery(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileRecoveryRows(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version})
+}
+
+// FileRecoveryJSON returns a complete bounded dataset using its separate cursor.
+func (c *Client) FileRecoveryJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	bounds, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileRecoveryJSON(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version}, bounds)
+}
+
+// FileBackupModes returns the actual native cursor from the observed database release.
+// Callers retain ownership of cursor iteration, close, and budgets.
+func (c *Client) FileBackupModes(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileBackupModesRows(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version})
+}
+
+// FileBackupModesJSON returns a complete bounded dataset using its separate cursor.
+func (c *Client) FileBackupModesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	bounds, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileBackupModesJSON(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version}, bounds)
+}
+
+// FileHeaders returns the actual native cursor from the observed database release.
+// Callers retain ownership of cursor iteration, close, and budgets.
+func (c *Client) FileHeaders(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileHeadersRows(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version})
+}
+
+// FileHeadersJSON returns a complete bounded dataset using its separate cursor.
+func (c *Client) FileHeadersJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	bounds, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.FileHeadersJSON(ctx, c.native(), storage.FileHealthOptions{OracleVersion: version}, bounds)
+}

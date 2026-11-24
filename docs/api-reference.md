@@ -142,6 +142,14 @@ func (c *Client) DirectoriesJSON(ctx context.Context, filter DictionaryFilter, l
 func (c *Client) Edition(ctx context.Context) (identity.EditionObservation, error)
 func (c *Client) EncryptionCounts(ctx context.Context, kind database.EncryptionKind) (*sql.Rows, error)
 func (c *Client) EncryptionCountsJSON(ctx context.Context, kind database.EncryptionKind, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) FileBackupModes(ctx context.Context) (*sql.Rows, error)
+func (c *Client) FileBackupModesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) FileHeaders(ctx context.Context) (*sql.Rows, error)
+func (c *Client) FileHeadersJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) FileRecovery(ctx context.Context) (*sql.Rows, error)
+func (c *Client) FileRecoveryJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) FileStatuses(ctx context.Context) (*sql.Rows, error)
+func (c *Client) FileStatusesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) FreeExtents(ctx context.Context) (*sql.Rows, error)
 func (c *Client) FreeExtentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) GoldenGate(ctx context.Context) (goldengate.Properties, error)
@@ -5607,6 +5615,34 @@ type Error struct {
 
 }// contains filtered or unexported fields
 
+type FileBackupMode struct {
+	FileHealthIdentity
+	Status, StartSCN, StartTime session.Value
+}
+type FileBackupModesResult struct {
+	Provenance Provenance
+	Rows       []FileBackupMode
+}
+type FileHeader struct {
+	FileHealthIdentity
+	Error, Recover, Fuzzy, CheckpointSCN, CheckpointTime session.Value
+}
+type FileHeadersResult struct {
+	Provenance Provenance
+	Rows       []FileHeader
+}
+type FileHealthIdentity struct {
+	FileID              session.Value
+	ReportingInstanceID session.Value
+	ContainerID         *session.Value
+	SourceContainerID   *session.Value
+}
+type FileHealthOptions struct{ OracleVersion string }
+type FileHealthRequest struct {
+	Options   FileHealthOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
 type FileNamesOptions struct{ OracleMajor int }
 type FileNamesRequest struct {
 	Options   FileNamesOptions
@@ -5619,6 +5655,22 @@ type FileNamesResult struct {
 type FileNamesRow struct {
 	FileName session.Value
 	Kind     session.Value
+}
+type FileRecoveryEntry struct {
+	FileHealthIdentity
+	Error, RecoverySCN, RecoveryTime session.Value
+}
+type FileRecoveryResult struct {
+	Provenance Provenance
+	Rows       []FileRecoveryEntry
+}
+type FileStatus struct {
+	FileHealthIdentity
+	Type, Name, Status session.Value
+}
+type FileStatusesResult struct {
+	Provenance Provenance
+	Rows       []FileStatus
 }
 type FreeExtent struct {
 	ReportingInstanceID session.Value
@@ -5811,7 +5863,11 @@ func DecodeDatabaseFiles(result session.Result, major int) (DatabaseFilesResult,
 func DecodeDatafileSize(result session.Result, options DatafileSizeOptions) (DatafileSizeResult, error)
 func DecodeDatafiles(result session.Result, major int) (DatafilesResult, error)
 func DecodeDefaultTemporary(result session.Result, major int) (DefaultTemporaryResult, error)
+func DecodeFileBackupModes(result session.Result, options FileHealthOptions) (FileBackupModesResult, error)
+func DecodeFileHeaders(result session.Result, options FileHealthOptions) (FileHeadersResult, error)
 func DecodeFileNames(result session.Result, options FileNamesOptions) (FileNamesResult, error)
+func DecodeFileRecovery(result session.Result, options FileHealthOptions) (FileRecoveryResult, error)
+func DecodeFileStatuses(result session.Result, options FileHealthOptions) (FileStatusesResult, error)
 func DecodeFreeExtents(result session.Result, major int) (FreeExtentsResult, error)
 func DecodeLongColumns(result session.Result, major int) (LongColumnsResult, error)
 func DecodeSGAComponents(result session.Result, major int, filter InstanceFilter) (SGAComponentsResult, error)
@@ -5824,9 +5880,21 @@ func DecodeTemporaryGroups(result session.Result, major int) (TemporaryGroupsRes
 func DefaultTemporaryJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func DefaultTemporaryRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func DefaultTemporaryStatement(major int) (string, error)
+func FileBackupModesJSON(ctx context.Context, q rowset.Queryer, options FileHealthOptions, limits rowset.Limits) (json.RawMessage, error)
+func FileBackupModesRows(ctx context.Context, q rowset.Queryer, options FileHealthOptions) (*sql.Rows, error)
+func FileBackupModesStatement(options FileHealthOptions) (string, error)
+func FileHeadersJSON(ctx context.Context, q rowset.Queryer, options FileHealthOptions, limits rowset.Limits) (json.RawMessage, error)
+func FileHeadersRows(ctx context.Context, q rowset.Queryer, options FileHealthOptions) (*sql.Rows, error)
+func FileHeadersStatement(options FileHealthOptions) (string, error)
 func FileNamesJSON(ctx context.Context, q rowset.Queryer, options FileNamesOptions, limits rowset.Limits) (json.RawMessage, error)
 func FileNamesRows(ctx context.Context, q rowset.Queryer, options FileNamesOptions) (*sql.Rows, error)
 func FileNamesStatement(options FileNamesOptions) (string, []any, error)
+func FileRecoveryJSON(ctx context.Context, q rowset.Queryer, options FileHealthOptions, limits rowset.Limits) (json.RawMessage, error)
+func FileRecoveryRows(ctx context.Context, q rowset.Queryer, options FileHealthOptions) (*sql.Rows, error)
+func FileRecoveryStatement(options FileHealthOptions) (string, error)
+func FileStatusesJSON(ctx context.Context, q rowset.Queryer, options FileHealthOptions, limits rowset.Limits) (json.RawMessage, error)
+func FileStatusesRows(ctx context.Context, q rowset.Queryer, options FileHealthOptions) (*sql.Rows, error)
+func FileStatusesStatement(options FileHealthOptions) (string, error)
 func FreeExtentsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func FreeExtentsRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func FreeExtentsStatement(major int) (string, error)
@@ -5838,7 +5906,11 @@ func ReadDatabaseFiles(ctx context.Context, reader Reader, request Request) (Dat
 func ReadDatafileSize(ctx context.Context, reader Reader, request DatafileSizeRequest) (DatafileSizeResult, error)
 func ReadDatafiles(ctx context.Context, reader Reader, request Request) (DatafilesResult, error)
 func ReadDefaultTemporary(ctx context.Context, reader Reader, request Request) (DefaultTemporaryResult, error)
+func ReadFileBackupModes(ctx context.Context, reader Reader, request FileHealthRequest) (FileBackupModesResult, error)
+func ReadFileHeaders(ctx context.Context, reader Reader, request FileHealthRequest) (FileHeadersResult, error)
 func ReadFileNames(ctx context.Context, reader Reader, request FileNamesRequest) (FileNamesResult, error)
+func ReadFileRecovery(ctx context.Context, reader Reader, request FileHealthRequest) (FileRecoveryResult, error)
+func ReadFileStatuses(ctx context.Context, reader Reader, request FileHealthRequest) (FileStatusesResult, error)
 func ReadFreeExtents(ctx context.Context, reader Reader, request Request) (FreeExtentsResult, error)
 func ReadLongColumns(ctx context.Context, reader Reader, request Request) (LongColumnsResult, error)
 func ReadSGAComponents(ctx context.Context, reader Reader, request SGARequest) (SGAComponentsResult, error)
