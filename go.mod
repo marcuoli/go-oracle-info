@@ -6,12 +6,12 @@ go 1.27.4
 // Tidy prunes these explicit version floors; refresh them after tidy.
 
 require (
-	github.com/marcuoli/go-oracle-session v0.23.0
+	github.com/marcuoli/go-oracle-session v0.25.0
 	github.com/marcuoli/go-sqltemplate v0.1.1
 )
 
 require (
-	codeberg.org/miekg/dns v0.6.142 // indirect
+	codeberg.org/miekg/dns v0.6.143 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20261123163617-e32d5238e4c2 // indirect

@@ -33,7 +33,7 @@ value, err := memory.Collect(ctx, reader, memory.Request{
 
 Inspect both `err` and `value.State`. A failed effective query can return the valid primary observation alongside an error. The library does not acquire a different scope to make a query succeed. `identity` exposes statement selection and decoding separately so an application keeps its bootstrap/admission sequence.
 
-Verified **source compatibility with the selected dependencies: Go 1.27.4** on Windows/amd64. With the same source and dependency checksums, an isolated modfile with its Go directive lowered to 1.27.3 fails on that exact compiler because go-oracle-session v0.23.0 requires Go 1.27.4. The shipping **module requirement** and the **build/validation compiler** are both Go 1.27.4. Native Oracle qualifications are recorded separately. Public module releases use github.com/marcuoli/go-oracle-info. The private Gitea repository is the source authority.
+Verified **source compatibility with the selected dependencies: Go 1.27.4** on Windows/amd64. With the same source and dependency checksums, an isolated modfile with its Go directive lowered to 1.27.3 fails on that exact compiler because go-oracle-session v0.25.0 requires Go 1.27.4. The shipping **module requirement** and the **build/validation compiler** are both Go 1.27.4. Native Oracle qualifications are recorded separately. Public module releases use github.com/marcuoli/go-oracle-info. The private Gitea repository is the source authority.
 
 ## Engineered-system facts
 

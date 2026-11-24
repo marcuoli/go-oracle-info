@@ -1,4 +1,5 @@
-codeberg.org/miekg/dns v0.6.142/go.mod h1:GZQYwBsgLFxE+NImBtNZH/eph/CHD8oHuFVGOLHuaos=
+codeberg.org/miekg/dns v0.6.143 h1:ObGIjavScP1UHEhZY1uZsrxcK8RAQeXeqJP6qNyOtm4=
+codeberg.org/miekg/dns v0.6.143/go.mod h1:GZQYwBsgLFxE+NImBtNZH/eph/CHD8oHuFVGOLHuaos=
 github.com/chzyer/logex v1.2.1/go.mod h1:JLbx6lG2kDbNRFnfkgvh4eRJRPX1QCoOIWomwysCBrQ=
 github.com/chzyer/readline v1.5.1/go.mod h1:Eh+b79XXUwfKfcPLepksvw2tcLE/Ct21YObkaSkeBlk=
 github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38GC8=
@@ -8,8 +9,8 @@ github.com/google/pprof v0.0.0-20261118010117-084b33a85f63/go.mod h1:yUo1AMMpsPI
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/ianlancetaylor/demangle v0.0.0-20261012173340-cbb8aaea4290/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
 github.com/klauspost/compress v1.20.5/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
-github.com/marcuoli/go-oracle-session v0.23.0 h1:YYUQ1oUhvZ+GEDczKITe2lKKcPwkFZBZJZsCWTXex1A=
-github.com/marcuoli/go-oracle-session v0.23.0/go.mod h1:8/Y2hEzGCyKms4rO7LwtA3B2yiUicBf7uwSt3a8ikD8=
+github.com/marcuoli/go-oracle-session v0.25.0 h1:vUtzjvTlF4wySlNhryNZeDw9T1uot51WlNAy9ja9Yq8=
+github.com/marcuoli/go-oracle-session v0.25.0/go.mod h1:xn2Dp5pJ30IElxuyjlVlhmhfT2BneWWViCMpsKV/wQ4=
 github.com/marcuoli/go-sqltemplate v0.1.1 h1:MtiN+DO1Y8DHzQTbSNwM3PssJd9ilc6MpZrxeASnS/I=
 github.com/marcuoli/go-sqltemplate v0.1.1/go.mod h1:h6PwhHMovPqYCWlSKQl4enk4/fUKZ0fsMicbPbP5zEo=
 github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
