@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.36.0 (2026-11-24)
+
+- Add exact connected-dictionary object identities, primary redo thread status, and active services by reporting instance and container (#154).
+
 ## v0.35.0 (2026-11-24)
 
 - Add release-aware observations of in-doubt transactions, running Scheduler jobs, materialized view state, and recycle-bin counts by owner (#153).

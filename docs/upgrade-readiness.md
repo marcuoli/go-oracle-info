@@ -189,3 +189,63 @@ unqualified.
 - Oracle 10.1 [new dictionary views](https://docs.oracle.com/cd/B13789_01/server.101/b10755/whatsnew.htm), [running job columns](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_1144.htm) and [recycle-bin columns](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_2276.htm), Oracle 10.2 [running job subname](https://docs.oracle.com/cd/B19306_01/server.102/b14237/statviews_2053.htm) and Oracle 12.1 [synchronous Scheduler jobs](https://docs.oracle.com/database/121/ARPLS/d_sched.htm)
 - Oracle Database Reference indexes for [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28320/toc.htm), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e40402/toc.htm), [12.1](https://docs.oracle.com/database/121/REFRN/toc.htm) and [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/)
 - Oracle 26ai [DBA_2PC_PENDING](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_2PC_PENDING.html), [DBA_SCHEDULER_RUNNING_JOBS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_SCHEDULER_RUNNING_JOBS.html), [DBA_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_MVIEWS.html) and [DBA_RECYCLEBIN](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_RECYCLEBIN.html)
+
+## Object identities, redo threads and active services
+
+These are three independent observations with Statement, Decode, Read, Rows,
+and JSON paths and matching Client methods. The caller admits the readable
+database, privileges, observed release, and relevant role. Each read retains
+only what its selected source returns.
+
+| Family | Source and interpretation |
+| --- | --- |
+| `objects.ObjectIdentities` | `SYS.DBA_OBJECTS` rows for a required list of exact owners, such as `SYS` and `SYSTEM`. Owner names use binary comparisons and bind values. Preserve object name, nullable subobject, type, exact dictionary object number and, when selected, the actual edition. The dictionary exposes the connection's current edition. Comparing names, classifying duplicates and deciding exceptions belong to the caller. |
+| `redo.Threads` | `V$THREAD` keeps thread number, raw status and enabled flag, Oracle's optional instance name, and the numeric connected instance separately. It requires an observed `PRIMARY` role. Oracle documents that the view does not return meaningful results on a physical standby. Other roles and an absent role return `redo.ErrUnsupportedScope` before the view is queried. |
+| `services.ActiveServices` | `GV$ACTIVE_SERVICES` preserves reporting `INST_ID`, actual service name and network name, including internal names and SQL NULL. It complements the existing configured service definitions. A visible active service does not establish listener or client reachability, and visibility depends on the admitted instance and `CONTAINER_DATA` scope. |
+
+| Numeric release | Object identities | Redo threads on primary | Active services |
+| --- | --- | --- | --- |
+| 9.2 | Base projection | Base projection | Unsupported before SQL |
+| 10.1, 10.2, 11.1 | Base projection. The 11.1 edition field is reserved. | Base projection | Base projection |
+| 11.2 | Adds `EDITION_NAME` | Base projection | Base projection |
+| 12.1.0.1, 12.1.0.2, 12.2.0.1, 18c, 19c, 21c, 23ai, 26ai numeric 23.26 | Adds `SOURCE_CON_ID` | Adds `CON_ID` and `SOURCE_CON_ID` | Adds `CON_ID` and `SOURCE_CON_ID` |
+
+`SOURCE_CON_ID` records the connected container. A view's `CON_ID` describes
+the row and can differ. Zero is a valid Oracle value. A nil optional field
+means the projection omitted it. A selected SQL NULL, a successful empty
+result, an unsupported selection, and an Oracle error remain distinct.
+
+Object owners accept up to 128 Unicode characters. The caller supplies names
+from the admitted database. Oracle documents OBJECT_ID as required through 21c.
+A projected NULL is preserved for the numeric 23 series.
+
+The object list has no SQL row limit. Use explicit adequate bounds for its
+buffered reader or JSON envelope. When the SDK's default 10,000 rows are
+insufficient, the caller can set higher finite limits or use the native
+cursor with its own row and byte budget. With an already admitted stream,
+the exact Statement and Decode can verify chunks. Completion is established
+only after the entire cursor and its terminal status have been validated.
+
+Oracle reference columns were checked on 2026-11-24. Fixtures verify the
+numeric release boundaries through 23.26.4, exact owner binds and numbers,
+separate instance/container identities, SQL NULL, unsupported-before-query,
+capacity, and terminal failures. Native SQL, typed Read, Client Rows, and
+bounded JSON passed on Windows amd64, Go 1.27.4, go-oracle-session v0.25.0
+with go-ora V2, and Oracle 26ai 23.26.1.0.0.
+
+| Native SYSDBA CDB-root scope | Object identities | Redo threads | Active services |
+| --- | ---: | --- | ---: |
+| READ WRITE primary | 53,821 | 1 | 6 |
+| READ ONLY WITH APPLY physical standby | 53,821 | Unsupported before the view was queried | 4 |
+
+Each object read had 53,732 SYS rows and 89 SYSTEM rows, with 3,782,848
+bytes of buffered value text and 5,061,867 bytes of bounded JSON. The native
+cursor, typed reader and JSON counts matched separate source counts in this
+run. Direct PDB/non-CDB, ordinary accounts, RAC, MOUNT, other roles and
+other numeric releases remain unqualified natively.
+
+- Oracle 9.2 [ALL_OBJECTS](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch290.htm#1297575) and [V$THREAD](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch3229.htm#1128344)
+- Oracle 10.1 [active service view introduction](https://docs.oracle.com/cd/B13789_01/server.101/b10755/whatsnew.htm), [projected columns](https://docs.oracle.com/cd/B13789_01/server.101/b10755/dynviews_1005.htm) and [RAC service-by-instance source](https://docs.oracle.com/cd/B14117_01/rac.101/b10768/design.htm)
+- Oracle [11.1 reserved edition field](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_1145.htm#i1583352), [11.2 edition identity](https://docs.oracle.com/cd/E11882_01/server.112/e40402/statviews_1158.htm#i1583352) and [12.1 USERENV](https://docs.oracle.com/database/121/SQLRF/functions199.htm)
+- Oracle 12.1 [V$THREAD](https://docs.oracle.com/database/121/REFRN/GUID-D1A0B100-BE3F-4098-8E71-719B7CCCFF4B.htm) and [V$ACTIVE_SERVICES](https://docs.oracle.com/database/121/REFRN/GUID-488BCD15-3125-4CD1-BE26-9E5CA6BC8AE9.htm)
+- Oracle 26ai [DBA_OBJECTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_OBJECTS.html), [V$THREAD](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-THREAD.html), [V$ACTIVE_SERVICES](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ACTIVE_SERVICES.html) and [dynamic view scope](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/about-dynamic-performance-views.html)

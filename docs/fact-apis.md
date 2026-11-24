@@ -72,16 +72,16 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
 | [networkacl](api-reference.md#networkacl) | `Inventory` |
-| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
+| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
 | [parameters](api-reference.md#parameters) | `ContainerSystem`, `Effective`, `Hidden`, `HiddenCatalog`, `HiddenContext`, `SPFile`, `ScalarSystem`, `System` |
 | [passwordfile](api-reference.md#passwordfile) | `Info` |
 | [patches](api-reference.md#patches) | `History`, `SQLPatch` |
 | [performance](api-reference.md#performance) | `Blockers`, `InDoubtTransactions`, `ResourceLimits` |
-| [redo](api-reference.md#redo) | `ArchivedLogs`, `Clock`, `Groups`, `History`, `Members` |
+| [redo](api-reference.md#redo) | `ArchivedLogs`, `Clock`, `Groups`, `History`, `Members`, `Threads` |
 | [registry](api-reference.md#registry) | `Components` |
 | [scheduler](api-reference.md#scheduler) | `Jobs`, `RunningJobs` |
 | [sequences](api-reference.md#sequences) | `Inventory` |
-| [services](api-reference.md#services) | `Definitions`, `Names` |
+| [services](api-reference.md#services) | `ActiveServices`, `Definitions`, `Names` |
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
 | [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileBackupModes`, `FileHeaders`, `FileNames`, `FileRecovery`, `FileStatuses`, `FreeExtents`, `LongColumns`, `RecoveryArea`, `RecoveryAreaUsage`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
 | [triggers](api-reference.md#triggers) | `Inventory` |
