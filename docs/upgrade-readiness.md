@@ -132,17 +132,86 @@ row and one time-zone-file row. A separate constant SQL read preserved all
 nine fractional digits. Direct PDB, older releases, MOUNT, ordinary accounts,
 RAC and nonempty restore-point sources remain unqualified natively.
 
-Oracle documents that reading `V$ENCRYPTION_WALLET` can open auto-login
-software or external keystores. Keystore evidence is tracked in #166. A safe
-collector would need independent, scoped evidence that no affected wallet
-could auto-open. An imported snapshot can establish a dated observation of
-the exact instance and container with the source's raw state and coverage.
-The six facts above require neither wallet inspection nor privileged tools.
+Keystore status requires separate [evidence and qualification](#tde-keystore-status-evidence).
 
 - Oracle 10.1 [FRA totals](https://docs.oracle.com/cd/B13789_01/server.101/b10755/dynviews_2034.htm), 10.2 [FRA file types](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1110.htm) and [restore points](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_2051.htm), 11.2 [replacement FRA source](https://docs.oracle.com/cd/E11882_01/server.112/e40402/dynviews_2124.htm)
 - Oracle 9.2 [incarnation ancestry](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch340.htm), 10.1 [promotion SCN](https://docs.oracle.com/cd/B13789_01/server.101/b10755/dynviews_1054.htm), 11.1 [restore-point flags](https://docs.oracle.com/cd/B28359_01/server.111/b28320/dynviews_2129.htm), 12.1 [restore points](https://docs.oracle.com/database/121/REFRN/GUID-19A363CF-E112-4BFE-8457-E5BB5FAF6FFB.htm) and 12.2 [PDB fields](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-RESTORE_POINT.html)
 - Oracle [10g/11g time zone observation](https://docs.oracle.com/cd/E11882_01/readmes.112/e41331/chapter11202.htm), [12.1 Data Pump reference](https://docs.oracle.com/database/121/SUTIL/E41528-10.pdf), and [12.2 time zone file columns](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-TIMEZONE_FILE.html)
 - 26ai [FRA quota](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RECOVERY_FILE_DEST.html), [file types](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RECOVERY_AREA_USAGE.html), [restore points](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RESTORE_POINT.html), [incarnations](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE_INCARNATION.html), [database role transition SCN](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE.html), [time zone files](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-TIMEZONE_FILE.html), [keystore side effects](https://docs.oracle.com/en/database/oracle/oracle-database/26/dbtde/managing-keystore-and-tde-master-encryption-key.html)
+
+
+## TDE keystore status evidence
+
+Issue #166 requires that assessment leave keystore and database state unchanged.
+Oracle documents that a query of `V$ENCRYPTION_WALLET` can open software
+auto-login wallets and external auto-login keystores. The view also validates
+TDE configuration and can write alert log warnings. A column list, row filter,
+read-only transaction or SYSDBA login does not establish a safe execution path.
+The equivalent `GV$` source increases the potential scope to visible instances.
+In a CDB, the connected root can see wallet rows for PDBs. A direct PDB sees only
+its own details. A root-only result filter does not independently establish
+which wallets the server may inspect.
+
+| Reviewed source | Evidence it supports |
+| --- | --- |
+| `TDE_CONFIGURATION` and `WALLET_ROOT` | Configured type and location. These parameters cannot prove effective wallet state or exclude every auto-login path on the affected members and containers. |
+| `V$DATABASE_KEY_INFO` and `V$ENCRYPTED_TABLESPACES` | Control-file key metadata and tablespace encryption state, respectively. Neither supplies live wallet status, order, mode or backup flags. |
+| Alert log or audit evidence | Observed historical messages or actions. Missing records and automatic opens prevent a complete current-state inference. |
+| `V$ENCRYPTION_KEYS`, fixed tables or attempts to read encrypted data | No side-effect-free wallet status contract was verified for these paths. They stay outside assessment. |
+
+The public reference review found no `V$ENCRYPTION_WALLET` listing in the
+9.2, 10.1 or 10.2 reference indexes. The 11.1 and 11.2 references document
+`STATUS` and locator fields. The 12.1 and 12.2 references add `WALLET_TYPE`,
+`WALLET_ORDER`, `FULLY_BACKED_UP` and `CON_ID`. The reviewed 18, 19, 21,
+23 and 26 references also document `KEYSTORE_MODE`. The Oracle 23 reference
+redirects to the 26ai page. For 26ai, record the observed numeric 23.26 release
+and RU. These are documented projection observations, with live collection
+unqualified across the reviewed range. A password-only deployment would still
+need independent evidence for the exact version, wallet configuration,
+privilege, member and container scope, plus a guarantee that the query itself
+has no prohibited effect. The affected view cannot verify its own preconditions.
+
+### Historical snapshot contract
+
+Assessment can safely consume an **already collected, sanitized snapshot**.
+Reading the artifact requires only file input. The snapshot represents what its
+producer observed at capture time, including the effect of the producer's
+original method. It cannot establish the wallet state before that observation
+or at the later assessment. Qualify the producer and capture separately from
+the import.
+
+- Require the recorded Oracle source, numeric release, UTC observation time,
+  producer identity, and a verified evidence digest. Record whether the
+  captured result completed, was truncated, failed or has unknown coverage.
+  Source identity and the digest establish provenance and byte consistency,
+  with producer trust assessed separately.
+- Bind the capture to the exact database member and instance using DBID,
+  database unique name, instance identity and startup where independently
+  recorded. DBID alone cannot distinguish a Data Guard primary and standby.
+  Preserve the original login role, OPEN/MOUNT mode, connected scope,
+  reporting instance and row `CON_ID`. Use PDB identity when matching a PDB
+  observation. Leave ambiguous or mismatched identity unavailable. A CDB-wide
+  `CON_ID=0` row supplies no specific PDB observation.
+- Preserve the original `STATUS`, `WALLET_TYPE`, `KEYSTORE_MODE`,
+  `WALLET_ORDER` and `FULLY_BACKED_UP` fields where captured, including
+  raw unknown values, SQL NULL, unprojected fields and multiple rows per scope.
+  Keep complete empty, missing, incomplete, mismatched and stale evidence
+  distinct. The caller owns the age policy and reports the original time
+  alongside any accepted historical status.
+- Exclude wallet paths, key identifiers and material, credentials, commands
+  and original unsanitized output. Import must remain independent of database,
+  wallet and external keystore connections. An already admitted, separate
+  database identity check may bind an artifact to its source.
+
+No qualified historical snapshot is currently available for either approved
+SYSDBA LAB root. The previous 23.26.1.0.0 root receipts identify the READ WRITE
+primary and READ ONLY WITH APPLY physical standby only. Both import checks
+remain pending a qualified snapshot for each exact member and the consumer's
+import path. Keep keystore status unavailable until evidence is admitted.
+
+- Oracle references on auto-open behavior for [software wallets](https://docs.oracle.com/en/database/oracle/oracle-database/26/dbtde/configuring-united-mode2.html) and [external keystores](https://docs.oracle.com/en/database/oracle/oracle-database/26/dbtde/managing-keystore-and-tde-master-encryption-key.html).
+- Wallet view references for [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28320/dynviews_1112.htm), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e40402/dynviews_1125.htm), [12.1](https://docs.oracle.com/database/121/REFRN/GUID-054B6FBC-4263-4A91-AEBD-D6FB50C22107.htm), [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-ENCRYPTION_WALLET.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-ENCRYPTION_WALLET.html) and [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ENCRYPTION_WALLET.html).
+- Oracle references on [keystore configuration](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/TDE_CONFIGURATION.html), [database key metadata](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE_KEY_INFO.html), [tablespace encryption](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ENCRYPTED_TABLESPACES.html) and [dynamic view visibility](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/about-dynamic-performance-views.html).
 
 ## Runtime dictionary evidence
 
