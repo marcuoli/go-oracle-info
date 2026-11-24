@@ -111,6 +111,8 @@ The #155 dictionary observations have a separate [release and qualification matr
 
 #185 adds a separate [DBTIMEZONE release and scope matrix](upgrade-readiness.md#connected-database-time-zone).
 
+#191 adds a separate [time-zone column release and scope matrix](upgrade-readiness.md#columns-with-time-zone-aware-timestamp-types).
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen

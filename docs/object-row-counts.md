@@ -78,9 +78,15 @@ Oracle references reviewed 2026-11-24 (America/Sao_Paulo). **Stats** means the
 exact five-column projection and binary owner bind above. **Count** means the
 same quoted partition and subpartition SELECT extensions for each admitted
 family. The count builder is a syntax helper with no version argument. Caller
-admission controls execution. No native SQL or driver/application probe is
-recorded here for this new pair of operations. Earlier table-level probes above
-are separate evidence.
+admission controls execution. Native probes on 2026-11-24 used read-write
+Enterprise PDBs. Direct SQL with a SYSDBA login returned 58,950 for a named
+sample partition and zero for a separately identified database-owned
+subpartition on each release. The Go read path with a SYSTEM login retained 35
+sample partition rows per endpoint in dictionary and exact modes, including
+database-local LAST_ANALYZED and the requested PARALLEL(2) for exact counts.
+The application-owned sample had no subpartition rows. Direct SYSDBA execution
+qualifies syntax and the tested scope. Other application accounts, open states
+and native releases require their own evidence.
 
 | Oracle release | Dictionary reference and selected SQL | Static selection/decoding | Native SQL | Driver/application |
 | --- | --- | --- | --- | --- |
@@ -92,10 +98,10 @@ are separate evidence.
 | 12cR1 (12.1) | [Oracle 12.1 reference][stats121]. Stats and Count. | Checked at major 12 | Unexecuted | Unqualified |
 | 12cR2 (12.2) | [Oracle 12.2 reference][stats122]. Stats and Count. Widened identifiers depend on `COMPATIBLE`. | Checked at major 12 | Unexecuted | Unqualified |
 | 18c (18) | [Oracle 18c reference][stats18]. Stats and Count. | Checked at major 18 | Unexecuted | Unqualified |
-| 19c (19) | [Oracle 19c reference][stats19]. Stats and Count. | Checked at major 19 | Unexecuted | Unqualified |
+| 19c (19) | [Oracle 19c reference][stats19]. Stats and Count. | Checked at major 19 | Named partition/subpartition SQL passed as SYSDBA | SYSTEM dictionary/partition counts passed. No application subpartition fixture |
 | 21c (21) | [Oracle 21c reference][stats21]. Stats and Count. | Checked at major 21 | Unexecuted | Unqualified |
 | 23c/23ai (23) | Oracle's [23 database reference URL][stats23] redirects to the current 26ai page. Stats and Count. A separately archived 23 release reference was not verified. | Checked at major 23 | Unexecuted | Unqualified |
-| 26ai (23.26 release line) | [Oracle 26ai reference][stats26]. Stats and Count. Numeric 23 selects the reviewed projection. Numeric 26 is rejected. | Checked at major 23 and numeric 26 rejection | Unexecuted | Unqualified |
+| 26ai (23.26 release line) | [Oracle 26ai reference][stats26]. Stats and Count. Numeric 23 selects the reviewed projection. Numeric 26 is rejected. | Checked at major 23 and numeric 26 rejection | Named partition/subpartition SQL passed as SYSDBA | SYSTEM dictionary/partition counts passed. No application subpartition fixture |
 
 The selected fields require no patch-set/RU predicate. Open non-CDB/CDB
 root/PDB scope is the caller's already connected dictionary. MOUNT and
