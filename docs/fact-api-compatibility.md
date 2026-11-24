@@ -43,6 +43,7 @@ only19/21/23. Numeric26 is rejected; 26ai branding does not admit it.
 | `database.CPUCount` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.CharacterSet` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.Configuration` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
+| `storage.BlockCorruptions` | DS | DS | DS | DS | DS | DS | DS | DS | DS | DS | DS | DS |
 | `storage.DatafileSize` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.EncryptionCounts` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `database.Endian` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
@@ -112,6 +113,7 @@ record deliberate canonical source differences.
 | database.Configuration / CPUCount / SessionParameters / SessionParametersWithDefaults | V$PARAMETER executing-session values/display/default flags, distinct from instance SYSTEM_PARAMETER2 and stored SPFILE |
 | database.Endian / CharacterSet / NLSInstance | V$TRANSPORTABLE_PLATFORM+V$DATABASE / NLS_DATABASE_PARAMETERS / NLS_INSTANCE_PARAMETERS; not interchangeable NLS scopes |
 | database.Products / EncryptionCounts / PDBCount | DBA_REGISTRY / DBA_TABLESPACES+DBA_ENCRYPTED_COLUMNS / V$PDBS. Non-seed PDB counts require admitted CDB root. |
+| storage.BlockCorruptions | [V$DATABASE_BLOCK_CORRUPTION release and scope matrix](redo-storage-asm.md#recorded-block-corruption). The 23c reference redirects to 26ai. Native proof covers only the two 23.26.1.0.0 SYSDBA CDB root cases. |
 | storage.DatafileSize / FileNames | DBA_DATA_FILES rounded allocation / admitted data+temp names and file-kind discriminators |
 | memory.SGAAllocated / PGAAllocated | V$SGA / V$PGASTAT observed instance allocation rounded to three decimal GiB |
 | memory.SGAComponents | Same GV$SGASTAT projection as the legacy storage API. CON_ID begins at 12, with the established reporting-instance filters and ordered binds. The documented 19c/26ai source and scope limits are in [the source guide](redo-storage-asm.md). |
