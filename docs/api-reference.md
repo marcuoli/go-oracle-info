@@ -288,6 +288,8 @@ func (c *Client) TempfilesJSON(ctx context.Context, options TempfileOptions, lim
 func (c *Client) TemporaryGroups(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TemporaryGroupsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TimeZone(ctx context.Context) (*sql.Rows, error)
+func (c *Client) TimeZoneColumns(ctx context.Context) (*sql.Rows, error)
+func (c *Client) TimeZoneColumnsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TimeZoneFiles(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TimeZoneFilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TimeZoneJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
@@ -4137,6 +4139,20 @@ type TablesStatisticsRow struct {
 	EstimatedRows session.Value
 	LastAnalyzed  session.Value
 }
+type TimeZoneColumn struct {
+	Owner, TableName, ColumnName, DataType, ColumnID session.Value
+	SourceContainerID                                *session.Value
+}
+type TimeZoneColumnsOptions struct{ OracleVersion string }
+type TimeZoneColumnsRequest struct {
+	Options   TimeZoneColumnsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type TimeZoneColumnsResult struct {
+	Provenance DatasetProvenance
+	Rows       []TimeZoneColumn
+}
 ~~~
 
 ### Functions
@@ -4162,6 +4178,7 @@ func DecodeTableCount(result session.Result, options TableCountOptions) (TableCo
 func DecodeTableStatistics(result session.Result, options TableStatisticsOptions) (TableStatisticsResult, error)
 func DecodeTables(result session.Result, options TablesOptions) (TablesResult, error)
 func DecodeTablesStatistics(result session.Result, options TablesStatisticsOptions) (TablesStatisticsResult, error)
+func DecodeTimeZoneColumns(result session.Result, options TimeZoneColumnsOptions) (TimeZoneColumnsResult, error)
 func InvalidDetailsJSON(ctx context.Context, q rowset.Queryer, major int, owners []string, limits rowset.Limits) (json.RawMessage, error)
 func InvalidDetailsJSONWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions, limits rowset.Limits) (json.RawMessage, error)
 func InvalidDetailsRows(ctx context.Context, q rowset.Queryer, major int, owners ...string) (*sql.Rows, error)
@@ -4210,6 +4227,7 @@ func ReadTableCount(ctx context.Context, reader Reader, request TableCountReques
 func ReadTableStatistics(ctx context.Context, reader Reader, request TableStatisticsRequest) (TableStatisticsResult, error)
 func ReadTables(ctx context.Context, reader Reader, request TablesRequest) (TablesResult, error)
 func ReadTablesStatistics(ctx context.Context, reader Reader, request TablesStatisticsRequest) (TablesStatisticsResult, error)
+func ReadTimeZoneColumns(ctx context.Context, reader Reader, request TimeZoneColumnsRequest) (TimeZoneColumnsResult, error)
 func RecycleBinCountsJSON(ctx context.Context, q rowset.Queryer, options RecycleBinCountsOptions, limits rowset.Limits) (json.RawMessage, error)
 func RecycleBinCountsRows(ctx context.Context, q rowset.Queryer, options RecycleBinCountsOptions) (*sql.Rows, error)
 func RecycleBinCountsStatement(options RecycleBinCountsOptions) (string, error)
@@ -4231,6 +4249,9 @@ func TablesStatement(options TablesOptions) (string, []any, error)
 func TablesStatisticsJSON(ctx context.Context, q rowset.Queryer, options TablesStatisticsOptions, limits rowset.Limits) (json.RawMessage, error)
 func TablesStatisticsRows(ctx context.Context, q rowset.Queryer, options TablesStatisticsOptions) (*sql.Rows, error)
 func TablesStatisticsStatement(options TablesStatisticsOptions) (string, []any, error)
+func TimeZoneColumnsJSON(ctx context.Context, q rowset.Queryer, options TimeZoneColumnsOptions, limits rowset.Limits) (json.RawMessage, error)
+func TimeZoneColumnsRows(ctx context.Context, q rowset.Queryer, options TimeZoneColumnsOptions) (*sql.Rows, error)
+func TimeZoneColumnsStatement(options TimeZoneColumnsOptions) (string, error)
 ~~~
 
 ### Methods

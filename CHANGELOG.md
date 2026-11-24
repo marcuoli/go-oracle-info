@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Inventory declared columns using either Oracle time-zone-aware TIMESTAMP type, preserving exact metadata and observed container scope (#191).
+
 ## v0.39.0 (2026-11-24)
 
 - Add a read-only database time zone fact with exact DBTIMEZONE text, native rows and bounded JSON (#185).

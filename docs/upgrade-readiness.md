@@ -181,6 +181,50 @@ other login scopes remain unqualified for this fact.
 
 - Oracle SQL references for [9.2](https://docs.oracle.com/cd/A97630_01/server.920/a96540/functions32a.htm), [10.1](https://docs.oracle.com/cd/B13789_01/server.101/b10759/functions035.htm), [10.2](https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions039.htm), [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28286/functions041.htm), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e41084/functions048.htm), [12.1](https://docs.oracle.com/database/121/SQLRF/functions056.htm), [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/DBTIMEZONE.html), [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/DBTIMEZONE.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/DBTIMEZONE.html), [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/sqlrf/DBTIMEZONE.html) and [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/DBTIMEZONE.html).
 - Oracle scope references for [DUAL access](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/Selecting-from-the-DUAL-Table.html), [12.2 PDB time zone](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-PLUGGABLE-DATABASE.html), [26ai PDB time zone](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/ALTER-PLUGGABLE-DATABASE.html), [closed sources](https://docs.oracle.com/en/error-help/db/ora-01219/) and [host-clock behavior](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/TIME_AT_DBTIMEZONE.html).
+
+## Columns with time-zone-aware timestamp types
+
+`objects.ReadTimeZoneColumns` lists the declared builtin types
+`TIMESTAMP WITH TIME ZONE` and `TIMESTAMP WITH LOCAL TIME ZONE` from
+`SYS.DBA_TAB_COLUMNS`. The SDK keeps Oracle's exact `DATA_TYPE` text, including
+fractional precision when Oracle includes it. It also preserves owner, object
+name (`TABLE_NAME`), column name, and nullable `COLUMN_ID`. Invisible columns
+can have a null ordinal.
+
+The source covers table, view, and cluster columns visible in the connected
+dictionary. Oracle's view filters system-generated hidden columns. The
+selection reads declared columns, so nested object attributes and stored
+values require separate evidence. This inventory is independent of
+`DBTIMEZONE`, the time-zone file version, and any migration verdict.
+Oracle's [TSTZ upgrade metadata](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_TSTZ_TAB_COLS.html)
+covers a different scope that can include object attributes.
+
+| Numeric release | Projection and documented scope |
+| --- | --- |
+| 9.2, 10.1, 10.2, 11.1 and 11.2 | `OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_ID`. Oracle's 9.2 guide shows the precision-decorated dictionary spellings for both timestamp families. |
+| 12.1, 12.2, 18, 19, 21, 23 and 26ai (numeric 23.26) | Same aliases plus `SOURCE_CON_ID` from the admitted connection. Fixtures cover both 12.1 patch sets. The 23 reference redirects to 26ai. |
+| Unreviewed numeric releases and branding-only inputs | Unsupported before the inventory query. |
+
+Statement, Decode, Read, native Rows and bounded JSON share the projection.
+`Client.TimeZoneColumns` and `Client.TimeZoneColumnsJSON` also use the existing
+version probe. The caller supplies an open, admitted connection with dictionary
+view access. Collect each required PDB on its own handle. A root observation
+does not imply all-PDB visibility. MOUNT and closed PDBs remain unqualified.
+A complete zero-row result stays distinct from a failed or capacity-limited read.
+
+Native checks ran as SYSTEM on open READ WRITE primary PDBs on Oracle
+19.32.0.0.0 and 23.26.1.0.0, using Go 1.27.4 on Windows amd64,
+go-oracle-session v0.25.0 and go-ora V2. The six-column projection returned
+903 and 1,228 columns respectively, with `SOURCE_CON_ID = 3`. Native Rows,
+bounded JSON and the typed reader matched all observed cells and independent
+counts by exact type. Both PDBs exposed `WITH TIME ZONE` columns at precisions
+1, 3, 6 and 9. Neither exposed a `WITH LOCAL TIME ZONE` column. Static
+fixtures cover that type and precision 0 through 9, nullable ordinals,
+bounds and atomic JSON. Legacy releases, root, non-CDB, RAC, MOUNT and other
+login scopes remain unqualified natively.
+
+- Oracle dictionary references for [9.2](https://docs.oracle.com/cd/B10500_01/server.920/a96536/ch2389.htm#1314437), [10.1](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_2360.htm#sthref2266), [10.2](https://docs.oracle.com/cd/B19306_01/server.102/b14237/statviews_4146.htm#I1023277), [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_5039.htm#I1023277), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e40402/statviews_5044.htm#I1023277), [12.1](https://docs.oracle.com/database/121/REFRN/GUID-91F945AE-5778-45A6-A07E-775A006A9AA1.htm), [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/DBA_TAB_COLUMNS.html), [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/DBA_TAB_COLUMNS.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TAB_COLUMNS.html), [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/DBA_TAB_COLUMNS.html) and [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_TAB_COLUMNS.html).
+- Oracle references for [9.2 declared type spellings](https://docs.oracle.com/cd/B10500_01/server.920/a96530/downgrad.htm), [data types and precision](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/Data-Types.html), [invisible column ordinals](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-TABLE.html), [container identity](https://docs.oracle.com/database/121/SQLRF/functions199.htm) and [closed dictionary access](https://docs.oracle.com/en/error-help/db/ora-01219/).
 ## TDE keystore status evidence
 
 Issue #166 requires that assessment leave keystore and database state unchanged.

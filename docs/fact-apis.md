@@ -72,7 +72,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
 | [networkacl](api-reference.md#networkacl) | `Inventory` |
-| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
+| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics`, `TimeZoneColumns` |
 | [parameters](api-reference.md#parameters) | `ContainerSystem`, `Effective`, `Hidden`, `HiddenCatalog`, `HiddenContext`, `SPFile`, `ScalarSystem`, `System` |
 | [passwordfile](api-reference.md#passwordfile) | `Info` |
 | [patches](api-reference.md#patches) | `History`, `SQLPatch` |
