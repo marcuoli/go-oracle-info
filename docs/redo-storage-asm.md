@@ -139,6 +139,52 @@ exact 19-digit change-number formatting. Native recorded ranges, MOUNT,
 direct-PDB and non-CDB sessions, other logins and other numeric releases
 remain unqualified. Nonempty range decoding is covered by fixtures.
 
+
+## ASM disk-group capacity
+
+`asm.DiskGroupCapacityStatement`, `DecodeDiskGroupCapacity`, `ReadDiskGroupCapacity`,
+`DiskGroupCapacityRows` and `DiskGroupCapacityJSON` share one projection. The
+`Client.ASMDiskGroupCapacity` and `Client.ASMDiskGroupCapacityJSON` methods use
+the numeric version observed on the borrowed handle. The caller supplies
+`asm.DatabaseInstance` or `asm.ASMInstance` from its admitted scope.
+
+The read uses the documented local `V$ASM_DISKGROUP_STAT` view. Oracle documents
+the same projected columns as `V$ASM_DISKGROUP`. The STAT view omits disk discovery
+and can omit groups new to the connected instance. A database handle reports
+groups visible to that instance (`database_visible_asm_disk_groups`). An ASM
+handle reports groups known to the connected ASM instance
+(`asm_instance_disk_groups`). Neither scope establishes RAC-wide or storage-wide
+completeness. Group numbers can change on remount. The view is independent of
+FRA quota and usage.
+
+| Numeric release | Projection | Oracle documentation and static coverage | Native execution and SDK qualification |
+| --- | --- | --- | --- |
+| 9.2, 10.1 | Unsupported before SQL | STAT is introduced in [10.2](https://docs.oracle.com/cd/B19306_01/server.102/b14237/whatsnew.htm). Static tests check selection and absence of a read. | Unsupported |
+| 10.2, 11.1, 11.2 | `GROUP_NUMBER, NAME, STATE, TYPE, TOTAL_MB, FREE_MB, REQUIRED_MIRROR_FREE_MB, USABLE_FILE_MB` | [10.2 STAT](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1022.htm) and [column definitions](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1021.htm). Both 11g references document the same fields. Static selection and decoder tests pass. | Unqualified |
+| 12.1, 12.2, 18, 19, 21, 23/23ai, 26ai (numeric 23.26) | Same columns plus `CON_ID` | [12.1 columns](https://docs.oracle.com/database/121/REFRN/GUID-5CF77719-75BE-4312-84A3-49A7C6A20393.htm), [19c STAT](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-ASM_DISKGROUP_STAT.html), [26ai STAT](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ASM_DISKGROUP_STAT.html) and [26ai columns](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ASM_DISKGROUP.html). The 23 reference redirects to 26ai. Static selection and decoder tests pass. | Native Rows, bounded JSON and typed reads returned complete empty sets at 23.26.1.0.0 on two SYSDBA CDB roots. |
+
+Values retain the documented Oracle MB units, exact decimal text and SQL NULL.
+`USABLE_FILE_MB` can be negative. Unmounted groups can have zero group number
+and zero total/free MB. With FLEX or EXTEND redundancy,
+`REQUIRED_MIRROR_FREE_MB` and `USABLE_FILE_MB` can be zero when no calculation
+is supplied. From 12.1 onward, Oracle documents `CON_ID = 0` for this view. The
+decoder preserves SQL NULL separately and leaves the field absent on legacy
+releases. An empty result records no groups visible through the selected
+view. It cannot establish the storage type, the capacity or the absence of ASM.
+See [Oracle's capacity guidance](https://docs.oracle.com/en/database/oracle/oracle-database/26/ostmg/capacity-diskgroups.html)
+and [ASM dynamic views](https://docs.oracle.com/en/database/oracle/oracle-database/26/ostmg/views-asm-info.html).
+
+The caller must already have access to the view on the admitted handle. Direct
+ASM administration uses SYSASM on current Oracle releases and SYSDBA in the
+[10.2 ASM documentation](https://docs.oracle.com/cd/B19306_01/server.102/b14231/storeman.htm).
+Native qualification covered two RDBMS roots with Oracle 23.26.1.0.0,
+one primary READ WRITE and one physical standby READ ONLY WITH APPLY, on
+Windows amd64 with Go 1.27.4, go-oracle-session v0.25.0 and go-ora V2. Both
+matched an independent count of zero. Legacy servers, ordinary-account access,
+direct ASM, PDB and MOUNT access, positive capacity rows and RAC-wide visibility
+remain unqualified. Fixture assertions cover populated values, NULLs, limits
+and cursor failure.
+
 ## Time, totals and attribution limits
 
 `ClockStatement`, `DecodeClock`, `ReadClock`, `ClockRows` and `ClockJSON` provide

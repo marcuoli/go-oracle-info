@@ -96,6 +96,8 @@ func New(queryer Queryer) *Client
 ~~~go
 func (c *Client) ASMClients(ctx context.Context, filter ASMClientFilter) (*sql.Rows, error)
 func (c *Client) ASMClientsJSON(ctx context.Context, filter ASMClientFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) ASMDiskGroupCapacity(ctx context.Context, sourceRole asm.SourceRole) (*sql.Rows, error)
+func (c *Client) ASMDiskGroupCapacityJSON(ctx context.Context, sourceRole asm.SourceRole, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) ActiveServices(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ActiveServicesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Architecture(ctx context.Context) (identity.ArchitectureObservation, error)
@@ -420,6 +422,30 @@ type ClientsResult struct {
 	Provenance Provenance
 	Rows       []Client
 }
+type DiskGroupCapacity struct {
+	GroupNumber          session.Value
+	Name                 session.Value
+	State                session.Value
+	Redundancy           session.Value
+	TotalMB              session.Value
+	FreeMB               session.Value
+	RequiredMirrorFreeMB session.Value
+	UsableFileMB         session.Value
+	ContainerID          *session.Value
+}
+type DiskGroupCapacityOptions struct {
+	OracleVersion string
+	SourceRole    SourceRole
+}
+type DiskGroupCapacityRequest struct {
+	Options   DiskGroupCapacityOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type DiskGroupCapacityResult struct {
+	Provenance Provenance
+	Rows       []DiskGroupCapacity
+}
 type Error struct {
 	Source string
 
@@ -459,7 +485,12 @@ func ClientsStatement(major int, filter Filter) (string, []any, error)
 func ClientsStatementWithOptions(options ClientsOptions) (string, []any, error)
 func DecodeClients(result session.Result, major int, filter Filter) (ClientsResult, error)
 func DecodeClientsWithOptions(result session.Result, options ClientsOptions) (ClientsResult, error)
+func DecodeDiskGroupCapacity(result session.Result, options DiskGroupCapacityOptions) (DiskGroupCapacityResult, error)
+func DiskGroupCapacityJSON(ctx context.Context, q rowset.Queryer, options DiskGroupCapacityOptions, limits rowset.Limits) (json.RawMessage, error)
+func DiskGroupCapacityRows(ctx context.Context, q rowset.Queryer, options DiskGroupCapacityOptions) (*sql.Rows, error)
+func DiskGroupCapacityStatement(options DiskGroupCapacityOptions) (string, error)
 func ReadClients(ctx context.Context, reader Reader, request Request) (ClientsResult, error)
+func ReadDiskGroupCapacity(ctx context.Context, reader Reader, request DiskGroupCapacityRequest) (DiskGroupCapacityResult, error)
 ~~~
 
 ### Methods

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.38.0 (2026-11-24)
+
+- Add release-aware ASM disk-group capacity from the local STAT view, with exact MB values, explicit database or ASM scope, and native rows and bounded JSON APIs (#156).
+
 ## v0.37.0 (2026-11-24)
 
 - Add connected global name and database properties, plus root registry components, invalid-object counts, SQL patch attempts, and exact legacy audit placements by container (#155).
