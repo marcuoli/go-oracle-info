@@ -180,3 +180,32 @@ func TestAssessmentIdentityRetainsInstanceAndContainerSemantics(t *testing.T) {
 		t.Fatalf("active service rows %s %v", blob, err)
 	}
 }
+
+func TestObjectIdentitiesDocumentedIdentifierConstraints(t *testing.T) {
+	owner := strings.Repeat("é", 80)
+	options := objects.ObjectIdentitiesOptions{OracleVersion: "19.33.0.0.0", Owners: []string{owner}}
+	statement, args, err := objects.ObjectIdentitiesStatement(options)
+	if err != nil || strings.Contains(statement, owner) || !reflect.DeepEqual(args, []any{owner}) {
+		t.Errorf("encoded owner was not bound exactly: %q %v %v", statement, args, err)
+	}
+	for _, invalid := range []string{strings.Repeat("é", 129), string([]byte{0xff}), "A\x00B"} {
+		_, _, err := objects.ObjectIdentitiesStatement(objects.ObjectIdentitiesOptions{OracleVersion: options.OracleVersion, Owners: []string{invalid}})
+		if !errors.Is(err, objects.ErrInvalidRequest) {
+			t.Errorf("invalid owner passed: %q %v", invalid, err)
+		}
+	}
+	options.Owners = []string{"SYS"}
+	result := session.Result{
+		Columns: []string{"OWNER", "OBJECT_NAME", "SUBOBJECT_NAME", "OBJECT_TYPE", "OBJECT_ID", "EDITION_NAME", "SOURCE_CON_ID"},
+		Rows: [][]session.Value{{
+			{Text: "SYS"}, {Text: "X"}, {Null: true}, {Text: "TABLE"}, {Null: true}, {Null: true}, {Text: "1"},
+		}},
+	}
+	if facts, err := objects.DecodeObjectIdentities(result, options); facts.Rows != nil || !errors.Is(err, objects.ErrInvalidEvidence) {
+		t.Errorf("legacy documented object number admitted NULL: %+v %v", facts, err)
+	}
+	options.OracleVersion = "23.26.1.0.0"
+	if facts, err := objects.DecodeObjectIdentities(result, options); err != nil || len(facts.Rows) != 1 || !facts.Rows[0].ObjectID.Null {
+		t.Errorf("modern projected NULL was lost: %+v %v", facts, err)
+	}
+}

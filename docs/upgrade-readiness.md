@@ -215,6 +215,10 @@ the row and can differ. Zero is a valid Oracle value. A nil optional field
 means the projection omitted it. A selected SQL NULL, a successful empty
 result, an unsupported selection, and an Oracle error remain distinct.
 
+Object owners accept up to 128 Unicode characters. The caller supplies names
+from the admitted database. Oracle documents OBJECT_ID as required through 21c.
+A projected NULL is preserved for the numeric 23 series.
+
 The object list has no SQL row limit. Use explicit adequate bounds for its
 buffered reader or JSON envelope. When the SDK's default 10,000 rows are
 insufficient, the caller can set higher finite limits or use the native

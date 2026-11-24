@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
@@ -15,7 +16,9 @@ import (
 	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
-// ObjectIdentitiesOptions identifies the numeric release and exact admitted owners.
+// ObjectIdentitiesOptions identifies the numeric release and exact admitted owners. Owner
+// names accept up to 128 Unicode characters. The admitted database determines
+// which names are valid in its character set.
 type ObjectIdentitiesOptions struct {
 	OracleVersion string
 	Owners        []string
@@ -58,7 +61,7 @@ func objectIdentitiesPlan(options ObjectIdentitiesOptions) (datasetSelection, er
 	binds := make([]string, len(options.Owners))
 	args := make([]any, len(options.Owners))
 	for i, name := range options.Owners {
-		if !validObjectStatusName(name) {
+		if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > 128 || strings.ContainsRune(name, 0) {
 			return datasetSelection{}, ErrInvalidRequest
 		}
 		binds[i] = "NLSSORT(:" + strconv.Itoa(i+1) + ", 'NLS_SORT=BINARY')"
@@ -116,6 +119,11 @@ func decodeObjectIdentities(result session.Result, p datasetSelection) (ObjectId
 			SubobjectName: row[index["SUBOBJECT_NAME"]], ObjectType: row[index["OBJECT_TYPE"]], ObjectID: row[index["OBJECT_ID"]],
 		}
 		if !owners[item.Owner.Text] || item.Name.Text == "" {
+			return ObjectIdentitiesResult{}, ErrInvalidEvidence
+		}
+		// Oracle marks OBJECT_ID required through 21c. The numeric 23
+		// series reference describes the column without that guarantee.
+		if p.provenance.OracleMajor < 23 && item.ObjectID.Null {
 			return ObjectIdentitiesResult{}, ErrInvalidEvidence
 		}
 		if j, ok := index["EDITION_NAME"]; ok {
