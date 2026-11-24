@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Record 36 SuperCluster QFSDP dates from the refreshed Oracle Support proactive patch notes (#170).
 ## v0.33.0 (2026-11-24)
 
 - Add 55 Oracle Support SuperCluster QFSDP observations with hardware model scope and documented release dates, including the final Q1 2026 bundle (#167).
