@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add exact-owner optimizer statistics and exact count statement builders for table partitions and subpartitions (#190).
+
 ## v0.39.0 (2026-11-24)
 
 - Add a read-only database time zone fact with exact DBTIMEZONE text, native rows and bounded JSON (#185).

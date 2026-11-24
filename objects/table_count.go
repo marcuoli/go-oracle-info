@@ -45,6 +45,31 @@ func CountStatementWithOptions(owner, table string, options CountOptions) (strin
 	return selectClause + "TO_CHAR(COUNT(*), 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS ROW_COUNT FROM " + o + "." + t, nil
 }
 
+// CountSubobjectStatement returns an exact decimal COUNT(*) for a named
+// partition or subpartition of a caller-admitted ordinary table. A subpartition
+// requires its admitted parent identity. Oracle addresses a subpartition by its
+// table-unique name, so the caller must confirm the parent-child relationship.
+// The caller also owns workload, connection and cutoff admission.
+func CountSubobjectStatement(owner, table, partition, subpartition string, options CountOptions) (string, error) {
+	name, err := QuoteIdentifier(partition)
+	if err != nil {
+		return "", err
+	}
+	clause := " PARTITION"
+	if subpartition != "" {
+		name, err = QuoteIdentifier(subpartition)
+		if err != nil {
+			return "", err
+		}
+		clause = " SUBPARTITION"
+	}
+	statement, err := CountStatementWithOptions(owner, table, options)
+	if err != nil {
+		return "", err
+	}
+	return statement + clause + " (" + name + ")", nil
+}
+
 // CountStatement returns an exact decimal COUNT(*) for one safely quoted table.
 // Callers must first admit the object as an ordinary table in the intended scope;
 // this function cannot establish cost, cutoff consistency or access permission.
