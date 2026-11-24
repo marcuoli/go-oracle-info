@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add 144 source-backed Oracle Database patch observations across five release lines, preserving the original imports and platform scope (#174).
 - Record 36 SuperCluster QFSDP dates from the refreshed Oracle Support proactive patch notes (#170).
 ## v0.33.0 (2026-11-24)
 

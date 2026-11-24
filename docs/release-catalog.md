@@ -63,6 +63,14 @@ supplies exact patch numbers and release dates. Platform fields remain empty in
 these observations because the article links to Patch Details without listing
 platforms for those rows. The original imported observations remain in the catalog.
 
+Release-specific proactive patch notes also provide direct observations for
+11.2.0.4 Database PSUs, 12.1.0.2 Database and GI PSUs, 12.2.0.1 GI RUs, and
+selected 19c and 21c Windows Database Bundle Patches. Package dates retain
+Oracle's stated precision. A generic Windows or Unix label is recorded as an
+artifact scope, with exact operating-system platforms supplied only by scoped
+package evidence. The separate source observations preserve the originally
+imported rows.
+
 The top-level snapshot date records when the seed was prepared. A source's
 check date, article revision, and artifact release date are separate fields.
 An absent date or package number is unresolved. A published `tbd`,
