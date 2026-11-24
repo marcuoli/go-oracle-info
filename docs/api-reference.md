@@ -145,6 +145,8 @@ func (c *Client) DatabaseOptions(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatabaseOptionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DatabaseProperties(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatabasePropertiesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) DatafileStorageHardware(ctx context.Context) (*sql.Rows, error)
+func (c *Client) DatafileStorageHardwareJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Datafiles(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatafilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DefaultTemporary(ctx context.Context) (*sql.Rows, error)
@@ -422,6 +424,16 @@ type ClientsResult struct {
 	Provenance Provenance
 	Rows       []Client
 }
+type DatafileStorageHardwareRequest struct {
+	OracleVersion string
+	Reference     reference.Reference
+	Limits        rowset.Limits
+}
+type DatafileStorageHardwareResult struct {
+	Provenance       Provenance
+	HardwareType     StorageHardwareType
+	ExadataDiskCount session.Value
+}
 type DiskGroupCapacity struct {
 	GroupNumber          session.Value
 	Name                 session.Value
@@ -472,6 +484,7 @@ type Request struct {
 	Reference   reference.Reference
 }
 type SourceRole string
+type StorageHardwareType string
 ~~~
 
 ### Functions
@@ -483,13 +496,18 @@ func ClientsRows(ctx context.Context, q rowset.Queryer, major int, filter Filter
 func ClientsRowsWithOptions(ctx context.Context, q rowset.Queryer, options ClientsOptions) (*sql.Rows, error)
 func ClientsStatement(major int, filter Filter) (string, []any, error)
 func ClientsStatementWithOptions(options ClientsOptions) (string, []any, error)
+func DatafileStorageHardwareJSON(ctx context.Context, q rowset.Queryer, oracleVersion string, limits rowset.Limits) (json.RawMessage, error)
+func DatafileStorageHardwareRows(ctx context.Context, q rowset.Queryer, oracleVersion string) (*sql.Rows, error)
+func DatafileStorageHardwareStatement(oracleVersion string) (string, error)
 func DecodeClients(result session.Result, major int, filter Filter) (ClientsResult, error)
 func DecodeClientsWithOptions(result session.Result, options ClientsOptions) (ClientsResult, error)
+func DecodeDatafileStorageHardware(result session.Result, oracleVersion string) (DatafileStorageHardwareResult, error)
 func DecodeDiskGroupCapacity(result session.Result, options DiskGroupCapacityOptions) (DiskGroupCapacityResult, error)
 func DiskGroupCapacityJSON(ctx context.Context, q rowset.Queryer, options DiskGroupCapacityOptions, limits rowset.Limits) (json.RawMessage, error)
 func DiskGroupCapacityRows(ctx context.Context, q rowset.Queryer, options DiskGroupCapacityOptions) (*sql.Rows, error)
 func DiskGroupCapacityStatement(options DiskGroupCapacityOptions) (string, error)
 func ReadClients(ctx context.Context, reader Reader, request Request) (ClientsResult, error)
+func ReadDatafileStorageHardware(ctx context.Context, reader Reader, request DatafileStorageHardwareRequest) (DatafileStorageHardwareResult, error)
 func ReadDiskGroupCapacity(ctx context.Context, reader Reader, request DiskGroupCapacityRequest) (DiskGroupCapacityResult, error)
 ~~~
 
@@ -504,6 +522,8 @@ func (e *Error) Unwrap() error
 
 - `ASMInstance`
 - `DatabaseInstance`
+- `StorageHardwareExadata`
+- `StorageHardwareUnknown`
 
 ### Variables
 

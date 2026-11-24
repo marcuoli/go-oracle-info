@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expose database-visible Exadata storage evidence from ASM datafile groups through a read-only selector and native rows and bounded JSON APIs (#183).
 - Document the TDE keystore collection boundary and the requirements for importing dated status evidence (#166).
 
 ## v0.38.0 (2026-11-24)
