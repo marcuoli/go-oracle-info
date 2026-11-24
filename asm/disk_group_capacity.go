@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"reflect"
 
 	"github.com/marcuoli/go-oracle-info/internal/numeric"
 	"github.com/marcuoli/go-oracle-info/internal/oracleversion"
@@ -143,6 +144,16 @@ func ReadDiskGroupCapacity(ctx context.Context, reader Reader, request DiskGroup
 	limits, err := rowset.Resolve(request.Limits)
 	if err != nil {
 		return DiskGroupCapacityResult{}, err
+	}
+	// A typed nil adapter can satisfy Reader while having no callable query.
+	value := reflect.ValueOf(reader)
+	switch value.Kind() {
+	case reflect.Invalid:
+		return DiskGroupCapacityResult{}, ErrInvalidRequest
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.Slice:
+		if value.IsNil() {
+			return DiskGroupCapacityResult{}, ErrInvalidRequest
+		}
 	}
 	result, err := query(ctx, reader, request.Reference, p)
 	if err != nil {

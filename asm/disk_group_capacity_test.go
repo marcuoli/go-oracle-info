@@ -159,3 +159,21 @@ func TestDiskGroupCapacityReadAndJSONCompletion(t *testing.T) {
 		t.Fatalf("terminal cursor: %s, %v, closes %d", payload, err, state.Closed())
 	}
 }
+
+type capacityReaderFunc func(context.Context, session.Statement) (session.Result, error)
+
+func (fn capacityReaderFunc) Query(ctx context.Context, statement session.Statement) (session.Result, error) {
+	return fn(ctx, statement)
+}
+
+func TestDiskGroupCapacityRejectsNilReaderAdapter(t *testing.T) {
+	var reader capacityReaderFunc
+	request := DiskGroupCapacityRequest{
+		Options:   DiskGroupCapacityOptions{OracleVersion: "23.26.1.0.0", SourceRole: DatabaseInstance},
+		Reference: sourceRef(t),
+	}
+	result, err := ReadDiskGroupCapacity(context.Background(), reader, request)
+	if result.Rows != nil || !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("admitted a nil reader adapter: %+v, %v", result, err)
+	}
+}
