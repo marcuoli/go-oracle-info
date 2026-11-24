@@ -72,14 +72,14 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
 | [networkacl](api-reference.md#networkacl) | `Inventory` |
-| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
+| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics` |
 | [parameters](api-reference.md#parameters) | `ContainerSystem`, `Effective`, `Hidden`, `HiddenCatalog`, `HiddenContext`, `SPFile`, `ScalarSystem`, `System` |
 | [passwordfile](api-reference.md#passwordfile) | `Info` |
 | [patches](api-reference.md#patches) | `History`, `SQLPatch` |
-| [performance](api-reference.md#performance) | `Blockers`, `ResourceLimits` |
+| [performance](api-reference.md#performance) | `Blockers`, `InDoubtTransactions`, `ResourceLimits` |
 | [redo](api-reference.md#redo) | `ArchivedLogs`, `Clock`, `Groups`, `History`, `Members` |
 | [registry](api-reference.md#registry) | `Components` |
-| [scheduler](api-reference.md#scheduler) | `Jobs` |
+| [scheduler](api-reference.md#scheduler) | `Jobs`, `RunningJobs` |
 | [sequences](api-reference.md#sequences) | `Inventory` |
 | [services](api-reference.md#services) | `Definitions`, `Names` |
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |

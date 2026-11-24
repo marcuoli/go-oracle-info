@@ -96,6 +96,11 @@ only19/21/23. Numeric26 is rejected; 26ai branding does not admit it.
 | `scheduler.Jobs` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 | `services.Names` | U | U | U | U | U | U | U | U | DS | DS | DS | DS |
 
+The four runtime dictionary sources added in #153 have an independent
+[release and qualification matrix](upgrade-readiness.md#runtime-dictionary-evidence).
+It records the 10.1 and 10.2 Scheduler boundaries, the recycle-bin floor and the
+12c connected-container projection.
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen
