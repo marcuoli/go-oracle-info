@@ -195,3 +195,43 @@ Native Go driver collection ran as SYSTEM in open primary PDBs on
 19.32.0.0.0 and 23.26.1.0.0. Each returned seven complete object grant rows
 qualified by the recorded grantor only. Both column collections completed
 with zero rows. The owner-only and both-actor cases have fixture coverage.
+
+## Standalone role maintenance catalog (#143)
+
+`grants.ReadRoleCatalog` reads the complete visible set of `ROLE` and
+`ORACLE_MAINTAINED` values from `DBA_ROLES` in the connected dictionary.
+The role's exact spelling and its `Y`, `N` or SQL NULL flag are retained.
+A role can appear even when the admitted scope has no incoming membership
+for it. The result does not identify who granted the role or prove effective
+privileges or visibility across containers.
+
+`RoleCatalogStatement`, `DecodeRoleCatalog`, `RoleCatalogRows` and
+`RoleCatalogJSON` use the same ordered two-column selection. The caller supplies
+the admitted reader or query handle, observed numeric release, reference and
+limits as applicable. Rows returns the native cursor for caller-owned iteration
+and close. JSON consumes its own cursor. Read and JSON retain the numeric release
+and connected dictionary scope and return no successful prefix after a failure.
+A missing role and a NULL flag remain distinct observations.
+
+This selector reuses the classified grants release guard. A numeric release
+that cannot qualify the flag returns `ErrRoleCatalogUnavailable` before
+execution. The 12.1 reference lists the column at the release-family level.
+The SDK uses the existing conservative 12.1.0.2 and 12.2.0.1 patch-set
+boundaries. Earlier releases can use the separately documented [predefined
+role list](legacy-predefined-roles.md) where applicable.
+
+| Numeric release | Documented source and selected projection | Static tests | Native SQL | SDK driver |
+| --- | --- | --- | --- | --- |
+| 9.2, 10.1, 10.2, 11.1, 11.2 | Flag unavailable, no statement | Pass | No execution | No execution |
+| 12.1.0.1, ambiguous 12.1 or 12.2, 12.2.0.0 | 12c patch-set gate rejects before querying | Pass | No execution | No execution |
+| 12.1.0.2 and 12.2.0.1 | [12.1](https://docs.oracle.com/database/121/REFRN/GUID-C8E5500E-A013-45D3-AEFB-2C9C0AC87EC7.htm) and [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/DBA_ROLES.html), `ROLE` and `ORACLE_MAINTAINED` | Pass | Unqualified | Unqualified |
+| 18c, 19c, 21c | Same columns in [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/DBA_ROLES.html), [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_ROLES.html) and [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/DBA_ROLES.html) | Pass | Unqualified | Unqualified |
+| 23c/23ai | Numeric 23 selector. The live 23 reference redirects to 26ai. | Pass | Unqualified | Unqualified |
+| 26ai, 23.26.1.0.0 | [26ai DBA_ROLES](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_ROLES.html), same two columns | Pass | Exact selection and independent flag counts passed in both SYSDBA CDB root scopes | Go 1.27.4 and go-oracle-session v0.23.0 V2 buffered read passed in both scopes |
+
+The 26ai primary was OPEN READ WRITE. The physical standby was OPEN READ ONLY
+WITH APPLY. Each observation contained 119 roles with `Y` and zero with `N`
+or SQL NULL. Fixture tests exercise `N`, SQL NULL, empty results and rejected
+evidence. Native positive `N` and NULL, native Rows and JSON, other RUs, PDB,
+non-CDB, MOUNT and non-SYSDBA cases remain unqualified for this selector.
+Oracle references checked 2026-11-23.

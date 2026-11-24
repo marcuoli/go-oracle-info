@@ -2214,6 +2214,25 @@ type Request struct {
 	Reference reference.Reference
 	Limits    rowset.Limits
 }
+type RoleCatalogEntry struct {
+	Role             session.Value
+	OracleMaintained session.Value
+}
+type RoleCatalogProvenance struct {
+	Source        string `json:"source"`
+	OracleMajor   int    `json:"oracle_major"`
+	OracleRelease string `json:"oracle_release"`
+	Scope         string `json:"scope"`
+}
+type RoleCatalogRequest struct {
+	OracleRelease string
+	Reference     reference.Reference
+	Limits        rowset.Limits
+}
+type RoleCatalogResult struct {
+	Provenance RoleCatalogProvenance
+	Records    []RoleCatalogEntry
+}
 type RoleGrant struct {
 	Common     *session.Value
 	Inherited  *session.Value
@@ -2257,6 +2276,7 @@ func DecodeDirectColumn(result session.Result, options Options) (DirectColumnRes
 func DecodeDirectSystem(result session.Result, options Options) (DirectSystemResult, error)
 func DecodeObjectPrivilegeGrants(result session.Result, options ClassifiedOptions) (ObjectPrivilegeGrantsResult, error)
 func DecodeRole(result session.Result, options Options) (RoleResult, error)
+func DecodeRoleCatalog(result session.Result, oracleRelease string) (RoleCatalogResult, error)
 func DecodeRoleMemberships(result session.Result, options ClassifiedOptions) (RoleMembershipsResult, error)
 func DirectColumnJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error)
 func DirectColumnRows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error)
@@ -2281,9 +2301,13 @@ func ReadObjectPrivilegeGrants(ctx context.Context, reader Reader, request Reque
 func ReadObjectPrivilegeGrantsForRelease(ctx context.Context, reader Reader, request Request, oracleRelease string) (ObjectPrivilegeGrantsResult, error)
 func ReadObjectPrivilegeGrantsWithOptions(ctx context.Context, reader Reader, request ClassifiedRequest) (ObjectPrivilegeGrantsResult, error)
 func ReadRole(ctx context.Context, reader Reader, request Request) (RoleResult, error)
+func ReadRoleCatalog(ctx context.Context, reader Reader, request RoleCatalogRequest) (RoleCatalogResult, error)
 func ReadRoleMemberships(ctx context.Context, reader Reader, request Request) (RoleMembershipsResult, error)
 func ReadRoleMembershipsForRelease(ctx context.Context, reader Reader, request Request, oracleRelease string) (RoleMembershipsResult, error)
 func ReadRoleMembershipsWithOptions(ctx context.Context, reader Reader, request ClassifiedRequest) (RoleMembershipsResult, error)
+func RoleCatalogJSON(ctx context.Context, q rowset.Queryer, oracleRelease string, limits rowset.Limits) (json.RawMessage, error)
+func RoleCatalogRows(ctx context.Context, q rowset.Queryer, oracleRelease string) (*sql.Rows, error)
+func RoleCatalogStatement(oracleRelease string) (string, []any, error)
 func RoleJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error)
 func RoleMembershipsJSON(ctx context.Context, q rowset.Queryer, options ClassifiedOptions, limits rowset.Limits) (json.RawMessage, error)
 func RoleMembershipsRows(ctx context.Context, q rowset.Queryer, options ClassifiedOptions) (*sql.Rows, error)
@@ -2304,6 +2328,7 @@ func (e *Error) Unwrap() error
 - `ErrApplicationPublicUnavailable`
 - `ErrInvalidEvidence`
 - `ErrInvalidRequest`
+- `ErrRoleCatalogUnavailable`
 - `ErrUnsupportedVersion`
 
 ## identity

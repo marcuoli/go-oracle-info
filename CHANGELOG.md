@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read exact Oracle-maintained role metadata from the connected dictionary without depending on role grants (#143).
+
 ## v0.29.1 (2026-11-23)
 
 - Update go-oracle-session to v0.23.0 and refresh four indirect dependency versions. Verify source and build compatibility on Go 1.27.4 (#141).
