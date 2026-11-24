@@ -26,10 +26,10 @@ func TestObjectStatusStatementUsesBoundExactKeys(t *testing.T) {
 		t.Fatalf("unexpected bound request: %v, %v", args, err)
 	}
 	for _, fragment := range []string{
-		"WHERE EXISTS (", "FROM DBA_OBJECTS o", "o.OWNER = k.OWNER_NAME",
+		"WITH requested_objects AS (SELECT CAST(:1 AS VARCHAR2(128 CHAR)) AS OWNER_NAME", "WHERE EXISTS (", "FROM DBA_OBJECTS o", "o.OWNER = k.OWNER_NAME",
 		"NLSSORT(o.OBJECT_NAME, 'NLS_SORT=BINARY') = NLSSORT(k.OBJECT_NAME, 'NLS_SORT=BINARY')",
-		"0, CAST(NULL AS VARCHAR2(128 CHAR))", "1, CAST(NULL AS VARCHAR2(128 CHAR))",
-		"2, CAST(:10 AS VARCHAR2(128 CHAR))", "o.SUBOBJECT_NAME IS NULL", "o.EDITION_NAME AS EDITION_NAME",
+		"0 AS SUBOBJECT_MODE, CAST(NULL AS VARCHAR2(128 CHAR))", "1 AS SUBOBJECT_MODE, CAST(NULL AS VARCHAR2(128 CHAR))",
+		"2 AS SUBOBJECT_MODE, CAST(:10 AS VARCHAR2(128 CHAR))", "o.SUBOBJECT_NAME IS NULL", "o.EDITION_NAME AS EDITION_NAME",
 	} {
 		if !strings.Contains(stmt, fragment) {
 			t.Errorf("missing %q from bounded SQL", fragment)
@@ -51,7 +51,7 @@ func TestObjectStatusReleaseAndBatchAdmission(t *testing.T) {
 	}
 	for _, version := range []string{"11.1", "11.2.0.4.0", "12.1.0.1.0", "12.1.0.2.0", "12.2.0.1.0", "18.0", "19.32", "21.0", "23.9", "23.26.1.0.0"} {
 		stmt, _, err := ObjectStatusStatement(ObjectStatusOptions{OracleRelease: version, Keys: one})
-		if err != nil || strings.Contains(stmt, "o.EDITION_NAME AS EDITION_NAME") != (version != "11.1") {
+		if err != nil || !strings.HasPrefix(stmt, "WITH requested_objects AS (SELECT ") || strings.Contains(stmt, "o.EDITION_NAME AS EDITION_NAME") != (version != "11.1") {
 			t.Fatalf("%s selected wrong edition projection: %v", version, err)
 		}
 	}

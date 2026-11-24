@@ -119,7 +119,8 @@ func selectObjectStatus(options ObjectStatusOptions) (objectStatusSelection, err
 	keys := make([]ObjectStatusKey, len(options.Keys))
 	args := make([]any, 0, len(keys)*4)
 	var query strings.Builder
-	query.WriteString("WITH requested_objects (OWNER_NAME, OBJECT_TYPE, OBJECT_NAME, SUBOBJECT_MODE, SUBOBJECT_NAME) AS (")
+	// Oracle 11.1 requires aliases inside the factored SELECT.
+	query.WriteString("WITH requested_objects AS (")
 	for i, key := range options.Keys {
 		if !validObjectStatusName(key.Owner) || !validObjectStatusName(key.ObjectType) || !validObjectStatusName(key.ObjectName) {
 			return objectStatusSelection{}, ErrInvalidRequest
@@ -130,17 +131,17 @@ func selectObjectStatus(options ObjectStatusOptions) (objectStatusSelection, err
 		}
 		first := len(args) + 1
 		args = append(args, key.Owner, key.ObjectType, key.ObjectName)
-		fmt.Fprintf(&query, "SELECT CAST(:%d AS VARCHAR2(128 CHAR)), CAST(:%d AS VARCHAR2(128 CHAR)), CAST(:%d AS VARCHAR2(128 CHAR)), ", first, first+1, first+2)
+		fmt.Fprintf(&query, "SELECT CAST(:%d AS VARCHAR2(128 CHAR)) AS OWNER_NAME, CAST(:%d AS VARCHAR2(128 CHAR)) AS OBJECT_TYPE, CAST(:%d AS VARCHAR2(128 CHAR)) AS OBJECT_NAME, ", first, first+1, first+2)
 		switch {
 		case key.SubobjectName == nil:
-			query.WriteString("0, CAST(NULL AS VARCHAR2(128 CHAR)) FROM DUAL")
+			query.WriteString("0 AS SUBOBJECT_MODE, CAST(NULL AS VARCHAR2(128 CHAR)) AS SUBOBJECT_NAME FROM DUAL")
 		case key.SubobjectName.Null && key.SubobjectName.Text == "":
 			keys[i].SubobjectName = new(*key.SubobjectName)
-			query.WriteString("1, CAST(NULL AS VARCHAR2(128 CHAR)) FROM DUAL")
+			query.WriteString("1 AS SUBOBJECT_MODE, CAST(NULL AS VARCHAR2(128 CHAR)) AS SUBOBJECT_NAME FROM DUAL")
 		case !key.SubobjectName.Null && validObjectStatusName(key.SubobjectName.Text):
 			keys[i].SubobjectName = new(*key.SubobjectName)
 			args = append(args, key.SubobjectName.Text)
-			fmt.Fprintf(&query, "2, CAST(:%d AS VARCHAR2(128 CHAR)) FROM DUAL", len(args))
+			fmt.Fprintf(&query, "2 AS SUBOBJECT_MODE, CAST(:%d AS VARCHAR2(128 CHAR)) AS SUBOBJECT_NAME FROM DUAL", len(args))
 		default:
 			return objectStatusSelection{}, ErrInvalidRequest
 		}
