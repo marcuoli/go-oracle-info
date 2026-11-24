@@ -81,7 +81,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [registry](api-reference.md#registry) | `Components` |
 | [scheduler](api-reference.md#scheduler) | `Jobs`, `RunningJobs` |
 | [sequences](api-reference.md#sequences) | `Inventory` |
-| [services](api-reference.md#services) | `ActiveServices`, `Definitions`, `Names` |
+| [services](api-reference.md#services) | `ActiveServices`, `Definitions`, [`ListenerNetworks`](scan-discovery.md), `Names` |
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
 | [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileBackupModes`, `FileHeaders`, `FileNames`, `FileRecovery`, `FileStatuses`, `FreeExtents`, `LongColumns`, `RecoveryArea`, `RecoveryAreaUsage`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
 | [triggers](api-reference.md#triggers) | `Inventory` |
@@ -243,3 +243,7 @@ API is added. Pure models/evaluators/expression/quoting helpers are not SQL-only
 fact gaps and acquire no artificial query API.
 
 See [GoldenGate database discovery](goldengate-discovery.md) for separate process identity, verified accessible heartbeat sources and exact lag/freshness evidence (#72).
+
+SQL-only [SCAN discovery](scan-discovery.md) combines effective registration
+parameters and visible remote listener rows through `Client.Scan`,
+`Client.ScanJSON`, and `services.ReadScan`.
