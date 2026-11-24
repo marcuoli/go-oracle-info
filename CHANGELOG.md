@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.31.0 (2026-11-24)
+
+- Add bounded CDB root PDB visibility, session location, and per-PDB CDB_USERS account selectors. (#149)
+
 ## v0.30.0 (2026-11-24)
 
 - Read raw object status for a finite batch of exact dictionary keys while retaining subobject and edition evidence (#145).
