@@ -46,7 +46,7 @@ separate from source review and fixture coverage.
 | `engineeredsystem` | Payload model, complete-result decoders, XML normalization | Pure model/decoder; preserve independent valid facts and rejected payload evidence |
 | `engineeredsystem/catalog` | Capability-selected SQL/schema catalog | Complete capability-selected datasets; no automatic discovery/collection |
 | `goldengate` | Capture/apply/administrator facts and database properties | Full fact pipeline; configured GGSCHEMA remains explicitly unavailable from admitted DB source |
-| `grants` | Direct/object/column/role grant facts | Full fact pipeline; raw grants do not imply effective access |
+| `grants` | Direct/object/column/role grants and standalone role maintenance catalog | Full fact pipeline; raw grants do not imply effective access |
 | `identity` | Scalar/bootstrap properties and complete database/session datasets | Complete source datasets plus preserved bootstrap/property contracts |
 | `instances` | Qualified inventory, per-member versions and visibility | Full fact pipeline; visibility is not physical RAC completeness |
 | `memory` | Admitted configured-memory collection, RAC aggregation and observed SGA/PGA allocations | Complete scoped/PDB/RAC source adapters plus unchanged aggregate/property contracts |
