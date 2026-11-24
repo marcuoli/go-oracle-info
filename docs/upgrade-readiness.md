@@ -143,3 +143,49 @@ The six facts above require neither wallet inspection nor privileged tools.
 - Oracle 9.2 [incarnation ancestry](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch340.htm), 10.1 [promotion SCN](https://docs.oracle.com/cd/B13789_01/server.101/b10755/dynviews_1054.htm), 11.1 [restore-point flags](https://docs.oracle.com/cd/B28359_01/server.111/b28320/dynviews_2129.htm), 12.1 [restore points](https://docs.oracle.com/database/121/REFRN/GUID-19A363CF-E112-4BFE-8457-E5BB5FAF6FFB.htm) and 12.2 [PDB fields](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-RESTORE_POINT.html)
 - Oracle [10g/11g time zone observation](https://docs.oracle.com/cd/E11882_01/readmes.112/e41331/chapter11202.htm), [12.1 Data Pump reference](https://docs.oracle.com/database/121/SUTIL/E41528-10.pdf), and [12.2 time zone file columns](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-TIMEZONE_FILE.html)
 - 26ai [FRA quota](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RECOVERY_FILE_DEST.html), [file types](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RECOVERY_AREA_USAGE.html), [restore points](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-RESTORE_POINT.html), [incarnations](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE_INCARNATION.html), [database role transition SCN](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE.html), [time zone files](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-TIMEZONE_FILE.html), [keystore side effects](https://docs.oracle.com/en/database/oracle/oracle-database/26/dbtde/managing-keystore-and-tde-master-encryption-key.html)
+
+## Runtime dictionary evidence
+
+The connected dictionary supplies four independent observations. Each family
+has Statement, Decode, Read, Rows and JSON, plus the Client's native cursor and
+bounded JSON methods. The queries use SYS-qualified views to select the
+dictionary even when the login has a local object with the same name.
+
+| Family | Reviewed source and projection |
+| --- | --- |
+| `performance.InDoubtTransactions` | `DBA_2PC_PENDING`, with local/global transaction IDs, raw state, mixed and advice flags, and failure, force and retry times. Oracle's text `COMMIT#` is exposed as `COMMIT_NUMBER`. Dates retain whole seconds in Gregorian civil time without a time zone. |
+| `scheduler.RunningJobs` | `DBA_SCHEDULER_RUNNING_JOBS`, with owner, job name, available subname, exact session ID and exact running instance. Oracle documents that a synchronous `RUN_JOB` with `use_current_session => TRUE` can be absent. Repeated observations are separate snapshots. |
+| `objects.MaterializedViews` | `DBA_MVIEWS`, with owner, name, raw staleness and compile state. The two flags are independent observations. |
+| `objects.RecycleBinCounts` | `DBA_RECYCLEBIN`, with a count for each visible exact owner. Indexes, LOBs and other dependent entries may contribute. An owner with no visible entries produces no row. |
+
+| Numeric release | In-doubt transactions | Running Scheduler jobs | Materialized views | Recycle-bin counts |
+| --- | --- | --- | --- | --- |
+| 9.2 | Base projection | Unsupported before SQL | Base projection | Unsupported before SQL |
+| 10.1 | Base | Base without subname | Base | Base |
+| 10.2, 11.1, 11.2 | Base | Adds `JOB_SUBNAME` | Base | Base |
+| 12.1.0.1, 12.1.0.2, 12.2.0.1, 18c, 19c, 21c, 23ai, 26ai numeric 23.26 | Base + connected container | Includes subname + connected container | Base + connected container | Base + connected container |
+
+The 12c and later projections derive `SOURCE_CON_ID` from the admitted
+connection's `USERENV`. It identifies the connected container, while
+`RUNNING_INSTANCE` describes the job's observed execution instance. The
+caller admits a readable, open dictionary and read access to each view.
+The connected root scope establishes visibility only through that root's
+dictionary. A nil optional field means its column was unprojected. A projected
+SQL NULL, a successful empty result, an unsupported selector, and an Oracle
+error remain distinct.
+
+Oracle reference columns were checked on 2026-11-24. Static fixtures cover
+each selection boundary and modern 23.26.1 and 23.26.4, exact numeric text,
+duplicate job observations, NULL, capacity, cancellation and terminal errors.
+Native SQL, typed Read, Client Rows and bounded JSON passed on Windows amd64
+with Go 1.27.4, go-oracle-session v0.25.0 V2 and Oracle 26ai 23.26.1.0.0.
+Both SYSDBA CDB$ROOT endpoints were open. The primary was READ WRITE and the
+physical standby was READ ONLY WITH APPLY. All four sources were successfully
+empty on both, matching separate dictionary counts. Nonempty native results,
+ordinary login, direct PDB/non-CDB, RAC, MOUNT and other numeric releases remain
+unqualified.
+
+- Oracle 9.2 [DBA_2PC_PENDING](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch2185.htm#1306535), [DBA_MVIEWS](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch2309.htm#1311218) and [ALL_MVIEWS](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch286.htm#1296735)
+- Oracle 10.1 [new dictionary views](https://docs.oracle.com/cd/B13789_01/server.101/b10755/whatsnew.htm), [running job columns](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_1144.htm) and [recycle-bin columns](https://docs.oracle.com/cd/B13789_01/server.101/b10755/statviews_2276.htm), Oracle 10.2 [running job subname](https://docs.oracle.com/cd/B19306_01/server.102/b14237/statviews_2053.htm) and Oracle 12.1 [synchronous Scheduler jobs](https://docs.oracle.com/database/121/ARPLS/d_sched.htm)
+- Oracle Database Reference indexes for [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28320/toc.htm), [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e40402/toc.htm), [12.1](https://docs.oracle.com/database/121/REFRN/toc.htm) and [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/)
+- Oracle 26ai [DBA_2PC_PENDING](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_2PC_PENDING.html), [DBA_SCHEDULER_RUNNING_JOBS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_SCHEDULER_RUNNING_JOBS.html), [DBA_MVIEWS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_MVIEWS.html) and [DBA_RECYCLEBIN](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_RECYCLEBIN.html)

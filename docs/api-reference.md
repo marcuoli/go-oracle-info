@@ -185,6 +185,8 @@ func (c *Client) HiddenParameterContext(ctx context.Context, filter HiddenContex
 func (c *Client) HiddenParameterContextJSON(ctx context.Context, filter HiddenContextFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) HiddenParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
 func (c *Client) HiddenParametersJSON(ctx context.Context, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) InDoubtTransactions(ctx context.Context) (*sql.Rows, error)
+func (c *Client) InDoubtTransactionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) InitParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
 func (c *Client) InitParametersJSON(ctx context.Context, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) InstanceVersions(ctx context.Context) (*sql.Rows, error)
@@ -197,6 +199,8 @@ func (c *Client) InvalidObjectsRows(ctx context.Context, owners []string) (*sql.
 func (c *Client) InvalidObjectsRowsJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) LongColumns(ctx context.Context) (*sql.Rows, error)
 func (c *Client) LongColumnsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) MaterializedViews(ctx context.Context) (*sql.Rows, error)
+func (c *Client) MaterializedViewsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) MetadataDDL(ctx context.Context, options MetadataOptions) (*sql.Rows, error)
 func (c *Client) MetadataDDLJSON(ctx context.Context, options MetadataOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) NetworkACL(ctx context.Context, dataset networkacl.Dataset) (*sql.Rows, error)
@@ -213,6 +217,8 @@ func (c *Client) RecoveryArea(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RecoveryAreaJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RecoveryAreaUsage(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RecoveryAreaUsageJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RecycleBinCounts(ctx context.Context) (*sql.Rows, error)
+func (c *Client) RecycleBinCountsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoClock(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RedoClockJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoGroups(ctx context.Context, filter RedoFilter) (*sql.Rows, error)
@@ -225,6 +231,8 @@ func (c *Client) RestorePoints(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RestorePointsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RoleObjectGrants(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) RoleObjectGrantsJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RunningJobs(ctx context.Context) (*sql.Rows, error)
+func (c *Client) RunningJobsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SGAComponents(ctx context.Context, filter SGAComponentFilter) (*sql.Rows, error)
 func (c *Client) SGAComponentsJSON(ctx context.Context, filter SGAComponentFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SPFileParameters(ctx context.Context, filter SPFileFilter) (*sql.Rows, error)
@@ -3671,6 +3679,23 @@ type InvalidObjectsRow struct {
 	Name   session.Value
 	Status session.Value
 }
+type MaterializedView struct {
+	Owner             session.Value
+	Name              session.Value
+	Staleness         session.Value
+	CompileState      session.Value
+	SourceContainerID *session.Value
+}
+type MaterializedViewsOptions struct{ OracleVersion string }
+type MaterializedViewsRequest struct {
+	Options   MaterializedViewsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type MaterializedViewsResult struct {
+	Provenance DatasetProvenance
+	Rows       []MaterializedView
+}
 type ObjectInventoryOptions struct {
 	OracleMajor int
 	Owners      []string
@@ -3763,6 +3788,21 @@ type ReadError struct {
 
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
+}
+type RecycleBinCount struct {
+	Owner             session.Value
+	Count             session.Value
+	SourceContainerID *session.Value
+}
+type RecycleBinCountsOptions struct{ OracleVersion string }
+type RecycleBinCountsRequest struct {
+	Options   RecycleBinCountsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type RecycleBinCountsResult struct {
+	Provenance DatasetProvenance
+	Rows       []RecycleBinCount
 }
 type SchemaOptions struct {
 	OracleMajor int
@@ -3880,11 +3920,13 @@ func CountStatementWithOptions(owner, table string, options CountOptions) (strin
 func DecodeInvalidDetails(result session.Result, major int, owners ...string) (InvalidDetailsResult, error)
 func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error)
 func DecodeInvalidObjects(result session.Result, options InvalidObjectsOptions) (InvalidObjectsResult, error)
+func DecodeMaterializedViews(result session.Result, options MaterializedViewsOptions) (MaterializedViewsResult, error)
 func DecodeObjectInventory(result session.Result, options ObjectInventoryOptions) (ObjectInventoryResult, error)
 func DecodeObjectStatus(result session.Result, options ObjectStatusOptions) (ObjectStatusResult, error)
 func DecodeObjectTotals(result session.Result, options ObjectTotalsOptions) (ObjectTotalsResult, error)
 func DecodeOldestStatistics(result session.Result, options StatisticsOptions, owners ...string) (OldestStatisticsResult, error)
 func DecodeOldestStatisticsWithOptions(result session.Result, options OldestStatisticsOptions) (OldestStatisticsResult, error)
+func DecodeRecycleBinCounts(result session.Result, options RecycleBinCountsOptions) (RecycleBinCountsResult, error)
 func DecodeSchema(result session.Result, options SchemaOptions) (SchemaResult, error)
 func DecodeStatistics(result session.Result, major, limit int) ([]Statistics, error)
 func DecodeTable(result session.Result, options TableOptions) (TableResult, error)
@@ -3903,6 +3945,9 @@ func InvalidObjectsRows(ctx context.Context, q rowset.Queryer, options InvalidOb
 func InvalidObjectsStatement(options InvalidObjectsOptions) (string, []any, error)
 func InvalidStatement(owners ...string) (string, []any)
 func InventoryStatement(owners ...string) (string, []any)
+func MaterializedViewsJSON(ctx context.Context, q rowset.Queryer, options MaterializedViewsOptions, limits rowset.Limits) (json.RawMessage, error)
+func MaterializedViewsRows(ctx context.Context, q rowset.Queryer, options MaterializedViewsOptions) (*sql.Rows, error)
+func MaterializedViewsStatement(options MaterializedViewsOptions) (string, error)
 func ObjectInventoryJSON(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func ObjectInventoryRows(ctx context.Context, q rowset.Queryer, options ObjectInventoryOptions) (*sql.Rows, error)
 func ObjectInventoryStatement(options ObjectInventoryOptions) (string, []any, error)
@@ -3921,16 +3966,21 @@ func OldestStatisticsStatementWithOptions(options OldestStatisticsOptions) (stri
 func QuoteIdentifier(value string) (string, error)
 func ReadInvalidDetails(ctx context.Context, reader Reader, request InvalidDetailsRequest) (InvalidDetailsResult, error)
 func ReadInvalidObjects(ctx context.Context, reader Reader, request InvalidObjectsRequest) (InvalidObjectsResult, error)
+func ReadMaterializedViews(ctx context.Context, reader Reader, request MaterializedViewsRequest) (MaterializedViewsResult, error)
 func ReadObjectInventory(ctx context.Context, reader Reader, request ObjectInventoryRequest) (ObjectInventoryResult, error)
 func ReadObjectStatus(ctx context.Context, reader Reader, request ObjectStatusRequest) (ObjectStatusResult, error)
 func ReadObjectTotals(ctx context.Context, reader Reader, request ObjectTotalsRequest) (ObjectTotalsResult, error)
 func ReadOldestStatistics(ctx context.Context, reader Reader, request OldestStatisticsRequest) (OldestStatisticsResult, error)
+func ReadRecycleBinCounts(ctx context.Context, reader Reader, request RecycleBinCountsRequest) (RecycleBinCountsResult, error)
 func ReadSchema(ctx context.Context, reader Reader, request SchemaRequest) (SchemaResult, error)
 func ReadTable(ctx context.Context, reader Reader, request TableRequest) (TableResult, error)
 func ReadTableCount(ctx context.Context, reader Reader, request TableCountRequest) (TableCountResult, error)
 func ReadTableStatistics(ctx context.Context, reader Reader, request TableStatisticsRequest) (TableStatisticsResult, error)
 func ReadTables(ctx context.Context, reader Reader, request TablesRequest) (TablesResult, error)
 func ReadTablesStatistics(ctx context.Context, reader Reader, request TablesStatisticsRequest) (TablesStatisticsResult, error)
+func RecycleBinCountsJSON(ctx context.Context, q rowset.Queryer, options RecycleBinCountsOptions, limits rowset.Limits) (json.RawMessage, error)
+func RecycleBinCountsRows(ctx context.Context, q rowset.Queryer, options RecycleBinCountsOptions) (*sql.Rows, error)
+func RecycleBinCountsStatement(options RecycleBinCountsOptions) (string, error)
 func SchemaJSON(ctx context.Context, q rowset.Queryer, options SchemaOptions, limits rowset.Limits) (json.RawMessage, error)
 func SchemaRows(ctx context.Context, q rowset.Queryer, options SchemaOptions) (*sql.Rows, error)
 func SchemaStatement(options SchemaOptions) (string, []any, error)
@@ -4712,6 +4762,28 @@ type Error struct {
 
 }// contains filtered or unexported fields
 
+type InDoubtTransaction struct {
+	LocalTransactionID  session.Value
+	GlobalTransactionID session.Value
+	State               session.Value
+	Mixed               session.Value
+	Advice              session.Value
+	FailTime            session.Value
+	ForceTime           session.Value
+	RetryTime           session.Value
+	CommitNumber        session.Value
+	SourceContainerID   *session.Value
+}
+type InDoubtTransactionsOptions struct{ OracleVersion string }
+type InDoubtTransactionsRequest struct {
+	Options   InDoubtTransactionsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type InDoubtTransactionsResult struct {
+	Provenance Provenance
+	Rows       []InDoubtTransaction
+}
 type Provenance struct {
 	Source      string `json:"source"`
 	OracleMajor int    `json:"oracle_major"`
@@ -4745,8 +4817,13 @@ func BlockersJSON(ctx context.Context, q rowset.Queryer, options BlockersOptions
 func BlockersRows(ctx context.Context, q rowset.Queryer, options BlockersOptions) (*sql.Rows, error)
 func BlockersStatement(options BlockersOptions) (string, []any, error)
 func DecodeBlockers(result session.Result, options BlockersOptions) (BlockersResult, error)
+func DecodeInDoubtTransactions(result session.Result, options InDoubtTransactionsOptions) (InDoubtTransactionsResult, error)
 func DecodeResourceLimits(result session.Result, options ResourceLimitsOptions) (ResourceLimitsResult, error)
+func InDoubtTransactionsJSON(ctx context.Context, q rowset.Queryer, options InDoubtTransactionsOptions, limits rowset.Limits) (json.RawMessage, error)
+func InDoubtTransactionsRows(ctx context.Context, q rowset.Queryer, options InDoubtTransactionsOptions) (*sql.Rows, error)
+func InDoubtTransactionsStatement(options InDoubtTransactionsOptions) (string, error)
 func ReadBlockers(ctx context.Context, reader Reader, request BlockersRequest) (BlockersResult, error)
+func ReadInDoubtTransactions(ctx context.Context, reader Reader, request InDoubtTransactionsRequest) (InDoubtTransactionsResult, error)
 func ReadResourceLimits(ctx context.Context, reader Reader, request ResourceLimitsRequest) (ResourceLimitsResult, error)
 func ResourceLimitsJSON(ctx context.Context, q rowset.Queryer, options ResourceLimitsOptions, limits rowset.Limits) (json.RawMessage, error)
 func ResourceLimitsRows(ctx context.Context, q rowset.Queryer, options ResourceLimitsOptions) (*sql.Rows, error)
@@ -5302,16 +5379,39 @@ type Provenance struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RunningJob struct {
+	Owner             session.Value
+	Name              session.Value
+	SessionID         session.Value
+	RunningInstance   session.Value
+	Subname           *session.Value
+	SourceContainerID *session.Value
+}
+type RunningJobsOptions struct{ OracleVersion string }
+type RunningJobsRequest struct {
+	Options   RunningJobsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type RunningJobsResult struct {
+	Provenance Provenance
+	Rows       []RunningJob
+}
 ~~~
 
 ### Functions
 
 ~~~go
 func DecodeJobs(result session.Result, options JobsOptions) (JobsResult, error)
+func DecodeRunningJobs(result session.Result, options RunningJobsOptions) (RunningJobsResult, error)
 func JobsJSON(ctx context.Context, q rowset.Queryer, options JobsOptions, limits rowset.Limits) (json.RawMessage, error)
 func JobsRows(ctx context.Context, q rowset.Queryer, options JobsOptions) (*sql.Rows, error)
 func JobsStatement(options JobsOptions) (string, []any, error)
 func ReadJobs(ctx context.Context, reader Reader, request JobsRequest) (JobsResult, error)
+func ReadRunningJobs(ctx context.Context, reader Reader, request RunningJobsRequest) (RunningJobsResult, error)
+func RunningJobsJSON(ctx context.Context, q rowset.Queryer, options RunningJobsOptions, limits rowset.Limits) (json.RawMessage, error)
+func RunningJobsRows(ctx context.Context, q rowset.Queryer, options RunningJobsOptions) (*sql.Rows, error)
+func RunningJobsStatement(options RunningJobsOptions) (string, error)
 ~~~
 
 ### Methods

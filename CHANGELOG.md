@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.35.0 (2026-11-24)
+
+- Add release-aware observations of in-doubt transactions, running Scheduler jobs, materialized view state, and recycle-bin counts by owner (#153).
+
 ## v0.34.0 (2026-11-24)
 
 - Add 144 source-backed Oracle Database patch observations across five release lines, preserving the original imports and platform scope (#174).
