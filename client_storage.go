@@ -398,7 +398,7 @@ func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter,
 // TempFreeSpace observes the release and returns the actual TEMP free-space
 // cursor. The caller owns iteration, Err, Close and finite stream budgets.
 func (c *Client) TempFreeSpace(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (c *Client) TempFreeSpaceJSON(ctx context.Context, limits ...JSONLimits) (j
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +421,7 @@ func (c *Client) TempFreeSpaceJSON(ctx context.Context, limits ...JSONLimits) (j
 // BlockCorruptions observes the release and returns the actual cursor over
 // recorded ranges. The caller owns iteration, Err, Close and its read budget.
 func (c *Client) BlockCorruptions(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -434,14 +434,14 @@ func (c *Client) BlockCorruptionsJSON(ctx context.Context, limits ...JSONLimits)
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return storage.BlockCorruptionsJSON(ctx, c.native(), version, resolved)
 }
 
-func (c *Client) storageVersion(ctx context.Context) (string, error) {
+func (c *Client) observedNumericVersion(ctx context.Context) (string, error) {
 	version, err := c.Version(ctx)
 	if err != nil {
 		return "", err
@@ -455,7 +455,7 @@ func (c *Client) storageVersion(ctx context.Context) (string, error) {
 // FileStatuses returns the actual native cursor from the observed database release.
 // Callers retain ownership of cursor iteration, close, and budgets.
 func (c *Client) FileStatuses(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +468,7 @@ func (c *Client) FileStatusesJSON(ctx context.Context, limits ...JSONLimits) (js
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +478,7 @@ func (c *Client) FileStatusesJSON(ctx context.Context, limits ...JSONLimits) (js
 // FileRecovery returns the actual native cursor from the observed database release.
 // Callers retain ownership of cursor iteration, close, and budgets.
 func (c *Client) FileRecovery(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (c *Client) FileRecoveryJSON(ctx context.Context, limits ...JSONLimits) (js
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +501,7 @@ func (c *Client) FileRecoveryJSON(ctx context.Context, limits ...JSONLimits) (js
 // FileBackupModes returns the actual native cursor from the observed database release.
 // Callers retain ownership of cursor iteration, close, and budgets.
 func (c *Client) FileBackupModes(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -514,7 +514,7 @@ func (c *Client) FileBackupModesJSON(ctx context.Context, limits ...JSONLimits) 
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +524,7 @@ func (c *Client) FileBackupModesJSON(ctx context.Context, limits ...JSONLimits) 
 // FileHeaders returns the actual native cursor from the observed database release.
 // Callers retain ownership of cursor iteration, close, and budgets.
 func (c *Client) FileHeaders(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +537,7 @@ func (c *Client) FileHeadersJSON(ctx context.Context, limits ...JSONLimits) (jso
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.storageVersion(ctx)
+	version, err := c.observedNumericVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
