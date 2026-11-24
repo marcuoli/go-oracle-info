@@ -68,11 +68,11 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [goldengate](api-reference.md#goldengate) | `Administrators`, `ApplyCoordinators`, `Capture`, `Extracts`, `HeartbeatCatalog`, `HeartbeatLag`, `Heartbeats`, `Replicats` |
 | [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleCatalog`, `RoleMemberships` |
 | [identity](api-reference.md#identity) | `BannersSource`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
-| [instances](api-reference.md#instances) | `Inventory`, `Versions`, `Visibility` |
+| [instances](api-reference.md#instances) | `Inventory`, `MemberStartup`, `Versions`, `Visibility` |
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
 | [networkacl](api-reference.md#networkacl) | `Inventory` |
-| [objects](api-reference.md#objects) | `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `SubobjectStatistics`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics`, `TimeZoneColumns` |
+| [objects](api-reference.md#objects) | `EncryptedColumns`, `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `SubobjectStatistics`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics`, `TimeZoneColumns` |
 | [parameters](api-reference.md#parameters) | `ContainerSystem`, `Effective`, `Hidden`, `HiddenCatalog`, `HiddenContext`, `SPFile`, `ScalarSystem`, `System` |
 | [passwordfile](api-reference.md#passwordfile) | `Info` |
 | [patches](api-reference.md#patches) | `History`, `SQLPatch` |
@@ -85,7 +85,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
 | [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileBackupModes`, `FileHeaders`, `FileNames`, `FileRecovery`, `FileStatuses`, `FreeExtents`, `LongColumns`, `RecoveryArea`, `RecoveryAreaUsage`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
 | [triggers](api-reference.md#triggers) | `Inventory` |
-| [users](api-reference.md#users) | `AccountCount`, `Inventory`, `TableMetadata`, `TablespaceQuotas` |
+| [users](api-reference.md#users) | `AccountCount`, `Inventory`, `PasswordVersionCounts`, `TableMetadata`, `TablespaceQuotas` |
 
 ### Facade, pure APIs and procedural sources
 
@@ -214,6 +214,9 @@ legacy presentation/report selection where necessary:
   independently valid evidence remain unchanged.
 
 - [LogicalDatabase](logical-database-identity.md) reads the control-file DBID and name on reviewed releases from 9.2, with the CDB flag from 12.1.
+
+See [member startup, password versions, and encrypted columns](assessment-environment-facts.md)
+for the #197 sources, release boundaries, and qualification.
 
 ## Engineered-source capabilities
 

@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## v0.42.0 (2026-11-24)
+
 - Add SQL-only SCAN discovery from effective listener parameters and visible remote registration evidence. Preserve raw scope and leave IP-only or ambiguous names unknown (#196).
+- Read visible instance startup and status, aggregate password-version counts, and connected-dictionary encrypted column identities (#197).
 
 ## v0.41.0 (2026-11-24)
 

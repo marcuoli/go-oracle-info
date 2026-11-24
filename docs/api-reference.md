@@ -158,6 +158,8 @@ func (c *Client) DirectObjectGrantsJSON(ctx context.Context, filter DictionaryFi
 func (c *Client) Directories(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) DirectoriesJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Edition(ctx context.Context) (identity.EditionObservation, error)
+func (c *Client) EncryptedColumns(ctx context.Context) (*sql.Rows, error)
+func (c *Client) EncryptedColumnsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) EncryptionCounts(ctx context.Context, kind database.EncryptionKind) (*sql.Rows, error)
 func (c *Client) EncryptionCountsJSON(ctx context.Context, kind database.EncryptionKind, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) FileBackupModes(ctx context.Context) (*sql.Rows, error)
@@ -221,6 +223,8 @@ func (c *Client) LongColumns(ctx context.Context) (*sql.Rows, error)
 func (c *Client) LongColumnsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) MaterializedViews(ctx context.Context) (*sql.Rows, error)
 func (c *Client) MaterializedViewsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) MemberStartup(ctx context.Context) (*sql.Rows, error)
+func (c *Client) MemberStartupJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) MetadataDDL(ctx context.Context, options MetadataOptions) (*sql.Rows, error)
 func (c *Client) MetadataDDLJSON(ctx context.Context, options MetadataOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) NetworkACL(ctx context.Context, dataset networkacl.Dataset) (*sql.Rows, error)
@@ -233,6 +237,8 @@ func (c *Client) OracleHomeRows(ctx context.Context) (*sql.Rows, error)
 func (c *Client) OracleHomeRowsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PasswordFileInfo(ctx context.Context, options PasswordFileOptions) (*sql.Rows, error)
 func (c *Client) PasswordFileInfoJSON(ctx context.Context, options PasswordFileOptions, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) PasswordVersionCounts(ctx context.Context) (*sql.Rows, error)
+func (c *Client) PasswordVersionCountsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PatchHistory(ctx context.Context, options PatchHistoryOptions) (*sql.Rows, error)
 func (c *Client) PatchHistoryJSON(ctx context.Context, options PatchHistoryOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RecoveryArea(ctx context.Context) (*sql.Rows, error)
@@ -3309,6 +3315,18 @@ type JSONEnvelope struct {
 	Provenance Provenance      `json:"provenance"`
 	Data       json.RawMessage `json:"data"`
 }
+type MemberStartupOptions struct{ OracleVersion string }
+type MemberStartupRequest struct {
+	Options   MemberStartupOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type MemberStartupResult struct {
+	State      State
+	Provenance VisibilityProvenance
+	Rows       []MemberStartupRow
+}
+type MemberStartupRow struct{ InstanceID, StartupTime, Status session.Value }
 type Provenance struct {
 	Source      string `json:"source"`
 	OracleMajor int    `json:"oracle_major"`
@@ -3388,14 +3406,19 @@ type VisibilityRow struct {
 ~~~go
 func Decode(result session.Result, major int) (Result, error)
 func DecodeInventory(result session.Result, options InventoryOptions) (Result, error)
+func DecodeMemberStartup(result session.Result, options MemberStartupOptions) (MemberStartupResult, error)
 func DecodeVersions(result session.Result, major int) (VersionResult, error)
 func DecodeVisibility(result session.Result, options VisibilityOptions) (VisibilityResult, error)
 func InventoryJSON(ctx context.Context, q rowset.Queryer, options InventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func InventoryRows(ctx context.Context, q rowset.Queryer, options InventoryOptions) (*sql.Rows, error)
 func InventoryStatement(options InventoryOptions) (string, error)
 func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
+func MemberStartupJSON(ctx context.Context, q rowset.Queryer, options MemberStartupOptions, limits rowset.Limits) (json.RawMessage, error)
+func MemberStartupRows(ctx context.Context, q rowset.Queryer, options MemberStartupOptions) (*sql.Rows, error)
+func MemberStartupStatement(options MemberStartupOptions) (string, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
 func ReadInventory(ctx context.Context, reader Reader, request InventoryRequest) (Result, error)
+func ReadMemberStartup(ctx context.Context, reader Reader, request MemberStartupRequest) (MemberStartupResult, error)
 func ReadVersions(ctx context.Context, reader Reader, request Request) (VersionResult, error)
 func ReadVisibility(ctx context.Context, reader Reader, request VisibilityRequest) (VisibilityResult, error)
 func Rows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
@@ -3863,6 +3886,17 @@ type DatasetProvenance struct {
 	Owner                  string   `json:"owner,omitempty"`
 	Complete               bool     `json:"complete"`
 }
+type EncryptedColumn struct{ Owner, TableName, ColumnName session.Value }
+type EncryptedColumnsOptions struct{ OracleVersion string }
+type EncryptedColumnsRequest struct {
+	Options   EncryptedColumnsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type EncryptedColumnsResult struct {
+	Provenance DatasetProvenance
+	Rows       []EncryptedColumn
+}
 type InvalidDetailsOptions struct {
 	OracleMajor int
 	Owners      []string
@@ -4184,6 +4218,7 @@ type TimeZoneColumnsResult struct {
 func CountStatement(owner, table string) (string, error)
 func CountStatementWithOptions(owner, table string, options CountOptions) (string, error)
 func CountSubobjectStatement(owner, table, partition, subpartition string, options CountOptions) (string, error)
+func DecodeEncryptedColumns(result session.Result, options EncryptedColumnsOptions) (EncryptedColumnsResult, error)
 func DecodeInvalidDetails(result session.Result, major int, owners ...string) (InvalidDetailsResult, error)
 func DecodeInvalidDetailsWithOptions(result session.Result, options InvalidDetailsOptions) (InvalidDetailsResult, error)
 func DecodeInvalidObjects(result session.Result, options InvalidObjectsOptions) (InvalidObjectsResult, error)
@@ -4204,6 +4239,9 @@ func DecodeTableStatistics(result session.Result, options TableStatisticsOptions
 func DecodeTables(result session.Result, options TablesOptions) (TablesResult, error)
 func DecodeTablesStatistics(result session.Result, options TablesStatisticsOptions) (TablesStatisticsResult, error)
 func DecodeTimeZoneColumns(result session.Result, options TimeZoneColumnsOptions) (TimeZoneColumnsResult, error)
+func EncryptedColumnsJSON(ctx context.Context, q rowset.Queryer, options EncryptedColumnsOptions, limits rowset.Limits) (json.RawMessage, error)
+func EncryptedColumnsRows(ctx context.Context, q rowset.Queryer, options EncryptedColumnsOptions) (*sql.Rows, error)
+func EncryptedColumnsStatement(options EncryptedColumnsOptions) (string, error)
 func InvalidDetailsJSON(ctx context.Context, q rowset.Queryer, major int, owners []string, limits rowset.Limits) (json.RawMessage, error)
 func InvalidDetailsJSONWithOptions(ctx context.Context, q rowset.Queryer, options InvalidDetailsOptions, limits rowset.Limits) (json.RawMessage, error)
 func InvalidDetailsRows(ctx context.Context, q rowset.Queryer, major int, owners ...string) (*sql.Rows, error)
@@ -4237,6 +4275,7 @@ func OldestStatisticsRowsWithOptions(ctx context.Context, q rowset.Queryer, opti
 func OldestStatisticsStatement(options StatisticsOptions, owners ...string) (string, []any, error)
 func OldestStatisticsStatementWithOptions(options OldestStatisticsOptions) (string, []any, error)
 func QuoteIdentifier(value string) (string, error)
+func ReadEncryptedColumns(ctx context.Context, reader Reader, request EncryptedColumnsRequest) (EncryptedColumnsResult, error)
 func ReadInvalidDetails(ctx context.Context, reader Reader, request InvalidDetailsRequest) (InvalidDetailsResult, error)
 func ReadInvalidObjects(ctx context.Context, reader Reader, request InvalidObjectsRequest) (InvalidObjectsResult, error)
 func ReadMaterializedViews(ctx context.Context, reader Reader, request MaterializedViewsRequest) (MaterializedViewsResult, error)
@@ -4311,6 +4350,8 @@ func (e *ReadError) Unwrap() error
 - `ErrInvalidRequest`
 - `ErrInvalidStatisticsEvidence`
 - `ErrInvalidStatisticsOptions`
+- `ErrSourceInaccessible`
+- `ErrSourceUnavailable`
 - `ErrStatisticsOwnersRequired`
 - `ErrUnsupportedStatisticsVersion`
 - `ErrUnsupportedVersion`
@@ -6669,6 +6710,18 @@ type PDBAccountsRequest struct {
 	Reference reference.Reference
 	Limits    rowset.Limits
 }
+type PasswordVersionClass string
+type PasswordVersionCount struct{ Versions, AccountCount session.Value }
+type PasswordVersionCountsOptions struct{ OracleVersion string }
+type PasswordVersionCountsRequest struct {
+	Options   PasswordVersionCountsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type PasswordVersionCountsResult struct {
+	Provenance Provenance
+	Rows       []PasswordVersionCount
+}
 type Provenance struct {
 	Source      string   `json:"source"`
 	OracleMajor int      `json:"oracle_major"`
@@ -6756,6 +6809,7 @@ func Decode(result session.Result, options Options) (Result, error)
 func DecodeAccountCount(result session.Result, options Options) (AccountCountResult, error)
 func DecodeInventory(result session.Result, options Options) (Result, error)
 func DecodePDBAccounts(result session.Result, options PDBAccountsOptions) ([]PDBAccount, error)
+func DecodePasswordVersionCounts(result session.Result, options PasswordVersionCountsOptions) (PasswordVersionCountsResult, error)
 func DecodeTableMetadata(result session.Result, options Options) (TableMetadataResult, error)
 func DecodeTablespaceQuotas(result session.Result, options Options) (TablespaceQuotasResult, error)
 func InventoryJSON(ctx context.Context, q rowset.Queryer, options Options, limits rowset.Limits) (json.RawMessage, error)
@@ -6766,10 +6820,14 @@ func LookupLegacyPredefinedAccounts(version string) (LegacyPredefinedAccounts, b
 func PDBAccountsJSON(ctx context.Context, q rowset.Queryer, options PDBAccountsOptions, limits rowset.Limits) (json.RawMessage, error)
 func PDBAccountsRows(ctx context.Context, q rowset.Queryer, options PDBAccountsOptions) (*sql.Rows, error)
 func PDBAccountsStatement(options PDBAccountsOptions) (string, []any, error)
+func PasswordVersionCountsJSON(ctx context.Context, q rowset.Queryer, options PasswordVersionCountsOptions, limits rowset.Limits) (json.RawMessage, error)
+func PasswordVersionCountsRows(ctx context.Context, q rowset.Queryer, options PasswordVersionCountsOptions) (*sql.Rows, error)
+func PasswordVersionCountsStatement(options PasswordVersionCountsOptions) (string, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
 func ReadAccountCount(ctx context.Context, reader Reader, request Request) (AccountCountResult, error)
 func ReadInventory(ctx context.Context, reader Reader, request Request) (Result, error)
 func ReadPDBAccounts(ctx context.Context, reader Reader, request PDBAccountsRequest) ([]PDBAccount, error)
+func ReadPasswordVersionCounts(ctx context.Context, reader Reader, request PasswordVersionCountsRequest) (PasswordVersionCountsResult, error)
 func ReadTableMetadata(ctx context.Context, reader Reader, request Request) (TableMetadataResult, error)
 func ReadTablespaceQuotas(ctx context.Context, reader Reader, request Request) (TablespaceQuotasResult, error)
 func Rows(ctx context.Context, q rowset.Queryer, options Options) (*sql.Rows, error)
@@ -6785,14 +6843,25 @@ func TablespaceQuotasStatement(options Options) (string, []any, error)
 ### Methods
 
 ~~~go
+func (c PasswordVersionCount) Class() PasswordVersionClass
 func (e *Error) Error() string
 func (e *Error) Unwrap() error
 ~~~
+
+### Constants
+
+- `PasswordVersions10GOnly`
+- `PasswordVersionsCaseSensitive`
+- `PasswordVersionsHTTPOnly`
+- `PasswordVersionsUnknown`
+- `PasswordVersionsUnreported`
 
 ### Variables
 
 - `ErrInvalidEvidence`
 - `ErrInvalidRequest`
+- `ErrSourceInaccessible`
+- `ErrSourceUnavailable`
 - `ErrUnsupportedVersion`
 
 ## Internal packages and examples
