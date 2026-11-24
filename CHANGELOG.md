@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.37.0 (2026-11-24)
+
+- Add connected global name and database properties, plus root registry components, invalid-object counts, SQL patch attempts, and exact legacy audit placements by container (#155).
+
 ## v0.36.0 (2026-11-24)
 
 - Add exact connected-dictionary object identities, primary redo thread status, and active services by reporting instance and container (#154).

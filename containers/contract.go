@@ -281,3 +281,22 @@ func resourceSelection(options ResourceOptions, source string, fields []field, o
 		projected("SOURCE_CON_ID", connectedContainer, rowset.Integer),
 	}, fields...), nil, memberPredicate(options.Scope), order), nil
 }
+
+// RootDictionaryOptions admits the observed numeric release and CDB root.
+type RootDictionaryOptions struct {
+	OracleVersion string
+	Scope         Scope
+}
+
+const rootDictionaryPredicate = connectedContainer + " = 1"
+
+func rootDictionaryProfile(options RootDictionaryOptions) (release, error) {
+	r, err := profile(options.OracleVersion, options.Scope)
+	if err != nil {
+		return 0, err
+	}
+	if options.Scope != Root {
+		return 0, ErrUnsupportedScope
+	}
+	return r, nil
+}

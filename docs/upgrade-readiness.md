@@ -249,3 +249,68 @@ other numeric releases remain unqualified natively.
 - Oracle [11.1 reserved edition field](https://docs.oracle.com/cd/B28359_01/server.111/b28320/statviews_1145.htm#i1583352), [11.2 edition identity](https://docs.oracle.com/cd/E11882_01/server.112/e40402/statviews_1158.htm#i1583352) and [12.1 USERENV](https://docs.oracle.com/database/121/SQLRF/functions199.htm)
 - Oracle 12.1 [V$THREAD](https://docs.oracle.com/database/121/REFRN/GUID-D1A0B100-BE3F-4098-8E71-719B7CCCFF4B.htm) and [V$ACTIVE_SERVICES](https://docs.oracle.com/database/121/REFRN/GUID-488BCD15-3125-4CD1-BE26-9E5CA6BC8AE9.htm)
 - Oracle 26ai [DBA_OBJECTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_OBJECTS.html), [V$THREAD](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-THREAD.html), [V$ACTIVE_SERVICES](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-ACTIVE_SERVICES.html) and [dynamic view scope](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/about-dynamic-performance-views.html)
+
+## Connected dictionary and root rollups
+
+These six independent facts share the Statement, Decode, Read, Rows, and
+bounded JSON contract. Retain connected and row container identities when
+correlating them with a separate container inventory.
+
+| Family | Source and observation |
+| --- | --- |
+| `identity.GlobalName` | `SYS.GLOBAL_NAME` returns the connected dictionary's raw global name as a scalar. The decoder accepts zero or one row and preserves SQL NULL. |
+| `database.Properties` | `SYS.DATABASE_PROPERTIES` returns property name, nullable value and description. The caller sets finite row and byte bounds for a complete inventory. The dedicated default-temporary fact still provides its one-property selection. |
+| `containers.RegistryComponents` | `CDB_REGISTRY` returns row `CON_ID`, component ID/name, version, optional full version, status, and Oracle's raw modified text. |
+| `containers.InvalidObjectCounts` | `CDB_OBJECTS` groups the visible rows by `CON_ID` and counts only those with status `INVALID`. An observed group can have exact zero. A missing group stays unobserved. |
+| `containers.SQLPatchHistory` | `CDB_REGISTRY_SQLPATCH` returns row `CON_ID`, exact patch ID and UID, raw action/status, six-digit Gregorian civil timestamp, and description. Separate attempts and duplicate rows remain visible. |
+| `containers.LegacyAuditTablePlacement` | `CDB_TABLES` returns row `CON_ID`, owner, table name and nullable tablespace for the exact `SYS.AUD$` and `SYS.FGA_LOG$` identities. A nullable tablespace remains a nullable metadata observation. Current-container callers can use the existing owner- and name-bound `users.TableMetadata` API. |
+
+The root families require `RootDictionaryOptions` with caller-admitted
+`containers.Root` on the exact connection. The SQL also guards execution
+visibility with connected container ID 1. Oracle `CONTAINER_DATA`, dictionary
+grants, PDB open or restricted state, and instance reachability determine which
+rows are visible. The row `CON_ID` stays separate from the root's admission
+scope. For the two connected dictionary readers, 12c and later return the
+connection's `SOURCE_CON_ID`. A completed result establishes coverage of the
+selected transport. Use a separate admitted PDB inventory to retain closed and
+unobserved containers explicitly. Audit placement describes table metadata.
+
+| Numeric release | Connected name and properties | Component, invalid-count and legacy audit root reads | Root SQL patch history |
+| --- | --- | --- | --- |
+| 9.2, 10.1, 10.2, 11.1, 11.2 | Base projection | Unsupported before SQL | Unsupported before SQL |
+| 12.1.0.1 | Adds `SOURCE_CON_ID` | Base including row `CON_ID` | Unsupported before SQL on this exact patch set |
+| 12.1.0.2, 12.2.0.1 | Same connected projection | Same root projection | Base including row `CON_ID` |
+| 18c, 19c, 21c, 23ai, 26ai numeric 23.26 | Same connected projection | Component projection adds `VERSION_FULL` | Same root projection |
+
+Oracle's 12.1.0.1 PSU example qualifies the local DBA SQL patch source
+with a narrower projection. The 12.1.0.2 root example and the corresponding
+Oracle Reference definitions establish the conservative floor for the new
+root patch projection. The online 23ai reference routes to 26ai. Oracle column
+references were checked on 2026-11-24. Fixtures cover numerical admission
+through 23.26.4, root scope rejection, visible zero, absent groups, exact
+numbers and timestamps, capacity, invalid evidence, and access and terminal
+failures.
+
+Native reads used Windows amd64, Go 1.27.4, go-oracle-session v0.25.0 with
+go-ora V2, and Oracle 26ai 23.26.1.0.0. On both SYSDBA CDB roots, the READ WRITE
+primary and READ ONLY WITH APPLY physical standby, the typed reader, native
+cursor, bounded JSON and independent source counts agreed.
+
+| Observation | Rows per endpoint | Visible dictionary scope |
+| --- | ---: | --- |
+| Global name | 1 | Connected root |
+| Database properties | 45 | Connected root |
+| Registry components | 28 | 14 at `CON_ID=1`, 14 at `CON_ID=3` |
+| Invalid object groups | 2 | `CON_ID=1` and `CON_ID=3`, with each exact count checked independently |
+| SQL patch attempts | 2 | One at each of `CON_ID=1` and `CON_ID=3` |
+| Legacy audit placements | 4 | Two at each of `CON_ID=1` and `CON_ID=3` |
+
+The existing owner-bound local audit lookup returned only the two root
+placements on each connection. The observed additional rows for
+`CON_ID=3` establish the root coverage gap. Direct PDB/non-CDB, MOUNT,
+ordinary login, RAC and other numeric releases remain unqualified natively.
+
+- Oracle 9.2 [GLOBAL_NAME](https://docs.oracle.com/cd/B10500_01/server.920/a96536/ch2431.htm) and [DATABASE_PROPERTIES](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch2183.htm)
+- Oracle 12.1 [CDB view visibility](https://docs.oracle.com/database/121/REFRN/GUID-2B8A1B8B-4F5B-4FBB-AE0B-68B6F8BA7D5E.htm), [USERENV](https://docs.oracle.com/database/121/SQLRF/functions199.htm), and [DBA_REGISTRY_SQLPATCH](https://docs.oracle.com/database/121/REFRN/GUID-F6D2BC12-606C-41FE-B9E8-F3702CD32F89.htm)
+- Oracle [12.1.0.1 local patch example](https://www.oracle.com/br/technical-resources/articles/database-performance/cdb-when-pdb-has-to-be-recovered.html), [12.1.0.2 root patch example](https://www.oracle.com/webfolder/technetwork/jp/ondemand/od12c-aug2014/03_DB12102_coretech_UPG_v2.pdf), and [18c registry full version](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/DBA_REGISTRY.html)
+- Oracle 26ai [GLOBAL_NAME](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/GLOBAL_NAME.html), [DATABASE_PROPERTIES](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DATABASE_PROPERTIES.html), [CDB views](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/cdb_-views.html), [DBA_REGISTRY](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_REGISTRY.html), [DBA_OBJECTS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_OBJECTS.html), [DBA_REGISTRY_SQLPATCH](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_REGISTRY_SQLPATCH.html), and [DBA_TABLES](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/DBA_TABLES.html)
