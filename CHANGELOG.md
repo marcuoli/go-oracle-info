@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add SQL-only SCAN discovery from effective listener parameters and visible remote registration evidence. Preserve raw scope and leave IP-only or ambiguous names unknown (#196).
+
 ## v0.41.0 (2026-11-24)
 
 - Add exact-owner optimizer statistics and exact count statement builders for table partitions and subpartitions (#190).

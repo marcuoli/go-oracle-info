@@ -215,6 +215,8 @@ func (c *Client) InvalidObjects(ctx context.Context, owners ...string) (*sql.Row
 func (c *Client) InvalidObjectsJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) InvalidObjectsRows(ctx context.Context, owners []string) (*sql.Rows, error)
 func (c *Client) InvalidObjectsRowsJSON(ctx context.Context, owners []string, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) ListenerNetworks(ctx context.Context) (*sql.Rows, error)
+func (c *Client) ListenerNetworksJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) LongColumns(ctx context.Context) (*sql.Rows, error)
 func (c *Client) LongColumnsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) MaterializedViews(ctx context.Context) (*sql.Rows, error)
@@ -265,6 +267,8 @@ func (c *Client) SQLPlanBaselines(ctx context.Context, filter DictionaryFilter) 
 func (c *Client) SQLPlanBaselinesJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SQLProfiles(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) SQLProfilesJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) Scan(ctx context.Context, limits ...JSONLimits) (services.ScanObservation, error)
+func (c *Client) ScanJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Segments(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SegmentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Sequences(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -5854,6 +5858,22 @@ type DefinitionsRequest struct {
 	Options   DefinitionsOptions
 	Reference reference.Reference
 }
+type ListenerNetwork struct {
+	InstanceID  session.Value  `json:"instance_id"`
+	Network     session.Value  `json:"network"`
+	Value       session.Value  `json:"value"`
+	ContainerID *session.Value `json:"container_id,omitempty"`
+}
+type ListenerNetworksOptions struct{ OracleVersion string }
+type ListenerNetworksRequest struct {
+	Options   ListenerNetworksOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ListenerNetworksResult struct {
+	Provenance DatasetProvenance `json:"provenance"`
+	Rows       []ListenerNetwork `json:"rows"`
+}
 type NamesOptions struct{ OracleMajor int }
 type NamesRequest struct {
 	Options   NamesOptions
@@ -5885,6 +5905,27 @@ type Result struct {
 	Provenance Provenance
 	Rows       []Service
 }
+type ScanObservation struct {
+	Name                string                  `json:"name,omitempty"`
+	ParameterProvenance parameters.Provenance   `json:"parameter_provenance"`
+	Parameters          []ScanParameter         `json:"parameters"`
+	RegistrationState   ScanRegistrationState   `json:"registration_state"`
+	Registration        *ListenerNetworksResult `json:"registration,omitempty"`
+}
+type ScanParameter struct {
+	InstanceID  session.Value  `json:"instance_id"`
+	ContainerID *session.Value `json:"container_id,omitempty"`
+	Name        session.Value  `json:"name"`
+	Ordinal     session.Value  `json:"ordinal"`
+	Value       session.Value  `json:"value"`
+}
+type ScanRegistrationState string
+type ScanRequest struct {
+	OracleVersion       string
+	ParametersReference reference.Reference
+	ListenersReference  reference.Reference
+	Limits              rowset.Limits
+}
 type Service struct {
 	Name              session.Value
 	NetworkName       session.Value
@@ -5915,18 +5956,24 @@ func ActiveServicesStatement(options ActiveServicesOptions) (string, error)
 func Decode(result session.Result, major int, includeEdition ...bool) (Result, error)
 func DecodeActiveServices(result session.Result, options ActiveServicesOptions) (ActiveServicesResult, error)
 func DecodeDefinitions(result session.Result, options DefinitionsOptions) (Result, error)
+func DecodeListenerNetworks(result session.Result, options ListenerNetworksOptions) (ListenerNetworksResult, error)
 func DecodeNames(result session.Result, options NamesOptions) (NamesResult, error)
 func DefinitionsJSON(ctx context.Context, q rowset.Queryer, options DefinitionsOptions, limits rowset.Limits) (json.RawMessage, error)
 func DefinitionsRows(ctx context.Context, q rowset.Queryer, options DefinitionsOptions) (*sql.Rows, error)
 func DefinitionsStatement(options DefinitionsOptions) (string, error)
 func JSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits, includeEdition ...bool) (json.RawMessage, error)
+func ListenerNetworksJSON(ctx context.Context, q rowset.Queryer, options ListenerNetworksOptions, limits rowset.Limits) (json.RawMessage, error)
+func ListenerNetworksRows(ctx context.Context, q rowset.Queryer, options ListenerNetworksOptions) (*sql.Rows, error)
+func ListenerNetworksStatement(options ListenerNetworksOptions) (string, error)
 func NamesJSON(ctx context.Context, q rowset.Queryer, options NamesOptions, limits rowset.Limits) (json.RawMessage, error)
 func NamesRows(ctx context.Context, q rowset.Queryer, options NamesOptions) (*sql.Rows, error)
 func NamesStatement(options NamesOptions) (string, []any, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
 func ReadActiveServices(ctx context.Context, reader Reader, request ActiveServicesRequest) (ActiveServicesResult, error)
 func ReadDefinitions(ctx context.Context, reader Reader, request DefinitionsRequest) (Result, error)
+func ReadListenerNetworks(ctx context.Context, reader Reader, request ListenerNetworksRequest) (ListenerNetworksResult, error)
 func ReadNames(ctx context.Context, reader Reader, request NamesRequest) (NamesResult, error)
+func ReadScan(ctx context.Context, reader Reader, request ScanRequest) (ScanObservation, error)
 func Rows(ctx context.Context, q rowset.Queryer, major int, includeEdition ...bool) (*sql.Rows, error)
 func Statement(major int, includeEdition ...bool) (string, error)
 ~~~
@@ -5943,6 +5990,10 @@ func (e *ReadError) Unwrap() error
 ### Constants
 
 - `NamesSQL`
+- `ScanRegistrationAvailable`
+- `ScanRegistrationInaccessible`
+- `ScanRegistrationNoRows`
+- `ScanRegistrationUnavailable`
 
 ### Variables
 

@@ -216,3 +216,8 @@ recorded as unavailable documentation, never evidence the views do not exist.
 - [V$TRANSPORTABLE_PLATFORM](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-TRANSPORTABLE_PLATFORM.html)
 - [NLS_DATABASE_PARAMETERS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/NLS_DATABASE_PARAMETERS.html)
 - [NLS_INSTANCE_PARAMETERS](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/NLS_INSTANCE_PARAMETERS.html)
+
+## SQL-only SCAN discovery
+
+See the [SCAN release matrix](scan-discovery.md#release-checks) for the #196
+parameter and listener source choices, isolated Oracle runs, and driver evidence.

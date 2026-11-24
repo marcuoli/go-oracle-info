@@ -3,6 +3,8 @@ package oracleinfo
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 
 	"github.com/marcuoli/go-oracle-info/identity"
 	"github.com/marcuoli/go-oracle-info/internal/projection"
@@ -11,9 +13,13 @@ import (
 	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
-type nativeIdentityReader struct{ queryer Queryer }
+type nativeIdentityReader struct {
+	queryer        Queryer
+	limits         rowset.Limits
+	integerColumns []string
+}
 
-// This is a bounded scalar-result adapter, not a transport/lease implementation.
+// This bounded adapter borrows native results without owning a session or lease.
 // It borrows real rows and delegates their complete lifecycle to rowset.Read.
 func (r nativeIdentityReader) Query(ctx context.Context, statement session.Statement) (session.Result, error) {
 	rows, err := rowset.Query(ctx, r.queryer, statement.Text, statement.Args...)
@@ -26,9 +32,17 @@ func (r nativeIdentityReader) Query(ctx context.Context, statement session.State
 	}
 	schema := make([]rowset.Column, len(names))
 	for i, name := range names {
-		schema[i] = rowset.Column{Name: name, Kind: rowset.Text}
+		kind := rowset.Text
+		if slices.Contains(r.integerColumns, strings.ToUpper(name)) {
+			kind = rowset.Integer
+		}
+		schema[i] = rowset.Column{Name: name, Kind: kind}
 	}
-	table, err := rowset.Read(ctx, rows, schema, rowset.Limits{MaxRows: 16, MaxBytes: 64 << 10})
+	limits := r.limits
+	if limits == (rowset.Limits{}) {
+		limits = rowset.Limits{MaxRows: 16, MaxBytes: 64 << 10}
+	}
+	table, err := rowset.Read(ctx, rows, schema, limits)
 	if err != nil {
 		return session.Result{}, err
 	}
