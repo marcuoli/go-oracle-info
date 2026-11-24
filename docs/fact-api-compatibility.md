@@ -103,6 +103,8 @@ It records the 10.1 and 10.2 Scheduler boundaries, the recycle-bin floor and the
 
 The three #154 families have a separate [release and qualification matrix](upgrade-readiness.md#object-identities-redo-threads-and-active-services).
 
+The #155 dictionary observations have a separate [release and qualification matrix](upgrade-readiness.md#connected-dictionary-and-root-rollups).
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen

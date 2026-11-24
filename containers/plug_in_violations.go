@@ -86,7 +86,7 @@ func plugInViolationsPlan(options PlugInViolationsOptions) (selection, error) {
 		order = "v.CON_ID, " + order
 	}
 	provenance := Provenance{Source: "PDB_PLUG_IN_VIOLATIONS", OracleVersion: options.OracleVersion, Scope: options.Scope}
-	return selectFields(provenance, fields, extras, predicate, order), nil
+	return selectFields(provenance.Source, provenance, fields, extras, predicate, order), nil
 }
 
 // DecodePlugInViolations validates the selected projection and retains raw findings.

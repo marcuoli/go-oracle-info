@@ -59,15 +59,15 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [alertlog](api-reference.md#alertlog) | `Counts`, `Entries` |
 | [asm](api-reference.md#asm) | `Clients` |
 | [backup](api-reference.md#backup) | `Jobs`, `RestorePoints` |
-| [containers](api-reference.md#containers) | `Inventory`, [`PlugInViolations`](upgrade-readiness.md#recorded-pdb-plug-in-violations), `ResourceSamples`, `ResourceUsage`, `SavedStates` |
-| [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `SessionParameters`, `SessionParametersWithDefaults`, `TimeZoneFiles` |
+| [containers](api-reference.md#containers) | `InvalidObjectCounts`, `Inventory`, `LegacyAuditTablePlacement`, [`PlugInViolations`](upgrade-readiness.md#recorded-pdb-plug-in-violations), `RegistryComponents`, `ResourceSamples`, `ResourceUsage`, `SQLPatchHistory`, `SavedStates` |
+| [database](api-reference.md#database) | `CPUCount`, `CharacterSet`, `Configuration`, `Encryption`, `EncryptionCounts`, `Endian`, `NLSDatabase`, `NLSInstance`, `Options`, `PDBCount`, `Products`, `Properties`, `SessionParameters`, `SessionParametersWithDefaults`, `TimeZoneFiles` |
 | [dataguard](api-reference.md#dataguard) | `ArchiveDestinationStatus`, `ArchiveDestinations`, `ArchiveGaps`, `ArchiveProgress`, `DatabaseContext`, `DatabaseIncarnations`, `Lag`, `Processes`, `RecoveryProgress`, `StandbyLogs`, `StandbyPromotionSCN`, `Status` |
 | [dblinks](api-reference.md#dblinks) | `Inventory` |
 | [directories](api-reference.md#directories) | `Inventory` |
 | [engineeredsystem/catalog](api-reference.md#engineeredsystemcatalog) | `Alerts`, `Cells`, `Configuration`, `ConnectedCells`, `Metadata`, `VisibleCellCount` |
 | [goldengate](api-reference.md#goldengate) | `Administrators`, `ApplyCoordinators`, `Capture`, `Extracts`, `HeartbeatCatalog`, `HeartbeatLag`, `Heartbeats`, `Replicats` |
 | [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleCatalog`, `RoleMemberships` |
-| [identity](api-reference.md#identity) | `BannersSource`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
+| [identity](api-reference.md#identity) | `BannersSource`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
 | [instances](api-reference.md#instances) | `Inventory`, `Versions`, `Visibility` |
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |

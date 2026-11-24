@@ -103,6 +103,14 @@ func (c *Client) ArchivedLogs(ctx context.Context, filter RedoHistoryFilter) (*s
 func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) BlockCorruptions(ctx context.Context) (*sql.Rows, error)
 func (c *Client) BlockCorruptionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) CDBInvalidObjectCounts(ctx context.Context, scope containers.Scope) (*sql.Rows, error)
+func (c *Client) CDBInvalidObjectCountsJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) CDBLegacyAuditTablePlacement(ctx context.Context, scope containers.Scope) (*sql.Rows, error)
+func (c *Client) CDBLegacyAuditTablePlacementJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) CDBRegistryComponents(ctx context.Context, scope containers.Scope) (*sql.Rows, error)
+func (c *Client) CDBRegistryComponentsJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) CDBSQLPatchHistory(ctx context.Context, scope containers.Scope) (*sql.Rows, error)
+func (c *Client) CDBSQLPatchHistoryJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Components(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ComponentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DataGuardArchiveDestinationStatus(ctx context.Context, filter DataGuardFilter) (*sql.Rows, error)
@@ -133,6 +141,8 @@ func (c *Client) DatabaseNLS(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatabaseNLSJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DatabaseOptions(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatabaseOptionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) DatabaseProperties(ctx context.Context) (*sql.Rows, error)
+func (c *Client) DatabasePropertiesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Datafiles(ctx context.Context) (*sql.Rows, error)
 func (c *Client) DatafilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DefaultTemporary(ctx context.Context) (*sql.Rows, error)
@@ -156,6 +166,8 @@ func (c *Client) FileStatuses(ctx context.Context) (*sql.Rows, error)
 func (c *Client) FileStatusesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) FreeExtents(ctx context.Context) (*sql.Rows, error)
 func (c *Client) FreeExtentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) GlobalName(ctx context.Context) (*sql.Rows, error)
+func (c *Client) GlobalNameJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) GoldenGate(ctx context.Context) (goldengate.Properties, error)
 func (c *Client) GoldenGateAdministrators(ctx context.Context) (*sql.Rows, error)
 func (c *Client) GoldenGateAdministratorsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
@@ -579,6 +591,19 @@ type Container struct {
 	ApplicationSeed            *session.Value
 	ApplicationRootContainerID *session.Value
 }
+type InvalidObjectCount struct {
+	ContainerID session.Value
+	Count       session.Value
+}
+type InvalidObjectCountsRequest struct {
+	Options   RootDictionaryOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type InvalidObjectCountsResult struct {
+	Provenance Provenance
+	Rows       []InvalidObjectCount
+}
 type InventoryOptions struct {
 	OracleVersion string
 	Scope         Scope
@@ -590,6 +615,16 @@ type InventoryRequest struct {
 type InventoryResult struct {
 	Provenance Provenance
 	Rows       []Container
+}
+type LegacyAuditTable struct{ ContainerID, Owner, TableName, TablespaceName session.Value }
+type LegacyAuditTablePlacementRequest struct {
+	Options   RootDictionaryOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type LegacyAuditTablePlacementResult struct {
+	Provenance Provenance
+	Rows       []LegacyAuditTable
 }
 type Location struct {
 	Name        session.Value
@@ -638,6 +673,24 @@ type ReadError struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RegistryComponent struct {
+	ContainerID session.Value
+	ID          session.Value
+	Name        session.Value
+	Version     session.Value
+	Status      session.Value
+	Modified    session.Value
+	VersionFull *session.Value
+}
+type RegistryComponentsRequest struct {
+	Options   RootDictionaryOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type RegistryComponentsResult struct {
+	Provenance Provenance
+	Rows       []RegistryComponent
+}
 type ResourceOptions struct {
 	OracleVersion string
 	Scope         Scope
@@ -681,6 +734,28 @@ type ResourceUsageRow struct {
 	SGABytes          session.Value
 	PGABytes          session.Value
 }
+type RootDictionaryOptions struct {
+	OracleVersion string
+	Scope         Scope
+}
+type SQLPatchAttempt struct {
+	ContainerID session.Value
+	PatchID     session.Value
+	PatchUID    session.Value
+	Action      session.Value
+	Status      session.Value
+	ActionTime  session.Value
+	Description session.Value
+}
+type SQLPatchHistoryRequest struct {
+	Options   RootDictionaryOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type SQLPatchHistoryResult struct {
+	Provenance Provenance
+	Rows       []SQLPatchAttempt
+}
 type SavedState struct {
 	ContainerID   session.Value
 	ContainerName session.Value
@@ -714,32 +789,52 @@ type VisiblePDB struct {
 ### Functions
 
 ~~~go
+func DecodeInvalidObjectCounts(result session.Result, options RootDictionaryOptions) (InvalidObjectCountsResult, error)
 func DecodeInventory(result session.Result, options InventoryOptions) (InventoryResult, error)
+func DecodeLegacyAuditTablePlacement(result session.Result, options RootDictionaryOptions) (LegacyAuditTablePlacementResult, error)
 func DecodePlugInViolations(result session.Result, options PlugInViolationsOptions) (PlugInViolationsResult, error)
+func DecodeRegistryComponents(result session.Result, options RootDictionaryOptions) (RegistryComponentsResult, error)
 func DecodeResourceSamples(result session.Result, options ResourceOptions) (ResourceSamplesResult, error)
 func DecodeResourceUsage(result session.Result, options ResourceOptions) (ResourceUsageResult, error)
+func DecodeSQLPatchHistory(result session.Result, options RootDictionaryOptions) (SQLPatchHistoryResult, error)
 func DecodeSavedStates(result session.Result, options SavedStatesOptions) (SavedStatesResult, error)
 func DecodeSessionLocation(result session.Result, version string) ([]Location, error)
 func DecodeVisiblePDBs(result session.Result, version string) ([]VisiblePDB, error)
+func InvalidObjectCountsJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
+func InvalidObjectCountsRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
+func InvalidObjectCountsStatement(options RootDictionaryOptions) (string, error)
 func InventoryJSON(ctx context.Context, q rowset.Queryer, options InventoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func InventoryRows(ctx context.Context, q rowset.Queryer, options InventoryOptions) (*sql.Rows, error)
 func InventoryStatement(options InventoryOptions) (string, error)
+func LegacyAuditTablePlacementJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
+func LegacyAuditTablePlacementRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
+func LegacyAuditTablePlacementStatement(options RootDictionaryOptions) (string, error)
 func PlugInViolationsJSON(ctx context.Context, q rowset.Queryer, options PlugInViolationsOptions, limits rowset.Limits) (json.RawMessage, error)
 func PlugInViolationsRows(ctx context.Context, q rowset.Queryer, options PlugInViolationsOptions) (*sql.Rows, error)
 func PlugInViolationsStatement(options PlugInViolationsOptions) (string, error)
+func ReadInvalidObjectCounts(ctx context.Context, reader Reader, request InvalidObjectCountsRequest) (InvalidObjectCountsResult, error)
 func ReadInventory(ctx context.Context, reader Reader, request InventoryRequest) (InventoryResult, error)
+func ReadLegacyAuditTablePlacement(ctx context.Context, reader Reader, request LegacyAuditTablePlacementRequest) (LegacyAuditTablePlacementResult, error)
 func ReadPlugInViolations(ctx context.Context, reader Reader, request PlugInViolationsRequest) (PlugInViolationsResult, error)
+func ReadRegistryComponents(ctx context.Context, reader Reader, request RegistryComponentsRequest) (RegistryComponentsResult, error)
 func ReadResourceSamples(ctx context.Context, reader Reader, request ResourceSamplesRequest) (ResourceSamplesResult, error)
 func ReadResourceUsage(ctx context.Context, reader Reader, request ResourceUsageRequest) (ResourceUsageResult, error)
+func ReadSQLPatchHistory(ctx context.Context, reader Reader, request SQLPatchHistoryRequest) (SQLPatchHistoryResult, error)
 func ReadSavedStates(ctx context.Context, reader Reader, request SavedStatesRequest) (SavedStatesResult, error)
 func ReadSessionLocation(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]Location, error)
 func ReadVisiblePDBs(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]VisiblePDB, error)
+func RegistryComponentsJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
+func RegistryComponentsRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
+func RegistryComponentsStatement(options RootDictionaryOptions) (string, error)
 func ResourceSamplesJSON(ctx context.Context, q rowset.Queryer, options ResourceOptions, limits rowset.Limits) (json.RawMessage, error)
 func ResourceSamplesRows(ctx context.Context, q rowset.Queryer, options ResourceOptions) (*sql.Rows, error)
 func ResourceSamplesStatement(options ResourceOptions) (string, error)
 func ResourceUsageJSON(ctx context.Context, q rowset.Queryer, options ResourceOptions, limits rowset.Limits) (json.RawMessage, error)
 func ResourceUsageRows(ctx context.Context, q rowset.Queryer, options ResourceOptions) (*sql.Rows, error)
 func ResourceUsageStatement(options ResourceOptions) (string, error)
+func SQLPatchHistoryJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
+func SQLPatchHistoryRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
+func SQLPatchHistoryStatement(options RootDictionaryOptions) (string, error)
 func SavedStatesJSON(ctx context.Context, q rowset.Queryer, options SavedStatesOptions, limits rowset.Limits) (json.RawMessage, error)
 func SavedStatesRows(ctx context.Context, q rowset.Queryer, options SavedStatesOptions) (*sql.Rows, error)
 func SavedStatesStatement(options SavedStatesOptions) (string, error)
@@ -942,6 +1037,22 @@ type ProductsResult struct {
 	Rows       []ProductsRow
 }
 type ProductsRow struct{ ComponentID session.Value }
+type PropertiesOptions struct{ OracleVersion string }
+type PropertiesRequest struct {
+	Options   PropertiesOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type PropertiesResult struct {
+	Provenance DatasetProvenance
+	Rows       []Property
+}
+type Property struct {
+	Name              session.Value
+	Value             session.Value
+	Description       session.Value
+	SourceContainerID *session.Value
+}
 type Provenance struct {
 	Source      string `json:"source"`
 	Scope       string `json:"scope"`
@@ -1049,6 +1160,7 @@ func DecodeOptions(result session.Result, major int) (OptionsResult, error)
 func DecodePDBCount(result session.Result, options PDBCountOptions) (PDBCountResult, error)
 func DecodePGAAllocated(result session.Result, options PGAAllocatedOptions) (PGAAllocatedResult, error)
 func DecodeProducts(result session.Result, options ProductsOptions) (ProductsResult, error)
+func DecodeProperties(result session.Result, options PropertiesOptions) (PropertiesResult, error)
 func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGAAllocatedResult, error)
 func DecodeSessionParameters(result session.Result, options SessionParametersOptions) (SessionParametersResult, error)
 func DecodeSessionParametersWithDefaults(result session.Result, options SessionParametersWithDefaultsOptions) (SessionParametersWithDefaultsResult, error)
@@ -1084,6 +1196,9 @@ func PGAAllocatedStatement(options PGAAllocatedOptions) (string, []any, error)
 func ProductsJSON(ctx context.Context, q rowset.Queryer, options ProductsOptions, limits rowset.Limits) (json.RawMessage, error)
 func ProductsRows(ctx context.Context, q rowset.Queryer, options ProductsOptions) (*sql.Rows, error)
 func ProductsStatement(options ProductsOptions) (string, []any, error)
+func PropertiesJSON(ctx context.Context, q rowset.Queryer, options PropertiesOptions, limits rowset.Limits) (json.RawMessage, error)
+func PropertiesRows(ctx context.Context, q rowset.Queryer, options PropertiesOptions) (*sql.Rows, error)
+func PropertiesStatement(options PropertiesOptions) (string, error)
 func ReadCPUCount(ctx context.Context, reader Reader, request CPUCountRequest) (CPUCountResult, error)
 func ReadCharacterSet(ctx context.Context, reader Reader, request CharacterSetRequest) (CharacterSetResult, error)
 func ReadConfiguration(ctx context.Context, reader Reader, request ConfigurationRequest) (ConfigurationResult, error)
@@ -1097,6 +1212,7 @@ func ReadOptions(ctx context.Context, reader Reader, request OptionsRequest) (Op
 func ReadPDBCount(ctx context.Context, reader Reader, request PDBCountRequest) (PDBCountResult, error)
 func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRequest) (PGAAllocatedResult, error)
 func ReadProducts(ctx context.Context, reader Reader, request ProductsRequest) (ProductsResult, error)
+func ReadProperties(ctx context.Context, reader Reader, request PropertiesRequest) (PropertiesResult, error)
 func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRequest) (SGAAllocatedResult, error)
 func ReadSessionParameters(ctx context.Context, reader Reader, request SessionParametersRequest) (SessionParametersResult, error)
 func ReadSessionParametersWithDefaults(ctx context.Context, reader Reader, request SessionParametersWithDefaultsRequest) (SessionParametersWithDefaultsResult, error)
@@ -2687,6 +2803,20 @@ type FullVersionSourceResult struct {
 	Rows       []FullVersionSourceRow
 }
 type FullVersionSourceRow struct{ Value session.Value }
+type GlobalNameOptions struct{ OracleVersion string }
+type GlobalNameRequest struct {
+	Options   GlobalNameOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type GlobalNameResult struct {
+	Provenance DatasetProvenance
+	Rows       []GlobalNameRow
+}
+type GlobalNameRow struct {
+	Name              session.Value
+	SourceContainerID *session.Value
+}
 type Instance struct {
 	ID           int
 	Name         Text
@@ -2917,6 +3047,7 @@ func DecodeExecution(result session.Result) (Execution, error)
 func DecodeExecutionIdentity(result session.Result, options ExecutionIdentityOptions) (ExecutionIdentityResult, error)
 func DecodeFullVersion(result session.Result) (Text, error)
 func DecodeFullVersionSource(result session.Result, options FullVersionSourceOptions) (FullVersionSourceResult, error)
+func DecodeGlobalName(result session.Result, options GlobalNameOptions) (GlobalNameResult, error)
 func DecodeInstance(result session.Result) (Instance, error)
 func DecodeInstanceIdentity(result session.Result, options InstanceIdentityOptions) (InstanceIdentityResult, error)
 func DecodeLogicalDatabase(result session.Result, options LogicalDatabaseOptions) (LogicalDatabaseResult, error)
@@ -2943,6 +3074,9 @@ func ExecutionStatement() string
 func FullVersionSourceJSON(ctx context.Context, q rowset.Queryer, options FullVersionSourceOptions, limits rowset.Limits) (json.RawMessage, error)
 func FullVersionSourceRows(ctx context.Context, q rowset.Queryer, options FullVersionSourceOptions) (*sql.Rows, error)
 func FullVersionSourceStatement(options FullVersionSourceOptions) (string, []any, error)
+func GlobalNameJSON(ctx context.Context, q rowset.Queryer, options GlobalNameOptions, limits rowset.Limits) (json.RawMessage, error)
+func GlobalNameRows(ctx context.Context, q rowset.Queryer, options GlobalNameOptions) (*sql.Rows, error)
+func GlobalNameStatement(options GlobalNameOptions) (string, error)
 func InstanceIdentityJSON(ctx context.Context, q rowset.Queryer, options InstanceIdentityOptions, limits rowset.Limits) (json.RawMessage, error)
 func InstanceIdentityRows(ctx context.Context, q rowset.Queryer, options InstanceIdentityOptions) (*sql.Rows, error)
 func InstanceIdentityStatement(options InstanceIdentityOptions) (string, []any, error)
@@ -2974,6 +3108,7 @@ func ReadEdition(ctx context.Context, reader Reader, refs EditionReferences) (Ed
 func ReadEditionSource(ctx context.Context, reader Reader, request EditionSourceRequest) (EditionSourceResult, error)
 func ReadExecutionIdentity(ctx context.Context, reader Reader, request ExecutionIdentityRequest) (ExecutionIdentityResult, error)
 func ReadFullVersionSource(ctx context.Context, reader Reader, request FullVersionSourceRequest) (FullVersionSourceResult, error)
+func ReadGlobalName(ctx context.Context, reader Reader, request GlobalNameRequest) (GlobalNameResult, error)
 func ReadInstanceIdentity(ctx context.Context, reader Reader, request InstanceIdentityRequest) (InstanceIdentityResult, error)
 func ReadLogicalDatabase(ctx context.Context, reader Reader, request LogicalDatabaseRequest) (LogicalDatabaseResult, error)
 func ReadNameSource(ctx context.Context, reader Reader, request NameSourceRequest) (NameSourceResult, error)
