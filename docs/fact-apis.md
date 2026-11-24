@@ -83,7 +83,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [sequences](api-reference.md#sequences) | `Inventory` |
 | [services](api-reference.md#services) | `Definitions`, `Names` |
 | [sqlplan](api-reference.md#sqlplan) | `Baseline`, `Profile` |
-| [storage](api-reference.md#storage) | `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileNames`, `FreeExtents`, `LongColumns`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
+| [storage](api-reference.md#storage) | `BlockCorruptions`, `DatabaseFiles`, `DatafileSize`, `Datafiles`, `DefaultTemporary`, `FileNames`, `FreeExtents`, `LongColumns`, `Segments`, `Tablespaces`, `TempFreeSpace`, `Tempfiles`, `TemporaryGroups` |
 | [triggers](api-reference.md#triggers) | `Inventory` |
 | [users](api-reference.md#users) | `AccountCount`, `Inventory`, `TableMetadata`, `TablespaceQuotas` |
 

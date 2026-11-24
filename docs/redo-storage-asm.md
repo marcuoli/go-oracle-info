@@ -11,7 +11,7 @@ admit endpoint/container/edition, source privileges and reporting-member coverag
 `Decode`, `Read`, `Rows` and `JSON` companions (for example `ReadGroups` and
 `GroupsStatement`). Storage provides the same companions for `Tablespaces`,
 `Datafiles`, `Tempfiles`, `FreeExtents`, `Segments`, `LongColumns`,
-`DefaultTemporary` and `TemporaryGroups`. `memory.SGAComponents` provides
+`DefaultTemporary`, `TemporaryGroups` and `BlockCorruptions`. `memory.SGAComponents` provides
 observed reporting-instance allocations. Its legacy `storage` entry points
 preserve their public types and behavior. `asm.Clients` provides
 its own companions. There is no query registry or connection/cache manager.
@@ -22,7 +22,7 @@ reference and any explicitly admitted filter/options. `Request`, `HistoryRequest
 `Client` hides version lookup for native rows and JSON. Its methods include
 `RedoGroups`, `RedoMembers`, `RedoHistory`, `ArchivedLogs`, `Tablespaces`,
 `Datafiles`, `Tempfiles`, `FreeExtents`, `Segments`, `LongColumns`,
-`DefaultTemporary`, `TemporaryGroups`, `SGAComponents` and `ASMClients`, each
+`DefaultTemporary`, `TemporaryGroups`, `BlockCorruptions`, `SGAComponents` and `ASMClients`, each
 with a `JSON` companion. Independent calls are separate observations.
 
 A `Reader.Query` must return only complete finite-budget results and retain query,
@@ -58,6 +58,7 @@ buffer limits are not evidence of exhaustive source coverage.
 | Archive copies | GV$ARCHIVED_LOG, qualified visible IDs and finite first-time interval | Destination/name, record/stamp, thread/sequence, resetlogs ID/change/time, activation, archival thread, block counts/size, first/next/completion times and raw status/role/copy flags. |
 | Tablespaces | DBA_TABLESPACES, current-container dictionary | Contents/status/retention/bigfile, block size, logging/management/encryption. No undo/owner exclusions. |
 | Datafiles | DBA_DATA_FILES, current-container dictionary | File/relative identity, bytes/blocks/user bytes, maximum, autoextension/increment, availability/online status. Keystore/source access remains caller admission; no wallet operation occurs. |
+| Recorded block corruption | V$DATABASE_BLOCK_CORRUPTION, connected fixed view | Recorded file/block ranges, change number and corruption type. Actual CON_ID from 12.1. See the [release matrix](#recorded-block-corruption). |
 | Tempfiles | DBA_TEMP_FILES, current-container dictionary | Common 11g file projection. `TempfileOptions.IncludeLocal` explicitly admits SHARED and owning INST_ID from 18+. It is not selected automatically. |
 | Free extents | DBA_FREE_SPACE, current-container dictionary | Tablespace/file/block identity and raw bytes/blocks. Offline locally managed files may have missing extent rows; absence does not independently establish zero free bytes. |
 | Segments | DBA_SEGMENTS, current-container dictionary | Owner/name/type/subtype/partition/tablespace, allocated bytes/blocks/extents and header identity. |
@@ -67,7 +68,8 @@ buffer limits are not evidence of exhaustive source coverage.
 | SGA components | GV$SGASTAT, qualified visible reporting IDs | All matching NAME=buffer_cache OR POOL=shared pool rows, with the predicate grouped before instance admission. Raw pool/name/bytes remain separate. |
 | ASM connections | GV$ASM_CLIENT, qualified visible reporting IDs | Group/instance/database/software/compatible/status. `Filter.SourceRole` must explicitly admit database_instance or asm_instance. CLUSTER_NAME is intentionally not projected by the common source contract. |
 
-All sources reject majors below 11. Modern CON_ID is projected from 12 onward;
+Except for recorded block corruption, these sources reject majors below 11.
+Modern CON_ID is projected from 12 onward;
 11g models have nil ContainerID. For dictionary views CON_ID is the connected
 container from SYS_CONTEXT, not invented CDB-wide visibility. Dictionary rows
 also retain SOURCE_INST_ID as ReportingInstanceID. Local tempfile OwningInstanceID
@@ -83,6 +85,59 @@ SCNs use reviewed TO_CHAR(TM9) decimal text because documented values can exceed
 int64. They remain JSON strings deliberately, never rounded floats. Other native
 integer JSON columns use the shared rowset integer contract and fail on a value
 it cannot represent exactly. No resultset CSV/plaintext serialization is added.
+
+## Recorded block corruption
+
+Use `V$DATABASE_BLOCK_CORRUPTION` to read ranges Oracle has already recorded.
+Each row retains the absolute file number, starting block, length, detection
+change number and Oracle's corruption type. A change number of zero is Oracle's
+media corruption marker. File and block numbers, range length and the change
+number use exact decimal text. `CON_ID` retains Oracle's actual value, including
+0 for whole-CDB or non-CDB data, 1 for the root, a PDB ID or SQL NULL when
+returned. On releases with five selected columns the field is unprojected.
+The view is read in the caller's admitted scope. The API does not switch
+containers, persist findings, merge ranges or validate datafiles. A completed
+empty read establishes zero recorded ranges visible at capture time.
+
+`BlockCorruptionsStatement`, `DecodeBlockCorruptions`, `ReadBlockCorruptions`,
+`BlockCorruptionsRows` and `BlockCorruptionsJSON` take an observed numeric Oracle
+version. `ReadBlockCorruptions` takes `BlockCorruptionsRequest{OracleVersion, Reference}`.
+The facade exposes `Client.BlockCorruptions` and `Client.BlockCorruptionsJSON`.
+Explicit-version methods require access to the fixed view. The facade also reads
+the Oracle version from V$INSTANCE. Oracle errors propagate through the
+caller-facing read API. An unsupported numeric version is rejected before the
+corruption query runs.
+
+Oracle Database Reference reviewed on 2026-11-24. Each row below has static
+selector and decoder coverage. Native coverage is recorded separately.
+
+| Release family | Oracle reference | Selected columns |
+| --- | --- | --- |
+| 9iR2 (9.2) | [9.2](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch339.htm) | Five base columns |
+| 10gR1 (10.1) | [10.1](https://docs.oracle.com/cd/B14117_01/server.101/b10755/dynviews_1055.htm) | Five base columns |
+| 10gR2 (10.2) | [10.2](https://docs.oracle.com/cd/B19306_01/server.102/b14237/dynviews_1074.htm) | Five base columns |
+| 11gR1 (11.1) | [11.1](https://docs.oracle.com/cd/B28359_01/server.111/b28320/dynviews_1087.htm) | Five base columns |
+| 11gR2 (11.2) | [11.2](https://docs.oracle.com/cd/E11882_01/server.112/e40402/dynviews_1098.htm) | Five base columns |
+| 12cR1 (12.1) | [12.1](https://docs.oracle.com/cd/E57425_01/121/REFRN/GUID-6CA088AF-B7B0-4CA1-8DC6-95372368BACC.htm) | Base plus CON_ID |
+| 12cR2 (12.2) | [12.2](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID |
+| 18c | [18c](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID |
+| 19c | [19c](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID |
+| 21c | [21c](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID |
+| 23c/23ai | [23c reference redirects to 26ai](https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID, selector tested with 23.4 |
+| 26ai (observed 23.26) | [26ai](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE_BLOCK_CORRUPTION.html) | Base plus CON_ID |
+
+The reviewed projection changes with the 12.1 multitenant metadata. No additional
+patch-set or RU predicate is established for these columns. Earlier releases,
+unreviewed numeric families and malformed version strings are rejected.
+
+Native SQL and SDK/driver verification ran on 23.26.1.0.0 in CDB$ROOT as SYSDBA,
+on a primary in READ WRITE and a physical standby in READ ONLY WITH APPLY.
+Go 1.27.4 on Windows amd64 and go-oracle-session v0.23.0 with go-ora V2 ran
+the SDK cursor, bounded JSON and typed reader. The queries matched independent
+zero-row counts on both endpoints. A separate Oracle literal confirmed the
+exact 19-digit change-number formatting. Native recorded ranges, MOUNT,
+direct-PDB and non-CDB sessions, other logins and other numeric releases
+remain unqualified. Nonempty range decoding is covered by fixtures.
 
 ## Time, totals and attribution limits
 

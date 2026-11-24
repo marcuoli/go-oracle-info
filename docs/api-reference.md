@@ -99,6 +99,8 @@ func (c *Client) ASMClientsJSON(ctx context.Context, filter ASMClientFilter, lim
 func (c *Client) Architecture(ctx context.Context) (identity.ArchitectureObservation, error)
 func (c *Client) ArchivedLogs(ctx context.Context, filter RedoHistoryFilter) (*sql.Rows, error)
 func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) BlockCorruptions(ctx context.Context) (*sql.Rows, error)
+func (c *Client) BlockCorruptionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Components(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ComponentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DataGuardArchiveDestinationStatus(ctx context.Context, filter DataGuardFilter) (*sql.Rows, error)
@@ -5544,6 +5546,18 @@ func (e *Error) Unwrap() error
 ### Types
 
 ~~~go
+type BlockCorruption struct {
+	FileID, BlockID, Blocks, CorruptionChange, CorruptionType session.Value
+	ContainerID                                               *session.Value
+}
+type BlockCorruptionsRequest struct {
+	OracleVersion string
+	Reference     reference.Reference
+}
+type BlockCorruptionsResult struct {
+	Provenance Provenance
+	Rows       []BlockCorruption
+}
 type DatabaseFile struct {
 	Type, FileID, Name, Bytes session.Value
 	ContainerID               *session.Value
@@ -5780,6 +5794,9 @@ type TemporaryProperty struct {
 ### Functions
 
 ~~~go
+func BlockCorruptionsJSON(ctx context.Context, q rowset.Queryer, oracleVersion string, limits rowset.Limits) (json.RawMessage, error)
+func BlockCorruptionsRows(ctx context.Context, q rowset.Queryer, oracleVersion string) (*sql.Rows, error)
+func BlockCorruptionsStatement(oracleVersion string) (string, error)
 func DatabaseFilesJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func DatabaseFilesRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func DatabaseFilesStatement(major int) (string, error)
@@ -5789,6 +5806,7 @@ func DatafileSizeStatement(options DatafileSizeOptions) (string, []any, error)
 func DatafilesJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func DatafilesRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func DatafilesStatement(major int) (string, error)
+func DecodeBlockCorruptions(result session.Result, oracleVersion string) (BlockCorruptionsResult, error)
 func DecodeDatabaseFiles(result session.Result, major int) (DatabaseFilesResult, error)
 func DecodeDatafileSize(result session.Result, options DatafileSizeOptions) (DatafileSizeResult, error)
 func DecodeDatafiles(result session.Result, major int) (DatafilesResult, error)
@@ -5815,6 +5833,7 @@ func FreeExtentsStatement(major int) (string, error)
 func LongColumnsJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func LongColumnsRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func LongColumnsStatement(major int) (string, error)
+func ReadBlockCorruptions(ctx context.Context, reader Reader, request BlockCorruptionsRequest) (BlockCorruptionsResult, error)
 func ReadDatabaseFiles(ctx context.Context, reader Reader, request Request) (DatabaseFilesResult, error)
 func ReadDatafileSize(ctx context.Context, reader Reader, request DatafileSizeRequest) (DatafileSizeResult, error)
 func ReadDatafiles(ctx context.Context, reader Reader, request Request) (DatafilesResult, error)

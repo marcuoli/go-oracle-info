@@ -398,7 +398,7 @@ func (c *Client) ArchivedLogsJSON(ctx context.Context, filter RedoHistoryFilter,
 // TempFreeSpace observes the release and returns the actual TEMP free-space
 // cursor. The caller owns iteration, Err, Close and finite stream budgets.
 func (c *Client) TempFreeSpace(ctx context.Context) (*sql.Rows, error) {
-	version, err := c.tempFreeSpaceVersion(ctx)
+	version, err := c.storageVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -411,14 +411,37 @@ func (c *Client) TempFreeSpaceJSON(ctx context.Context, limits ...JSONLimits) (j
 	if err != nil {
 		return nil, err
 	}
-	version, err := c.tempFreeSpaceVersion(ctx)
+	version, err := c.storageVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return storage.TempFreeSpaceJSON(ctx, c.native(), version, resolved)
 }
 
-func (c *Client) tempFreeSpaceVersion(ctx context.Context) (string, error) {
+// BlockCorruptions observes the release and returns the actual cursor over
+// recorded ranges. The caller owns iteration, Err, Close and its read budget.
+func (c *Client) BlockCorruptions(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.BlockCorruptionsRows(ctx, c.native(), version)
+}
+
+// BlockCorruptionsJSON returns one bounded dataset of recorded corruption.
+func (c *Client) BlockCorruptionsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.storageVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return storage.BlockCorruptionsJSON(ctx, c.native(), version, resolved)
+}
+
+func (c *Client) storageVersion(ctx context.Context) (string, error) {
 	version, err := c.Version(ctx)
 	if err != nil {
 		return "", err
