@@ -18,8 +18,10 @@ connection, query Oracle Support, or select an upgrade target.
 - **Exadata:** the saved Exadata supported versions article (KB153930, old
   Doc ID 888828.1) supplies software and full-stack download history. The
   [November 18 Oracle announcement](https://blogs.oracle.com/exadata/software-2026-nov-17)
-  adds exact published builds when no matching component patch row was
-  verified. Hardware applicability and cloud availability remain unqualified.
+  identifies the exact published builds. The November 24 MOS capture supplies
+  component package numbers and documented scopes for the 25.2, 26.1, and 26.2
+  maintenance builds. Hardware applicability and cloud availability remain
+  unqualified.
 - **Oracle Database Appliance:** the
   [Oracle documentation index](https://docs.oracle.com/en/engineered-systems/oracle-database-appliance/)
   supplies the release listing. Package rows come from the matching patch
@@ -41,10 +43,12 @@ snapshot by its input revision and SHA-256 digest. The loader returns these fiel
 as data for callers. The release refresh also uses the source ID to reconcile
 records and retain their historical provenance.
 
-An empty `artifacts` array means the source provides no platform-specific package
-records for that patch group. This includes the imported 11.2.0.4 Grid Infrastructure
-PSU entries. Use the matching Oracle patch documentation to verify package details
-for a specific platform.
+An empty `artifacts` array means the source provides no package records for
+that patch group. For the 27 originally imported 11.2.0.4 Grid Infrastructure
+PSU groups, a separate [Oracle Support observation](https://support.oracle.com/support/?documentId=KB111315)
+supplies exact patch numbers and release dates. Platform fields remain empty in
+these observations because the article links to Patch Details without listing
+platforms for those rows. The original imported observations remain in the catalog.
 
 The top-level snapshot date records when the seed was prepared. A source's
 check date, article revision, and artifact release date are separate fields.
