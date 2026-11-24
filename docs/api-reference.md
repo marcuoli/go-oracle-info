@@ -287,8 +287,10 @@ func (c *Client) Tempfiles(ctx context.Context, options TempfileOptions) (*sql.R
 func (c *Client) TempfilesJSON(ctx context.Context, options TempfileOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) TemporaryGroups(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TemporaryGroupsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) TimeZone(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TimeZoneFiles(ctx context.Context) (*sql.Rows, error)
 func (c *Client) TimeZoneFilesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) TimeZoneJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Triggers(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
 func (c *Client) TriggersJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) UserAccountCount(ctx context.Context, filter DictionaryFilter) (*sql.Rows, error)
@@ -1180,6 +1182,17 @@ type TimeZoneFilesResult struct {
 	Provenance DatasetProvenance
 	Rows       []TimeZoneFile
 }
+type TimeZoneOptions struct{ OracleVersion string }
+type TimeZoneRequest struct {
+	Options   TimeZoneOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type TimeZoneResult struct {
+	Provenance DatasetProvenance
+	Rows       []TimeZoneRow
+}
+type TimeZoneRow struct{ Value session.Value }
 ~~~
 
 ### Functions
@@ -1216,6 +1229,7 @@ func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGA
 func DecodeSessionParameters(result session.Result, options SessionParametersOptions) (SessionParametersResult, error)
 func DecodeSessionParametersWithDefaults(result session.Result, options SessionParametersWithDefaultsOptions) (SessionParametersWithDefaultsResult, error)
 func DecodeStorage(result session.Result, options StorageOptions) (StorageResult, error)
+func DecodeTimeZone(result session.Result, options TimeZoneOptions) (TimeZoneResult, error)
 func DecodeTimeZoneFiles(result session.Result, options TimeZoneFilesOptions) (TimeZoneFilesResult, error)
 func EncryptionCountsJSON(ctx context.Context, q rowset.Queryer, options EncryptionCountsOptions, limits rowset.Limits) (json.RawMessage, error)
 func EncryptionCountsRows(ctx context.Context, q rowset.Queryer, options EncryptionCountsOptions) (*sql.Rows, error)
@@ -1268,6 +1282,7 @@ func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRe
 func ReadSessionParameters(ctx context.Context, reader Reader, request SessionParametersRequest) (SessionParametersResult, error)
 func ReadSessionParametersWithDefaults(ctx context.Context, reader Reader, request SessionParametersWithDefaultsRequest) (SessionParametersWithDefaultsResult, error)
 func ReadStorage(ctx context.Context, reader Reader, request StorageRequest) (StorageResult, error)
+func ReadTimeZone(ctx context.Context, reader Reader, request TimeZoneRequest) (TimeZoneResult, error)
 func ReadTimeZoneFiles(ctx context.Context, reader Reader, request TimeZoneFilesRequest) (TimeZoneFilesResult, error)
 func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error)
 func SGAAllocatedRows(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions) (*sql.Rows, error)
@@ -1284,6 +1299,9 @@ func StorageStatement(options StorageOptions) (string, []any, error)
 func TimeZoneFilesJSON(ctx context.Context, q rowset.Queryer, options TimeZoneFilesOptions, limits rowset.Limits) (json.RawMessage, error)
 func TimeZoneFilesRows(ctx context.Context, q rowset.Queryer, options TimeZoneFilesOptions) (*sql.Rows, error)
 func TimeZoneFilesStatement(options TimeZoneFilesOptions) (string, error)
+func TimeZoneJSON(ctx context.Context, q rowset.Queryer, options TimeZoneOptions, limits rowset.Limits) (json.RawMessage, error)
+func TimeZoneRows(ctx context.Context, q rowset.Queryer, options TimeZoneOptions) (*sql.Rows, error)
+func TimeZoneStatement(options TimeZoneOptions) (string, error)
 ~~~
 
 ### Methods

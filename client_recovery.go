@@ -121,6 +121,28 @@ func (c *Client) StandbyPromotionSCNJSON(ctx context.Context, limits ...JSONLimi
 	return dataguard.StandbyPromotionSCNJSON(ctx, c.native(), version, resolved)
 }
 
+// TimeZone observes the release and transfers the connected endpoint's native DBTIMEZONE cursor.
+func (c *Client) TimeZone(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return database.TimeZoneRows(ctx, c.native(), database.TimeZoneOptions{OracleVersion: version})
+}
+
+// TimeZoneJSON consumes a separate complete bounded cursor.
+func (c *Client) TimeZoneJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return database.TimeZoneJSON(ctx, c.native(), database.TimeZoneOptions{OracleVersion: version}, resolved)
+}
+
 // TimeZoneFiles observes the release and transfers the actual native cursor.
 func (c *Client) TimeZoneFiles(ctx context.Context) (*sql.Rows, error) {
 	version, err := c.observedNumericVersion(ctx)
