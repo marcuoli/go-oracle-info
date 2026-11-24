@@ -2380,7 +2380,7 @@
     {"line": "21", "version": "21.8.0", "kind": "bundle", "component": "RDBMS", "source_kind": "BP", "product_name": "21c", "artifacts": [{"number": 34468137, "release_date": "2022-10-18", "scope": "windows"}], "source": "KB117472"},
     {"line": "21", "version": "21.7.0", "kind": "bundle", "component": "RDBMS", "source_kind": "BP", "product_name": "21c", "artifacts": [{"number": 34110698, "release_date": "2022-07-19", "scope": "windows"}], "source": "KB117472"},
     {"line": "21", "version": "21.6.0", "kind": "bundle", "component": "RDBMS", "source_kind": "BP", "product_name": "21c", "artifacts": [{"number": 33829143, "release_date": "2022-04-19", "scope": "windows"}], "source": "KB117472"},
-    {"line": "21", "version": "21.4.0", "kind": "bundle", "component": "RDBMS", "source_kind": "BP", "product_name": "21c", "artifacts": [{"number": 33322894, "release_date": "2022-10-19", "scope": "windows"}], "source": "KB117472"}
+    {"line": "21", "version": "21.4.0", "kind": "bundle", "component": "RDBMS", "source_kind": "BP", "product_name": "21c", "artifacts": [{"number": 33322894, "scope": "windows"}], "source": "KB117472"}
   ],
   "coverage": [
     {"line": "11.2.0.3", "source": "local-patch-export", "status": "local_patch_snapshot"},
@@ -2404,6 +2404,7 @@
     "Edition and error-correction exceptions are in the Oracle policy footnotes. Lifecycle dates do not establish availability for a platform.",
     "Historical patch coverage begins in the Oracle 11.2 family. The lifecycle includes older Oracle versions.",
     "Release-specific Oracle proactive notes add package-level observations where version and family match a historical gap. A package number and date do not establish availability on every platform.",
-    "Historical import observations and undated platform variants remain available. An Oracle table's Windows or Unix label establishes only the cohort shown."
+    "Historical import observations and undated platform variants remain available. An Oracle table's Windows or Unix label establishes only the cohort shown.",
+    "The 21.4 Windows patch 33322894 has a verified package number. Oracle's differing date evidence requires package-specific confirmation."
   ]
 }
