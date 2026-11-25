@@ -113,6 +113,8 @@ The #155 dictionary observations have a separate [release and qualification matr
 
 #191 adds a separate [time-zone column release and scope matrix](upgrade-readiness.md#columns-with-time-zone-aware-timestamp-types).
 
+#206 adds a separate [connected session clock matrix](session-clock.md#release-and-qualification-matrix).
+
 ## Source applicability
 
 Each canonical file defines exact aliases and scalar kinds in its private frozen

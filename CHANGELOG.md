@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read six connected Oracle clock expressions in one bounded snapshot, preserving civil readings, UTC instants, and the session time zone (#206).
+
 - Save the reusable MOS capture prompt for the 41 remaining Database catalog groups and the 21.4 Windows patch date (#204).
 
 ## v0.44.1 (2026-11-25)

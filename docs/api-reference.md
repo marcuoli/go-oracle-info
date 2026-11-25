@@ -281,6 +281,8 @@ func (c *Client) Sequences(ctx context.Context, filter DictionaryFilter) (*sql.R
 func (c *Client) SequencesJSON(ctx context.Context, filter DictionaryFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Services(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ServicesJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) SessionClock(ctx context.Context) (*sql.Rows, error)
+func (c *Client) SessionClockJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SessionContext(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionContextJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) StandbyPromotionSCN(ctx context.Context) (*sql.Rows, error)
@@ -1140,6 +1142,24 @@ type SGAAllocatedResult struct {
 	Rows       []SGAAllocatedRow
 }
 type SGAAllocatedRow struct{ GiB session.Value }
+type SessionClockOptions struct{ OracleVersion string }
+type SessionClockRequest struct {
+	Options   SessionClockOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type SessionClockResult struct {
+	Provenance DatasetProvenance
+	Rows       []SessionClockRow
+}
+type SessionClockRow struct {
+	SysDate             session.Value
+	SysTimestampUTC     session.Value
+	CurrentDate         session.Value
+	CurrentTimestampUTC session.Value
+	LocalTimestamp      session.Value
+	SessionTimeZone     session.Value
+}
 type SessionParametersOptions struct{ OracleMajor int }
 type SessionParametersRequest struct {
 	Options   SessionParametersOptions
@@ -1238,6 +1258,7 @@ func DecodePGAAllocated(result session.Result, options PGAAllocatedOptions) (PGA
 func DecodeProducts(result session.Result, options ProductsOptions) (ProductsResult, error)
 func DecodeProperties(result session.Result, options PropertiesOptions) (PropertiesResult, error)
 func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGAAllocatedResult, error)
+func DecodeSessionClock(result session.Result, options SessionClockOptions) (SessionClockResult, error)
 func DecodeSessionParameters(result session.Result, options SessionParametersOptions) (SessionParametersResult, error)
 func DecodeSessionParametersWithDefaults(result session.Result, options SessionParametersWithDefaultsOptions) (SessionParametersWithDefaultsResult, error)
 func DecodeStorage(result session.Result, options StorageOptions) (StorageResult, error)
@@ -1291,6 +1312,7 @@ func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRe
 func ReadProducts(ctx context.Context, reader Reader, request ProductsRequest) (ProductsResult, error)
 func ReadProperties(ctx context.Context, reader Reader, request PropertiesRequest) (PropertiesResult, error)
 func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRequest) (SGAAllocatedResult, error)
+func ReadSessionClock(ctx context.Context, reader Reader, request SessionClockRequest) (SessionClockResult, error)
 func ReadSessionParameters(ctx context.Context, reader Reader, request SessionParametersRequest) (SessionParametersResult, error)
 func ReadSessionParametersWithDefaults(ctx context.Context, reader Reader, request SessionParametersWithDefaultsRequest) (SessionParametersWithDefaultsResult, error)
 func ReadStorage(ctx context.Context, reader Reader, request StorageRequest) (StorageResult, error)
@@ -1299,6 +1321,9 @@ func ReadTimeZoneFiles(ctx context.Context, reader Reader, request TimeZoneFiles
 func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error)
 func SGAAllocatedRows(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions) (*sql.Rows, error)
 func SGAAllocatedStatement(options SGAAllocatedOptions) (string, []any, error)
+func SessionClockJSON(ctx context.Context, q rowset.Queryer, options SessionClockOptions, limits rowset.Limits) (json.RawMessage, error)
+func SessionClockRows(ctx context.Context, q rowset.Queryer, options SessionClockOptions) (*sql.Rows, error)
+func SessionClockStatement(options SessionClockOptions) (string, error)
 func SessionParametersJSON(ctx context.Context, q rowset.Queryer, options SessionParametersOptions, limits rowset.Limits) (json.RawMessage, error)
 func SessionParametersRows(ctx context.Context, q rowset.Queryer, options SessionParametersOptions) (*sql.Rows, error)
 func SessionParametersStatement(options SessionParametersOptions) (string, []any, error)
