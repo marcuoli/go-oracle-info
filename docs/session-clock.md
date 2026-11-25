@@ -2,7 +2,7 @@
 
 The [session clock API](api-reference.md#database) samples six Oracle expressions
 with one read-only SELECT on an already admitted connection. It uses SYS.DUAL and
-retains the numeric release and connected-session scope in the result provenance.
+retains the numeric major version and connected-session scope in the result provenance.
 The application owns connection affinity, permissions, timeouts, elapsed
 measurements and clock comparison.
 
