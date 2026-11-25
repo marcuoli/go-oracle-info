@@ -4,7 +4,7 @@
 
 ## v0.44.0 (2026-11-25)
 
-- Fill 72 historical Database catalog gaps from reviewed Oracle Support captures. Preserve SuperCluster model scope, distinguish bundled and separately supplied updates, and retain exact package date provenance (#174).
+- Fill 73 historical Database catalog gaps from reviewed Oracle Support captures. Preserve SuperCluster model scope, distinguish bundled and separately supplied updates, and retain exact package date provenance (#174).
 
 ## v0.43.0 (2026-11-25)
 
