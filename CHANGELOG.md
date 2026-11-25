@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.44.1 (2026-11-25)
+
+- Limit catalog embedding to the four public snapshots and ignore local Oracle Support evidence and private feeds (#202).
+
 ## v0.44.0 (2026-11-25)
 
 - Fill 73 historical Database catalog gaps from reviewed Oracle Support captures. Preserve SuperCluster model scope, distinguish bundled and separately supplied updates, and retain exact package date provenance (#174).

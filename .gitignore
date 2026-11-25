@@ -2,3 +2,30 @@
 *.exe
 *.test
 *.out
+
+# Local Oracle Support evidence and caller-supplied feeds
+/oracle-support/
+/captures/
+/archive/
+/private/
+*.mhtml
+*.mht
+555.1.html
+2485457.1.html
+import-manifest.json
+mos-capture-manifest.json
+review.json
+private-review.json
+review-v*.json
+patch-catalog.json
+private-recommendations.json
+recommendations.json
+gold-images.json
+autoupgrade-archive.json
+
+# Only these public snapshots are bundled
+/releases/data/*
+!/releases/data/database.json
+!/releases/data/exadata.json
+!/releases/data/oda.json
+!/releases/data/supercluster.json

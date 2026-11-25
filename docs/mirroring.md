@@ -3,7 +3,9 @@
 The private Gitea repository owns implementation history. The public mirror is
 `github.com/marcuoli/go-oracle-info`. Module publication uses a clean canonical
 `main`, and the same integrated commit and immutable module tag on both forges.
-Private validation inputs remain outside Git.
+Private validation inputs remain outside Git. The module embeds the four public
+catalog snapshots by filename. Local Oracle Support captures, archives and
+caller-supplied feeds belong in the private evidence store.
 
 Use [the catalog refresh and review](release-catalog.md#refresh-before-publish)
 for every new module version. Review the required scoped Oracle evidence using
