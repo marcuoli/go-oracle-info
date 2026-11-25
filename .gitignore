@@ -14,7 +14,11 @@
 2485457.1.html
 import-manifest.json
 mos-capture-manifest.json
+review.json
+private-review.json
 review-v*.json
+patch-catalog.json
+private-recommendations.json
 recommendations.json
 gold-images.json
 autoupgrade-archive.json
