@@ -84,6 +84,21 @@ artifact scope, with exact operating-system platforms supplied only by scoped
 package evidence. The separate source observations preserve the originally
 imported rows.
 
+The v0.44.0 Database refresh fills 73 historical package groups, including
+69 SuperCluster associations. Those observations bind the exact full-stack
+package to the documented Database or Grid Infrastructure level or, for
+quarter-labelled 18c groups, the matching proactive section. Artifact scope
+retains the named SuperCluster models and distinguishes a bundled update from
+a certified Database update supplied separately. A model or section label
+does not supply an operating-system package ID. Forty-one groups remain
+unresolved. The 21.4 Windows bundle observation for patch 33322894 still has no
+verified release date.
+
+For the 11.2.0.4 April 2022 group, the existing date-derived version key is
+corroborated by KB111315's exact SuperCluster patch number and date. KB117594
+identifies the model scope and separately supplied Database update.
+[Oracle Support QFSDP table](https://support.oracle.com/support/?documentId=KB117594)
+
 The top-level snapshot date records when the seed was prepared. A source's
 check date, article revision, and artifact release date are separate fields.
 An absent date or package number is unresolved. A published `tbd`,
@@ -286,6 +301,13 @@ the original `source_name`. Include only packages whose number or exact version
 and scope were actually verified. For a correction, use the same source ID and
 record identity, and include the observed group-level fields. Multiple source
 observations for a numeric version may remain in the catalog.
+
+If a second document establishes an artifact detail, such as the release date
+for the same hardware package, cite its identifier in the artifact's
+`corroborated_by` list. Each identifier must resolve to one verified check for
+the same catalog product. The primary check still supplies the artifact's
+package and scope provenance. Keep the supporting check and its evidence hash
+even when it introduces no independent records.
 
 An Oracle support announcement with an explicit MOS patch link can establish
 the patch facts shown publicly. Retain the announcement URL, linked MOS

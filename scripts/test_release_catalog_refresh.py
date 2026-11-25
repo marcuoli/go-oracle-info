@@ -372,6 +372,57 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(proof["checked_utc"], article["checked_utc"])
         self.assertEqual(proof["old_doc_id"], "2521164.1")
 
+    def test_corroboration_retains_verified_same_product_source(self):
+        main = self.check("database_patches")
+        supporting = dict(main, identifier="KB117472", old_doc_id="2796590.1",
+                          url="https://support.oracle.com/support/?documentId=KB117472")
+        self.review["checks"].append(supporting)
+        artifact = dict(number=38658593, corroborated_by=["KB117472"])
+        main.update(result="updated", records=[dict(line="19", kind="bundle", version="19.30.0",
+                                                    artifacts=[artifact])])
+        self.verify()
+        old = fixture()
+        merged = merge_catalog(old, reviewed_catalogs(
+            self.review["checks"], "2026-11-21", {"database": old, "exadata": None, "supercluster": None}
+        )["database"])
+        self.assertEqual(merged["patches"][0]["artifacts"], [artifact])
+        self.assertEqual(next(s for s in merged["sources"] if s["id"] == "KB117472"),
+                         {"id": "KB117472", "title": supporting["title"], "url": supporting["url"],
+                          "old_doc_id": "2796590.1", "checked_utc": supporting["checked_utc"],
+                          "sha256": supporting["evidence_sha256"]})
+
+    def test_primary_source_remains_the_record_bearing_check(self):
+        main = self.check("database_patches")
+        self.review["checks"].append(dict(main, role="database_roadmap"))
+        main.update(result="updated", records=[dict(line="19", kind="bundle", version="19.30.0",
+                                                    artifacts=[dict(number=38658593)])])
+        self.verify()
+        reviewed = reviewed_catalogs(self.review["checks"], "2026-11-21",
+                                     {"database": fixture(), "exadata": None, "supercluster": None})["database"]
+        self.assertEqual(reviewed["patches"][0]["source"], main["identifier"])
+        self.assertEqual(reviewed["sources"][0]["sha256"], main["evidence_sha256"])
+
+    def test_corroboration_rejects_self_invalid_and_duplicate_ids(self):
+        main = self.check("database_patches")
+        for ids in ([], ["KB106822"], ["KB117472", "KB117472"], ["../bad"], [42]):
+            with self.subTest(ids=ids):
+                artifact = dict(number=38658593, corroborated_by=ids)
+                main.update(result="updated", records=[dict(line="19", kind="bundle", version="19.30.0",
+                                                            artifacts=[artifact])])
+                with self.assertRaisesRegex(ValueError, "invalid package corroboration"):
+                    self.verify()
+
+    def test_corroboration_rejects_missing_or_cross_product_source(self):
+        main = self.check("database_patches")
+        for id_ in ("KB117472", self.check("exadata_patches")["identifier"]):
+            with self.subTest(id_=id_):
+                main.update(result="updated", records=[dict(line="19", kind="bundle", version="19.30.0",
+                                                            artifacts=[dict(number=38658593, corroborated_by=[id_])])])
+                self.verify()
+                with self.assertRaisesRegex(ValueError, "corroborating source"):
+                    reviewed_catalogs(self.review["checks"], "2026-11-21",
+                                      {"database": fixture(), "exadata": None, "supercluster": None})
+
     def run_publish_verifier(self, *, changed_product=None, skipped_history=False):
         base = self.review["history_base"]
         head = "3" * 40

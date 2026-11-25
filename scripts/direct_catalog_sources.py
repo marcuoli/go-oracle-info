@@ -38,7 +38,7 @@ PATCH_FIELDS = dict.fromkeys((
 ), str) | dict.fromkeys(("base_release", "terminal_release", "restricted"), bool) | {"artifacts": list}
 ARTIFACT_FIELDS = dict.fromkeys((
     "version", "component", "scope", "platform", "mos_platform", "release_date", "disabled_at",
-), str) | dict.fromkeys(("number", "platform_id"), int) | dict.fromkeys(("base_release", "terminal_release"), bool)
+), str) | dict.fromkeys(("number", "platform_id"), int) | dict.fromkeys(("base_release", "terminal_release"), bool) | {"corroborated_by": list}
 
 
 def evidence_time(value, field):
@@ -136,6 +136,14 @@ def validate_records(check, field):
             validate_fields(artifact, ARTIFACT_FIELDS, set())
             if not artifact.get("number") and not artifact.get("version"):
                 raise ValueError("reviewed package needs a patch number or exact version")
+            if "corroborated_by" in artifact:
+                supplemental = artifact["corroborated_by"]
+                if (not supplemental
+                        or any(type(id_) is not str or not IDENTIFIER.fullmatch(id_) for id_ in supplemental)
+                        or check["identifier"] in supplemental
+                        or len(set(supplemental)) != len(supplemental)):
+                    raise ValueError("invalid package corroboration")
+
 
 
 def validate_review(review, version, oda, evidence_root, now):
@@ -204,18 +212,36 @@ def reviewed_catalogs(checks, as_of, previous):
         product: dict(sources={}, releases=[], patches=[], coverage=[])
         for product in ("database", "exadata", "supercluster")
     }
+    # A secondary authority can corroborate one package without supplying a
+    # new catalog record. Its dated evidence must be reviewed for this product.
+    documents = {}
+    for check in checks:
+        product, _, _ = ROLES[check["role"]]
+        documents.setdefault((product, check["identifier"]), []).append(check)
     for check in checks:
         product, _, field = ROLES[check["role"]]
-        if not check.get("records"):
+        records = check.get("records")
+        if not records:
             continue
         update = products[product]
-        id_ = check["identifier"]
-        document = source(id_, check["title"], check["url"], old_doc_id=check.get("old_doc_id"),
-                          revision=check.get("revision"), checked_utc=check["checked_utc"],
-                          sha256=check["evidence_sha256"])
-        if update["sources"].setdefault(id_, document) != document:
-            raise ValueError(f"conflicting evidence for {id_}")
-        update[field].extend(dict(row, source=id_) for row in check["records"])
+        origin = check["identifier"]
+        source_ids = {origin}
+        for row in records:
+            for artifact in row.get("artifacts", []):
+                source_ids.update(artifact.get("corroborated_by", []))
+        for id_ in sorted(source_ids):
+            authority = check
+            if id_ != origin:
+                authorities = documents.get((product, id_), [])
+                if len(authorities) != 1:
+                    raise ValueError(f"missing or ambiguous corroborating source {id_} for {product}")
+                authority = authorities[0]
+            document = source(id_, authority["title"], authority["url"], old_doc_id=authority.get("old_doc_id"),
+                              revision=authority.get("revision"), checked_utc=authority["checked_utc"],
+                              sha256=authority["evidence_sha256"])
+            if update["sources"].setdefault(id_, document) != document:
+                raise ValueError(f"conflicting evidence for {id_}")
+        update[field].extend(dict(row, source=origin) for row in records)
     return {
         product: catalog(product, as_of, list(update["sources"].values()), update["releases"],
                          update["patches"], update["coverage"], (previous[product] or {}).get("notes", []))
