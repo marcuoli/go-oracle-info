@@ -391,6 +391,17 @@ class ReviewTests(unittest.TestCase):
                           "old_doc_id": "2796590.1", "checked_utc": supporting["checked_utc"],
                           "sha256": supporting["evidence_sha256"]})
 
+    def test_primary_source_remains_the_record_bearing_check(self):
+        main = self.check("database_patches")
+        self.review["checks"].append(dict(main, role="database_roadmap"))
+        main.update(result="updated", records=[dict(line="19", kind="bundle", version="19.30.0",
+                                                    artifacts=[dict(number=38658593)])])
+        self.verify()
+        reviewed = reviewed_catalogs(self.review["checks"], "2026-11-21",
+                                     {"database": fixture(), "exadata": None, "supercluster": None})["database"]
+        self.assertEqual(reviewed["patches"][0]["source"], main["identifier"])
+        self.assertEqual(reviewed["sources"][0]["sha256"], main["evidence_sha256"])
+
     def test_corroboration_rejects_self_invalid_and_duplicate_ids(self):
         main = self.check("database_patches")
         for ids in ([], ["KB106822"], ["KB117472", "KB117472"], ["../bad"], [42]):
