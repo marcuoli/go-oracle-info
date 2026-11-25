@@ -148,6 +148,52 @@ def merge_patches(old, fresh, aliases, history):
     return list(current.values())
 
 
+def reconcile_legacy_11g_psus(patches, history):
+    """Archive imported observations covered by the exact MOS DB or GI PSU."""
+    candidates = {}
+    for pos, row in enumerate(patches):
+        source = original_id(row["source"])
+        component = row.get("component")
+        version = row.get("version", "")
+        if (source not in {LOCAL_PATCH_EXPORT, "KB111315"}
+                or row["line"] != "11.2.0.4" or row["kind"] != "PSU"
+                or row.get("source_kind") != "PSU" or row.get("product_name") != "11gR2"
+                or component not in {"GI", "RDBMS"} or row.get("source_name")
+                or row.get("source_subtype") not in {None, "", component}
+                or not re.fullmatch(r"11\.2\.0\.4\.[0-9]{6}", version)):
+            continue
+        candidates.setdefault((version, component), {}).setdefault(source, []).append(pos)
+
+    archived = set()
+    for group in candidates.values():
+        imported = group.get(LOCAL_PATCH_EXPORT, [])
+        verified = group.get("KB111315", [])
+        if len(imported) != 1 or len(verified) != 1:
+            continue
+        legacy, oracle = patches[imported[0]], patches[verified[0]]
+        # Preserve conflicting flags and restrictions still supported only
+        # by the import. Missing booleans make no affirmative claim.
+        default_flags = {"base_release": False, "terminal_release": False,
+                         "restricted": False, "disabled_at": ""}
+        if any(legacy.get(flag, default) != oracle.get(flag, default)
+               for flag, default in default_flags.items()):
+            continue
+        reviewed_packages = {package_observation(artifact) for artifact in oracle.get("artifacts", [])
+                             if artifact.get("number", 0) > 0}
+        if reviewed_packages and all(package_observation(artifact) in reviewed_packages
+                                     for artifact in legacy.get("artifacts", [])):
+            archived.add(imported[0])
+            history.append(legacy)
+    return [row for pos, row in enumerate(patches) if pos not in archived]
+
+
+def package_observation(artifact):
+    # Compare exact package and scope fields, including unknown or omitted
+    # platform information. The complete original provenance goes to history.
+    return key_json({field: value for field, value in artifact.items()
+                     if field not in {"source", "recorded_source_id", "corroborated_by"}})
+
+
 def consolidate_history(entries, aliases, incoming):
     records = [remap_row(row, aliases) for row in entries] + incoming
     return list({key_json(row): row for row in records}.values())
@@ -207,6 +253,8 @@ def merge_catalog(old, fresh):
     result["releases"] = merge_rows(old["releases"], fresh["releases"], release_key, aliases,
                                     release_history, "release")
     result["patches"] = merge_patches(old["patches"], fresh["patches"], aliases, patch_history)
+    if result["product"] == "database":
+        result["patches"] = reconcile_legacy_11g_psus(result["patches"], patch_history)
     previous_coverage = {coverage_key(r): remap_row(r, aliases) for r in old["coverage"]}
     previous_coverage.update(index(fresh["coverage"], coverage_key, "coverage"))
     result["coverage"] = list(previous_coverage.values())

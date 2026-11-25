@@ -56,12 +56,25 @@ snapshot by its input revision and SHA-256 digest. The loader returns these fiel
 as data for callers. The release refresh also uses the source ID to reconcile
 records and retain their historical provenance.
 
-An empty `artifacts` array means the source provides no package records for
-that patch group. For the 27 originally imported 11.2.0.4 Grid Infrastructure
-PSU groups, a separate [Oracle Support observation](https://support.oracle.com/support/?documentId=KB111315)
-supplies exact patch numbers and release dates. Platform fields remain empty in
-these observations because the article links to Patch Details without listing
-platforms for those rows. The original imported observations remain in the catalog.
+An empty `artifacts` array means the source supplies no package records for
+that group. The Database catalog reconciles 54 imported 11.2.0.4 PSU
+placeholders with the exact numbered records in the November 24, 2026
+[Oracle Support capture](https://support.oracle.com/support/?documentId=KB111315).
+Those records cover 27 Database PSUs and 27 GI PSUs. The active groups use the
+patch numbers and release dates from KB111315 (old Doc ID 2285559.1).
+The article establishes Market Driven Support restrictions for 20 of these
+observations. Its DB and GI download-link columns leave the operating system
+unspecified. Windows bundles and other platform-scoped packages retain their
+own identities.
+
+A refresh matches the exact numeric version and component and requires one
+import and one numbered KB111315 group with matching group flags. An imported
+group with package records is eligible only when every package already has an
+exact match, including its platform, date, and other package metadata.
+Conflicting or ambiguous observations remain separate. Retired observations
+remain complete in `history.patches` with their original source and flags.
+The previous MOS observations and their source snapshot retain the original
+metadata before the restriction was recorded.
 
 Release-specific proactive patch notes also provide direct observations for
 11.2.0.4 Database PSUs, 12.1.0.2 Database and GI PSUs, 12.2.0.1 GI RUs, and

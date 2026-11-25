@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## v0.43.0 (2026-11-25)
+
+- Reconcile 54 duplicate 11.2.0.4 Database and GI PSU groups using documented patch numbers and dates. Preserve platform packages and original observations in catalog history, and retain the verified Market Driven Support restrictions (#189).
+
 ## v0.42.0 (2026-11-24)
 
 - Add SQL-only SCAN discovery from effective listener parameters and visible remote registration evidence. Preserve raw scope and leave IP-only or ambiguous names unknown (#196).
