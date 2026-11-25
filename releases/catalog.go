@@ -115,7 +115,7 @@ type Catalog struct {
 	History       *History   `json:"history,omitempty"`
 }
 
-//go:embed data/*.json
+//go:embed data/database.json data/exadata.json data/oda.json data/supercluster.json
 var data embed.FS
 
 // Load returns an independent copy of the bundled catalog for product.
