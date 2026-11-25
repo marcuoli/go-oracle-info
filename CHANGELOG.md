@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Save the reusable MOS capture prompt for the 41 remaining Database catalog groups and the 21.4 Windows patch date (#204).
+
 ## v0.44.1 (2026-11-25)
 
 - Limit catalog embedding to the four public snapshots and ignore local Oracle Support evidence and private feeds (#202).

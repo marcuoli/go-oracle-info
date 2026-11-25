@@ -16,6 +16,8 @@ Find the go-oracle-info checkout by its `github.com/marcuoli/go-oracle-info` mod
 
 For a signed-in MOS refresh of all seven JSON files, copy the [reusable refresh prompt](refresh-mos-prompt.md).
 
+For the remaining Database catalog gaps, copy the [issue #174 MOS capture prompt](capture-issue-174-prompt.md).
+
 ## Choose the repository workflow
 
 | Requested output | Start here |
