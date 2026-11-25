@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "supercluster",
-  "as_of": "2026-11-24",
+  "as_of": "2026-11-25",
   "sources": [
     {"id": "KB106910", "title": "Database 12.1.0.2 Proactive Patch Information", "url": "https://support.oracle.com/support/?anchorId=&documentId=KB106910&page=sptemplate&sptemplate=km-article", "old_doc_id": "2285558.1", "checked_utc": "2026-11-24T16:58:01.063363+00:00", "revision": "Nov 20, 2026", "sha256": "10460c6c1921781f656324449989a1344864fbaa9b36b8dd8923b5537e4ca0ba"},
     {"id": "KB106910@9f4ad6992fae1263b7b4c7920c37a801435a186004d5d3149890e25ae0080b9d", "title": "Database 12.1.0.2 Proactive Patch Information", "url": "https://support.oracle.com/ic/builder/rt/customer_portal/live/webApps/customer-portal/?anchorId=&kmContentId=2285558&page=sptemplate&sptemplate=km-article", "old_doc_id": "2285558.1", "checked_utc": "2026-11-09T00:59:22.317Z", "revision": "Nov 2, 2026", "sha256": "b0b3af8273b7db9d3fa3aeea35aabc6e9890e818bc855eb508573d6673867714"},

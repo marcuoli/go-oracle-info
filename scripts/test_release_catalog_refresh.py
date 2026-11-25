@@ -30,6 +30,21 @@ def fixture(checked="2026-11-19T12:00:00Z"):
     }
 
 
+def legacy_psu_fixture():
+    old = fixture()
+    legacy = {"line": "11.2.0.4", "version": "11.2.0.4.230718", "kind": "PSU",
+              "component": "RDBMS", "source_kind": "PSU", "source_subtype": "RDBMS",
+              "product_name": "11gR2", "source": "local-patch-export", "restricted": True,
+              "base_release": False, "terminal_release": False, "artifacts": []}
+    direct = {k: v for k, v in legacy.items() if k not in ("source_subtype", "base_release", "terminal_release")}
+    direct.update(source="KB111315", artifacts=[{"number": 35269283, "release_date": "2023-07-18"}])
+    old["sources"].append({"id": "local-patch-export", "title": "Original import"})
+    old["patches"].append(legacy)
+    fresh = dict(old, sources=[{"id": "KB111315", "title": "Oracle 11.2.0.4 Proactive Patch Information"}],
+                 releases=[], patches=[direct], coverage=[])
+    return old, fresh, legacy, direct
+
+
 class ReconcileTests(unittest.TestCase):
     def test_unchanged(self):
         old = fixture()
@@ -91,6 +106,59 @@ class ReconcileTests(unittest.TestCase):
         self.assertEqual(merged["patches"][0]["artifacts"][1]["source"], archived["id"])
         self.assertEqual(merged["patches"][0]["artifacts"][1]["corroborated_by"], [current_id])
         self.assertEqual(merge_catalog(merged, fresh), merged)
+
+    def test_legacy_11g_psu_placeholder_moves_to_history(self):
+        old, fresh, legacy, direct = legacy_psu_fixture()
+        merged = merge_catalog(old, fresh)
+        self.assertEqual(merged["patches"], [direct, *old["patches"][:-1]])
+        self.assertEqual(merged["history"]["patches"], [legacy])
+        self.assertIn({"id": "local-patch-export", "title": "Original import"}, merged["sources"])
+        self.assertEqual(merge_catalog(merged, fresh), merged)
+
+    def test_legacy_11g_psu_exact_number_scope_and_metadata_are_archived(self):
+        old, fresh, legacy, direct = legacy_psu_fixture()
+        linux = {"number": 35269283, "platform_id": 13, "platform": "Linux x86 64-bit",
+                 "mos_platform": "Linux x86-64", "release_date": "2023-07-18"}
+        windows = {"number": 41220347, "platform_id": 2, "platform": "Windows x64"}
+        direct["artifacts"] = [linux, windows]
+        legacy["artifacts"] = [dict(linux, source="local-patch-export", recorded_source_id="2285559.1")]
+        merged = merge_catalog(old, fresh)
+        self.assertEqual(merged["patches"][0], direct)
+        self.assertNotIn(legacy, merged["patches"])
+        self.assertEqual(merged["history"]["patches"], [legacy])
+        self.assertEqual(merge_catalog(merged, fresh), merged)
+
+    def test_legacy_11g_psu_unresolved_variants_remain_active(self):
+        for change in ("number", "scoped", "date", "missing_number", "flags", "disabled",
+                       "different_component", "bundle", "other_line", "multiple_direct", "multiple_legacy"):
+            with self.subTest(change=change):
+                old, fresh, legacy, direct = legacy_psu_fixture()
+                if change == "number":
+                    legacy["artifacts"] = [dict(direct["artifacts"][0], number=12345678)]
+                elif change == "scoped":
+                    legacy["artifacts"] = [dict(direct["artifacts"][0], platform_id=13)]
+                elif change == "date":
+                    legacy["artifacts"] = [dict(direct["artifacts"][0], release_date="2023-07-19")]
+                elif change == "missing_number":
+                    direct["artifacts"] = [{"version": "11.2.0.4.230718"}]
+                elif change == "flags":
+                    direct["restricted"] = False
+                elif change == "disabled":
+                    legacy["disabled_at"] = "2023-07-19"
+                elif change == "different_component":
+                    direct.update(component="GI", source_subtype="GI")
+                elif change == "bundle":
+                    legacy.update(kind="bundle", source_kind="WIN_BUNDLE")
+                elif change == "other_line":
+                    direct.update(line="12.1.0.2", version="12.1.0.2.230718")
+                    legacy.update(line="12.1.0.2", version="12.1.0.2.230718")
+                elif change == "multiple_direct":
+                    fresh["patches"].append(dict(direct, source_subtype="RDBMS"))
+                elif change == "multiple_legacy":
+                    old["patches"].append(dict(legacy, source_subtype=""))
+                merged = merge_catalog(old, fresh)
+                self.assertIn(legacy, merged["patches"])
+                self.assertNotIn("history", merged)
 
     def test_conflicting_duplicate_fails(self):
         old = fixture()
