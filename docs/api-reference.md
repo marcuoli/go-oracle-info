@@ -201,6 +201,8 @@ func (c *Client) GoldenGateReplicatsJSON(ctx context.Context, f GoldenGateProces
 func (c *Client) GoldenGateReplicatsRows(ctx context.Context, f GoldenGateProcessFilter) (*sql.Rows, error)
 func (c *Client) HiddenParameterCatalog(ctx context.Context, filter HiddenCatalogFilter) (*sql.Rows, error)
 func (c *Client) HiddenParameterCatalogJSON(ctx context.Context, filter HiddenCatalogFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) HiddenParameterCatalogWithSessionDefault(ctx context.Context, filter HiddenCatalogFilter) (*sql.Rows, error)
+func (c *Client) HiddenParameterCatalogWithSessionDefaultJSON(ctx context.Context, filter HiddenCatalogFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) HiddenParameterContext(ctx context.Context, filter HiddenContextFilter) (*sql.Rows, error)
 func (c *Client) HiddenParameterContextJSON(ctx context.Context, filter HiddenContextFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) HiddenParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
@@ -4448,6 +4450,10 @@ type HiddenCatalogResult struct {
 	Provenance Provenance
 	Rows       []HiddenParameter
 }
+type HiddenCatalogWithSessionDefaultResult struct {
+	Provenance Provenance
+	Rows       []HiddenParameterWithSessionDefault
+}
 type HiddenContextFilter struct {
 	Names          []string
 	NonDefaultOnly bool
@@ -4491,6 +4497,10 @@ type HiddenParameter struct {
 	IsSessionModifiable session.Value
 	IsSystemModifiable  session.Value
 	Description         session.Value
+}
+type HiddenParameterWithSessionDefault struct {
+	HiddenParameter
+	SessionIsDefault session.Value
 }
 type JSONEnvelope struct {
 	Provenance Provenance      `json:"provenance"`
@@ -4701,6 +4711,7 @@ func DecodeEffectiveWithOptions(result session.Result, options SourceOptions) (E
 func DecodeHidden(result session.Result, major int, filter Filter) (EffectiveResult, error)
 func DecodeHiddenCatalog(result session.Result, major int, filter HiddenCatalogFilter) (HiddenCatalogResult, error)
 func DecodeHiddenCatalogWithOptions(result session.Result, options HiddenCatalogOptions) (HiddenCatalogResult, error)
+func DecodeHiddenCatalogWithSessionDefault(result session.Result, major int, filter HiddenCatalogFilter) (HiddenCatalogWithSessionDefaultResult, error)
 func DecodeHiddenContext(result session.Result, major int, filter HiddenContextFilter) (HiddenContextResult, error)
 func DecodeHiddenContextWithOptions(result session.Result, options HiddenContextOptions) (HiddenContextResult, error)
 func DecodeHiddenWithOptions(result session.Result, options SourceOptions) (EffectiveResult, error)
@@ -4722,6 +4733,9 @@ func HiddenCatalogRows(ctx context.Context, q rowset.Queryer, major int, filter 
 func HiddenCatalogRowsWithOptions(ctx context.Context, q rowset.Queryer, options HiddenCatalogOptions) (*sql.Rows, error)
 func HiddenCatalogStatement(major int, filter HiddenCatalogFilter) (string, []any, error)
 func HiddenCatalogStatementWithOptions(options HiddenCatalogOptions) (string, []any, error)
+func HiddenCatalogWithSessionDefaultJSON(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter, limits rowset.Limits) (json.RawMessage, error)
+func HiddenCatalogWithSessionDefaultRows(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter) (*sql.Rows, error)
+func HiddenCatalogWithSessionDefaultStatement(major int, filter HiddenCatalogFilter) (string, []any, error)
 func HiddenContextJSON(ctx context.Context, q rowset.Queryer, major int, filter HiddenContextFilter, limits rowset.Limits) (json.RawMessage, error)
 func HiddenContextJSONWithOptions(ctx context.Context, q rowset.Queryer, options HiddenContextOptions, limits rowset.Limits) (json.RawMessage, error)
 func HiddenContextRows(ctx context.Context, q rowset.Queryer, major int, filter HiddenContextFilter) (*sql.Rows, error)
@@ -4740,6 +4754,7 @@ func ReadContainerSystem(ctx context.Context, reader Reader, request ContainerSy
 func ReadEffective(ctx context.Context, reader Reader, request Request) (EffectiveResult, error)
 func ReadHidden(ctx context.Context, reader Reader, request Request) (EffectiveResult, error)
 func ReadHiddenCatalog(ctx context.Context, reader Reader, request HiddenCatalogRequest) (HiddenCatalogResult, error)
+func ReadHiddenCatalogWithSessionDefault(ctx context.Context, reader Reader, request HiddenCatalogRequest) (HiddenCatalogWithSessionDefaultResult, error)
 func ReadHiddenContext(ctx context.Context, reader Reader, request HiddenContextRequest) (HiddenContextResult, error)
 func ReadSPFile(ctx context.Context, reader Reader, request SPFileRequest) (SPFileResult, error)
 func ReadScalarSystem(ctx context.Context, reader Reader, request ScalarSystemRequest) (ScalarSystemResult, error)

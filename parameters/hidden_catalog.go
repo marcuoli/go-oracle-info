@@ -49,17 +49,31 @@ type HiddenCatalogResult struct {
 	Rows       []HiddenParameter
 }
 
+// HiddenParameterWithSessionDefault includes the raw KSPPSTDF flag belonging
+// to the session value. Preserve SQL NULL and unrecognized flag text.
+type HiddenParameterWithSessionDefault struct {
+	HiddenParameter
+	SessionIsDefault session.Value
+}
+
+// HiddenCatalogWithSessionDefaultResult is the session and instance catalog
+// with the additional session-side default flag.
+type HiddenCatalogWithSessionDefaultResult struct {
+	Provenance Provenance
+	Rows       []HiddenParameterWithSessionDefault
+}
+
 const hiddenCatalogSource = "SYS.X$KSPPI+SYS.X$KSPPCV+SYS.X$KSPPSV"
 
 // HiddenCatalogStatement selects the explicit internal fixed-table catalog.
 // This is independent of HiddenStatement's visible SYSTEM_PARAMETER2 dataset;
 // there is no fallback or privilege escalation when the source is unavailable.
 func HiddenCatalogStatement(major int, filter HiddenCatalogFilter) (string, []any, error) {
-	plan, err := hiddenCatalogPlan(major, filter)
+	plan, err := hiddenCatalogPlan(major, filter, false)
 	return plan.sql, plan.args, err
 }
 
-func hiddenCatalogPlan(major int, filter HiddenCatalogFilter) (selection, error) {
+func hiddenCatalogPlan(major int, filter HiddenCatalogFilter, includeSessionDefault bool) (selection, error) {
 	if major < 11 {
 		return selection{}, ErrUnsupportedVersion
 	}
@@ -88,7 +102,12 @@ func hiddenCatalogPlan(major int, filter HiddenCatalogFilter) (selection, error)
 	sql := `SELECT a.KSPPINM AS NAME, b.KSPPSTVL AS SESSION_VALUE, c.KSPPSTVL AS INSTANCE_VALUE,
  DECODE(BITAND(a.KSPPIFLG / 256, 1), 1, 'TRUE', 'FALSE') AS ISSES_MODIFIABLE,
  DECODE(BITAND(a.KSPPIFLG / 65536, 3), 1, 'IMMEDIATE', 2, 'DEFERRED', 3, 'IMMEDIATE', 'FALSE') AS ISSYS_MODIFIABLE,
- a.KSPPDESC AS DESCRIPTION
+ a.KSPPDESC AS DESCRIPTION`
+	if includeSessionDefault {
+		sql += ", b.KSPPSTDF AS SESSION_IS_DEFAULT"
+		columns = append(columns, rowset.Column{Name: "SESSION_IS_DEFAULT", Kind: rowset.Text})
+	}
+	sql += `
  FROM SYS.X$KSPPI a
  JOIN SYS.X$KSPPCV b ON a.INDX = b.INDX
  JOIN SYS.X$KSPPSV c ON a.INDX = c.INDX
@@ -114,7 +133,7 @@ func hiddenCatalogPlan(major int, filter HiddenCatalogFilter) (selection, error)
 // DecodeHiddenCatalog validates every row before returning any typed facts.
 // SQL NULL, literal NULL text and different session/instance values stay distinct.
 func DecodeHiddenCatalog(result session.Result, major int, filter HiddenCatalogFilter) (HiddenCatalogResult, error) {
-	plan, err := hiddenCatalogPlan(major, filter)
+	plan, err := hiddenCatalogPlan(major, filter, false)
 	if err != nil {
 		return HiddenCatalogResult{}, err
 	}
@@ -128,17 +147,24 @@ func decodeHiddenCatalog(result session.Result, plan selection) (HiddenCatalogRe
 	}
 	rows := make([]HiddenParameter, len(result.Rows))
 	for i, row := range result.Rows {
-
-		rows[i] = HiddenParameter{Name: row[index["NAME"]], SessionValue: row[index["SESSION_VALUE"]], InstanceValue: row[index["INSTANCE_VALUE"]], IsSessionModifiable: row[index["ISSES_MODIFIABLE"]], IsSystemModifiable: row[index["ISSYS_MODIFIABLE"]], Description: row[index["DESCRIPTION"]]}
+		rows[i] = hiddenParameter(row, index)
 	}
 	return HiddenCatalogResult{Provenance: plan.provenance, Rows: rows}, nil
+}
+
+func hiddenParameter(row []session.Value, index map[string]int) HiddenParameter {
+	return HiddenParameter{
+		Name: row[index["NAME"]], SessionValue: row[index["SESSION_VALUE"]],
+		InstanceValue: row[index["INSTANCE_VALUE"]], Description: row[index["DESCRIPTION"]],
+		IsSessionModifiable: row[index["ISSES_MODIFIABLE"]], IsSystemModifiable: row[index["ISSYS_MODIFIABLE"]],
+	}
 }
 
 // ReadHiddenCatalog executes once through an admitted complete buffered reader.
 // The caller owns deadlines, finite transport budgets and session lifetime.
 // Query/terminal/cancellation failures publish no successful prefix or fallback.
 func ReadHiddenCatalog(ctx context.Context, reader Reader, request HiddenCatalogRequest) (HiddenCatalogResult, error) {
-	plan, err := hiddenCatalogPlan(request.OracleMajor, request.Filter)
+	plan, err := hiddenCatalogPlan(request.OracleMajor, request.Filter, false)
 	if err != nil {
 		return HiddenCatalogResult{}, err
 	}
@@ -156,7 +182,7 @@ func ReadHiddenCatalog(ctx context.Context, reader Reader, request HiddenCatalog
 // HiddenCatalogRows returns the actual caller-native cursor. The caller owns
 // Next/Scan/Err/Close, budgets and session affinity; the SQL does not truncate.
 func HiddenCatalogRows(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter) (*sql.Rows, error) {
-	plan, err := hiddenCatalogPlan(major, filter)
+	plan, err := hiddenCatalogPlan(major, filter, false)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +192,75 @@ func HiddenCatalogRows(ctx context.Context, q rowset.Queryer, major int, filter 
 // HiddenCatalogJSON reads the same selection on its own cursor using shared
 // rowset lifecycle/budgets. It publishes no bytes on iteration/close/cancel/error.
 func HiddenCatalogJSON(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter, limits rowset.Limits) (json.RawMessage, error) {
-	plan, err := hiddenCatalogPlan(major, filter)
+	plan, err := hiddenCatalogPlan(major, filter, false)
+	if err != nil {
+		return nil, err
+	}
+	return readJSON(ctx, q, plan, limits)
+}
+
+// HiddenCatalogWithSessionDefaultStatement selects the legacy catalog columns
+// followed by the raw SESSION_IS_DEFAULT column.
+func HiddenCatalogWithSessionDefaultStatement(major int, filter HiddenCatalogFilter) (string, []any, error) {
+	plan, err := hiddenCatalogPlan(major, filter, true)
+	return plan.sql, plan.args, err
+}
+
+// DecodeHiddenCatalogWithSessionDefault validates the full extended projection.
+func DecodeHiddenCatalogWithSessionDefault(result session.Result, major int, filter HiddenCatalogFilter) (HiddenCatalogWithSessionDefaultResult, error) {
+	plan, err := hiddenCatalogPlan(major, filter, true)
+	if err != nil {
+		return HiddenCatalogWithSessionDefaultResult{}, err
+	}
+	return decodeHiddenCatalogWithSessionDefault(result, plan)
+}
+
+func decodeHiddenCatalogWithSessionDefault(result session.Result, plan selection) (HiddenCatalogWithSessionDefaultResult, error) {
+	index, err := parameterColumns(result, plan)
+	if err != nil {
+		return HiddenCatalogWithSessionDefaultResult{}, err
+	}
+	rows := make([]HiddenParameterWithSessionDefault, len(result.Rows))
+	flag := index["SESSION_IS_DEFAULT"]
+	for i, row := range result.Rows {
+		rows[i] = HiddenParameterWithSessionDefault{
+			HiddenParameter:  hiddenParameter(row, index),
+			SessionIsDefault: row[flag],
+		}
+	}
+	return HiddenCatalogWithSessionDefaultResult{Provenance: plan.provenance, Rows: rows}, nil
+}
+
+// ReadHiddenCatalogWithSessionDefault reads the extended catalog once on the
+// admitted session. The caller provides complete results under finite budgets.
+func ReadHiddenCatalogWithSessionDefault(ctx context.Context, reader Reader, request HiddenCatalogRequest) (HiddenCatalogWithSessionDefaultResult, error) {
+	plan, err := hiddenCatalogPlan(request.OracleMajor, request.Filter, true)
+	if err != nil {
+		return HiddenCatalogWithSessionDefaultResult{}, err
+	}
+	result, err := queryParameters(ctx, reader, request.Reference, plan)
+	if err != nil {
+		return HiddenCatalogWithSessionDefaultResult{}, err
+	}
+	facts, decodeErr := decodeHiddenCatalogWithSessionDefault(result, plan)
+	if err = errors.Join(decodeErr, ctx.Err()); err != nil {
+		return HiddenCatalogWithSessionDefaultResult{}, &Error{Source: hiddenCatalogSource, cause: err}
+	}
+	return facts, nil
+}
+
+// HiddenCatalogWithSessionDefaultRows returns the extended caller-native cursor.
+func HiddenCatalogWithSessionDefaultRows(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter) (*sql.Rows, error) {
+	plan, err := hiddenCatalogPlan(major, filter, true)
+	if err != nil {
+		return nil, err
+	}
+	return open(ctx, q, plan)
+}
+
+// HiddenCatalogWithSessionDefaultJSON returns the complete bounded extended catalog.
+func HiddenCatalogWithSessionDefaultJSON(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter, limits rowset.Limits) (json.RawMessage, error) {
+	plan, err := hiddenCatalogPlan(major, filter, true)
 	if err != nil {
 		return nil, err
 	}
