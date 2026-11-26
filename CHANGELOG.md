@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose exact redo buffer allocation per qualified reporting instance from GV$SGA, preserving SQL NULL, source completion and raw numeric bytes (#215).
+
 - Keep CDB SQL patch history ordering outside the formatted dictionary query block to avoid the observed Oracle RAC ORA-12850 failure (#212).
 
 - Refresh the reviewed public Oracle catalog snapshot dates for v0.46.0 (#210).
