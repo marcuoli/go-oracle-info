@@ -42,3 +42,33 @@ func (c *Client) HiddenParameterCatalogJSON(ctx context.Context, filter HiddenCa
 	}
 	return parameters.HiddenCatalogJSON(ctx, c.native(), major, filter, resolved)
 }
+
+// HiddenParameterCatalogWithSessionDefault returns the native fixed-table cursor
+// with the raw SESSION_IS_DEFAULT column. The caller owns the cursor and budgets.
+func (c *Client) HiddenParameterCatalogWithSessionDefault(ctx context.Context, filter HiddenCatalogFilter) (*sql.Rows, error) {
+	if _, _, err := parameters.HiddenCatalogWithSessionDefaultStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.HiddenCatalogWithSessionDefaultRows(ctx, c.native(), major, filter)
+}
+
+// HiddenParameterCatalogWithSessionDefaultJSON consumes the extended catalog
+// independently into bounded JSON, preserving the raw flag and SQL NULL.
+func (c *Client) HiddenParameterCatalogWithSessionDefaultJSON(ctx context.Context, filter HiddenCatalogFilter, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err := parameters.HiddenCatalogWithSessionDefaultStatement(11, filter); err != nil {
+		return nil, err
+	}
+	major, err := c.major(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return parameters.HiddenCatalogWithSessionDefaultJSON(ctx, c.native(), major, filter, resolved)
+}
