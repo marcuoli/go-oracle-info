@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh the reviewed public Oracle catalog snapshot dates for v0.46.0 (#210).
+
 - Expose the raw hidden-parameter session default flag in the opt-in extended catalog (#208).
 
 - Read six connected Oracle clock expressions in one bounded snapshot, preserving civil readings, UTC instants, and the session time zone (#206).
