@@ -447,7 +447,7 @@ through 23.26.4, root scope rejection, visible zero, absent groups, exact
 numbers and timestamps, capacity, invalid evidence, and access and terminal
 failures.
 
-Native reads used Windows amd64, Go 1.27.4, go-oracle-session v0.25.0 with
+The original #155 projections ran on Windows amd64 with Go 1.27.4, go-oracle-session v0.25.0,
 go-ora V2, and Oracle 26ai 23.26.1.0.0. On both SYSDBA CDB roots, the READ WRITE
 primary and READ ONLY WITH APPLY physical standby, the typed reader, native
 cursor, bounded JSON and independent source counts agreed.
@@ -465,6 +465,35 @@ The existing owner-bound local audit lookup returned only the two root
 placements on each connection. The observed additional rows for
 `CON_ID=3` establish the root coverage gap. Direct PDB/non-CDB, MOUNT,
 ordinary login, RAC and other numeric releases remain unqualified natively.
+
+### Root SQL patch history ordering on RAC
+
+Issue #212 separates formatting and ordering for `CDB_REGISTRY_SQLPATCH`. The
+inner view retains the seven-column projected source and root predicate.
+The outer query uses Oracle's documented `NO_MERGE(v)` hint and orders by
+container, Gregorian civil timestamp, numeric patch ID, numeric patch UID,
+and action. Only the sort expressions convert the two IDs to numbers.
+Projected IDs remain exact text. Equal-key rows and NULL descriptions are
+retained. The same plan serves Statement, Read, Rows and JSON.
+
+The release matrix above records static admission for the revised selector.
+Its exact native verification on 2026-11-26 used Oracle 19.3.0.0.0, instance
+1 of a two-member RAC, SYSDBA, CDB$ROOT, and a READ WRITE primary. The Windows
+amd64 Go 1.27.4 consumer used go-oracle-session v0.25.2 with its V2 driver.
+The previously released query returned ORA-12850. The revised query returned
+both rows in container order (1 and 3) and matched the unordered dictionary
+control as a multiset of all seven projected values. A separate nine-row
+read-only CTE on the same server supplied same-container timestamp and action
+ties, numeric ID and UID comparisons, duplicate rows, and nullable
+descriptions. Its order, six fractional digits, and NULLs matched the
+expected results. The CTE observations describe fixture data.
+
+The revised selector has exact native evidence for that RAC root. Production
+same-container row density, other RUs, non-RAC, standby, restricted PDBs and
+other accounts were not exercised with this query shape. Earlier native
+projections are recorded above for the original selectors.
+
+- Oracle 19c [NO_MERGE hint](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Comments.html) and [ORA-12850](https://docs.oracle.com/en/error-help/db/ora-12850/)
 
 - Oracle 9.2 [GLOBAL_NAME](https://docs.oracle.com/cd/B10500_01/server.920/a96536/ch2431.htm) and [DATABASE_PROPERTIES](https://docs.oracle.com/cd/B10501_01/server.920/a96536/ch2183.htm)
 - Oracle 12.1 [CDB view visibility](https://docs.oracle.com/database/121/REFRN/GUID-2B8A1B8B-4F5B-4FBB-AE0B-68B6F8BA7D5E.htm), [USERENV](https://docs.oracle.com/database/121/SQLRF/functions199.htm), and [DBA_REGISTRY_SQLPATCH](https://docs.oracle.com/database/121/REFRN/GUID-F6D2BC12-606C-41FE-B9E8-F3702CD32F89.htm)

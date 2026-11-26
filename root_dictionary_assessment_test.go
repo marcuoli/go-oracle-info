@@ -32,6 +32,7 @@ func TestRootDictionaryReleaseMatrix(t *testing.T) {
 		{"12.1.0.2.0", true, true, true, false},
 		{"12.2.0.1.0", true, true, true, false},
 		{"18.1.0.0.0", true, true, true, true},
+		{"19.3.0.0.0", true, true, true, true},
 		{"19.33.0.0.0", true, true, true, true},
 		{"21.21.0.0.0", true, true, true, true},
 		{"23.9.0.0.0", true, true, true, true},
@@ -81,6 +82,13 @@ func TestRootDictionaryReleaseMatrix(t *testing.T) {
 				}
 				if (v.view == "CDB_REGISTRY" && tc.full) != strings.Contains(sql, " AS VERSION_FULL") {
 					t.Fatalf("incorrect full version column: %s", sql)
+				}
+				if v.view == "CDB_REGISTRY_SQLPATCH" {
+					const outer = "SELECT /*+ NO_MERGE(v) */ v.CON_ID, v.PATCH_ID, v.PATCH_UID, v.ACTION, v.STATUS, v.ACTION_TIME, v.DESCRIPTION FROM (SELECT "
+					const order = ") v ORDER BY v.CON_ID, v.ACTION_TIME, TO_NUMBER(v.PATCH_ID), TO_NUMBER(v.PATCH_UID), v.ACTION"
+					if !strings.HasPrefix(sql, outer) || !strings.HasSuffix(sql, order) || strings.Count(sql, " ORDER BY ") != 1 {
+						t.Fatalf("expected isolated SQL patch sort: %s", sql)
+					}
 				}
 				opt.Scope = containers.CurrentContainer
 				if sql, err := v.statement(opt); sql != "" || !errors.Is(err, containers.ErrUnsupportedScope) {
