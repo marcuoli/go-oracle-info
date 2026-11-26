@@ -249,6 +249,8 @@ func (c *Client) RecoveryAreaUsage(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RecoveryAreaUsageJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RecycleBinCounts(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RecycleBinCountsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) RedoBufferAllocation(ctx context.Context, filter memory.InstanceFilter) (*sql.Rows, error)
+func (c *Client) RedoBufferAllocationJSON(ctx context.Context, filter memory.InstanceFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoClock(ctx context.Context) (*sql.Rows, error)
 func (c *Client) RedoClockJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) RedoGroups(ctx context.Context, filter RedoFilter) (*sql.Rows, error)
@@ -3568,6 +3570,22 @@ type ReadError struct {
 type Reader interface {
 	Query(context.Context, session.Statement) (session.Result, error)
 }
+type RedoBufferAllocationOptions struct {
+	OracleMajor int
+	Filter      InstanceFilter
+}
+type RedoBufferAllocationRequest struct {
+	Options   RedoBufferAllocationOptions
+	Reference reference.Reference
+}
+type RedoBufferAllocationResult struct {
+	Provenance DatasetProvenance
+	Rows       []RedoBufferAllocationRow
+}
+type RedoBufferAllocationRow struct {
+	InstanceID session.Value
+	Bytes      session.Value
+}
 type Request struct {
 	Parameter          Parameter
 	Options            Options
@@ -3636,6 +3654,7 @@ func DecodePDBWithOptions(result session.Result, options ParameterOptions) (Obse
 func DecodePGAAllocated(result session.Result, options PGAAllocatedOptions) (PGAAllocatedResult, error)
 func DecodeParameter(result session.Result, options ParameterOptions) (Observation, error)
 func DecodeRAC(result session.Result, o Options) (RACObservation, error)
+func DecodeRedoBufferAllocation(result session.Result, options RedoBufferAllocationOptions) (RedoBufferAllocationResult, error)
 func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGAAllocatedResult, error)
 func DecodeSGAComponents(result session.Result, major int, filter InstanceFilter) (SGAComponentsResult, error)
 func DecodeSGAComponentsWithOptions(result session.Result, options SGAComponentsOptions) (SGAComponentsResult, error)
@@ -3661,8 +3680,12 @@ func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRe
 func ReadParameter(ctx context.Context, reader Reader, request SourceRequest) (Observation, error)
 func ReadRAC(ctx context.Context, reader Reader, options Options, ref reference.Reference) (RACObservation, error)
 func ReadRACWithOptions(ctx context.Context, reader Reader, request RACRequest) (RACObservation, error)
+func ReadRedoBufferAllocation(ctx context.Context, reader Reader, request RedoBufferAllocationRequest) (RedoBufferAllocationResult, error)
 func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRequest) (SGAAllocatedResult, error)
 func ReadSGAComponents(ctx context.Context, reader Reader, request SGARequest) (SGAComponentsResult, error)
+func RedoBufferAllocationJSON(ctx context.Context, q rowset.Queryer, options RedoBufferAllocationOptions, limits rowset.Limits) (json.RawMessage, error)
+func RedoBufferAllocationRows(ctx context.Context, q rowset.Queryer, options RedoBufferAllocationOptions) (*sql.Rows, error)
+func RedoBufferAllocationStatement(options RedoBufferAllocationOptions) (string, []any, error)
 func Rows(ctx context.Context, q rowset.Queryer, parameter Parameter, options Options) (*sql.Rows, error)
 func SGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error)
 func SGAAllocatedRows(ctx context.Context, q rowset.Queryer, options SGAAllocatedOptions) (*sql.Rows, error)
