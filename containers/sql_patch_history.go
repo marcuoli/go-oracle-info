@@ -64,7 +64,12 @@ func sqlPatchHistoryPlan(options RootDictionaryOptions) (selection, error) {
 		projected("ACTION_TIME", datetime.GregorianTimestamp6("v.ACTION_TIME"), rowset.Text),
 		raw("DESCRIPTION", rowset.Text),
 	}
-	result := selectFields("SYS."+p.Source, p, fields, nil, rootDictionaryPredicate, "v.CON_ID, v.ACTION_TIME, v.PATCH_ID, v.PATCH_UID, v.ACTION")
+	// A sort in the formatted dictionary query block can raise ORA-12850 on
+	// RAC. Keep row formatting in the non-merged view and sort the result
+	// outside it. The transported patch IDs are integer text.
+	result := selectFields("SYS."+p.Source, p, fields, nil, rootDictionaryPredicate, "")
+	result.sql = "SELECT /*+ NO_MERGE(v) */ v.CON_ID, v.PATCH_ID, v.PATCH_UID, v.ACTION, v.STATUS, v.ACTION_TIME, v.DESCRIPTION FROM (" +
+		result.sql + ") v ORDER BY v.CON_ID, v.ACTION_TIME, TO_NUMBER(v.PATCH_ID), TO_NUMBER(v.PATCH_UID), v.ACTION"
 	return result, nil
 }
 

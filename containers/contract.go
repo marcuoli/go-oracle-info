@@ -140,10 +140,11 @@ func selectFields(view string, p Provenance, fields, extras []field, predicate, 
 	for _, f := range extras {
 		p.OptionalColumns = append(p.OptionalColumns, f.column.Name)
 	}
-	return selection{
-		sql:    "SELECT " + strings.Join(names, ", ") + " FROM " + view + " v WHERE " + predicate + " ORDER BY " + order,
-		schema: columns, provenance: p,
+	sql := "SELECT " + strings.Join(names, ", ") + " FROM " + view + " v WHERE " + predicate
+	if order != "" {
+		sql += " ORDER BY " + order
 	}
+	return selection{sql: sql, schema: columns, provenance: p}
 }
 
 func resultIndex(result session.Result, p selection) (map[string]int, error) {
