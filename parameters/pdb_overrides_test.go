@@ -151,3 +151,54 @@ func TestPDBOverridesLimitsAndCancellation(t *testing.T) {
 		t.Fatalf("pre-PDB version admitted: %v", err)
 	}
 }
+
+func TestPDBMemoryOnlyQualificationMatrix(t *testing.T) {
+	for _, tc := range []struct {
+		version    string
+		major      int
+		parameters []string
+		want       parameters.PDBOverrideState
+	}{
+		{"19.32.0.0.0", 19, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"21.3.0.0.0", 21, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"23.26.3.0.0", 23, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"19.32.0.0.0", 19, []string{"session_cached_cursors", "OPEN_CURSORS"}, parameters.PDBOverrideUnknown},
+		{"21.3.0.0.0", 21, []string{"session_cached_cursors"}, parameters.PDBOverrideUnknown},
+		{"23.26.1.0.0", 23, []string{"optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideUnknown},
+		{"19.31.0.0.0", 19, []string{"open_cursors", "optimizer_index_cost_adj"}, parameters.PDBOverrideUnknown},
+		{"19.32", 19, []string{"open_cursors"}, parameters.PDBOverrideUnknown},
+		{"21.3.0.0", 21, []string{"optimizer_dynamic_sampling"}, parameters.PDBOverrideUnknown},
+		{"21.4.0.0.0", 21, []string{"open_cursors"}, parameters.PDBOverrideUnknown},
+	} {
+		for _, name := range tc.parameters {
+			t.Run(tc.version+"/"+name, func(t *testing.T) {
+				request := pdbOverrideFixture()
+				request.OracleVersion = tc.version
+				request.Member.Effective.Provenance.OracleMajor = tc.major
+				request.Member.Stored.Provenance.OracleMajor = tc.major
+				request.Member.Effective.Rows[0].Name.Text = name
+				request.Member.Stored.Rows[0].Name.Text = name
+				switch name {
+				case "optimizer_index_cost_adj":
+					request.Member.Effective.Rows[0].Value.Text = "137"
+				case "optimizer_dynamic_sampling":
+					request.Member.Effective.Rows[0].Value.Text = "6"
+				}
+				report, err := parameters.EvaluatePDBOverrides(t.Context(), request)
+				if err != nil || len(report.Findings) != 1 || report.Findings[0].State != tc.want {
+					t.Fatalf("report = %+v, err = %v, want %s", report, err, tc.want)
+				}
+
+				// A positive stored clause remains independent of the memory-only matrix.
+				stored := &request.Member.Stored.Rows[0]
+				stored.IsSpecified.Text = "TRUE"
+				stored.Ordinal.Text = "1"
+				stored.Value = session.Value{Text: request.Member.Effective.Rows[0].Value.Text}
+				report, err = parameters.EvaluatePDBOverrides(t.Context(), request)
+				if err != nil || len(report.Findings) != 1 || report.Findings[0].State != parameters.PDBOverridePersistent {
+					t.Fatalf("stored clause report = %+v, err = %v", report, err)
+				}
+			})
+		}
+	}
+}

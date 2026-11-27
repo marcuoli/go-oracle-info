@@ -26,8 +26,9 @@ list ordinal and SQL NULL. It does not resolve SID precedence.
 The two reads have no shared snapshot. Set `RuntimePairVerified` only when
 the caller has independently established that the paired observations
 represent the same configuration state. Freshness alone allows a change
-between reads. Without that admission a memory-only state remains unknown. The effective modification flag does not identify the
-`ALTER SYSTEM` scope or prove which command produced the current state.
+between reads. Without that admission a memory-only state remains unknown.
+The effective modification flag does not identify the `ALTER SYSTEM` scope
+or prove which command produced the current state.
 A persistent clause may coexist with a different current value. Keep
 those values visible independently. The existing restart-persistence
 evaluator still returns unknown for PDB scope. Ordinary root collection
@@ -42,10 +43,32 @@ reuses the original SQL statements and projections. 9.2, 10.1, 10.2,
 11.1 and 11.2 reject PDB evaluation. For 12.1, 12.2, 18c, 19c, 21c and numeric
 23c/23ai/26ai, the existing effective and stored projections supply the
 exact per-row evidence. Only positive stored evidence supports a persistent
-classification. The new memory-only classification is admitted for exact
-numeric 23.26.3.0.0 and the tested `open_cursors` parameter. Other parameters,
-release/RU, account and RAC combinations are
-unqualified for that inference.
+classification. The following exact release and parameter pairs qualify
+for the memory-only inference when the same evidence gates pass.
+
+| Observed Oracle version | Qualified parameters |
+| --- | --- |
+| 19c `19.32.0.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
+| 21c `21.3.0.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
+| 26ai `23.26.3.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
+
+All other release and parameter combinations leave the memory-only state
+unknown. Other accounts, RAC and other topology or startup configurations
+retain separate qualification boundaries. Positive stored evidence can
+establish a persistent override independently of this matrix.
+
+The expanded 19c, 21c and 26ai runs used SYSDBA with an isolated single-instance CDB and a
+direct read-write disposable PDB on 2026-11-27. Each parameter was checked
+while inherited, after `MEMORY`, after setting a distinct `SPFILE` value,
+after reopen, after `BOTH`, after resetting the stored clause, and after
+reopening to inherit again. All three parameters reproduced the exact
+effective and stored shapes above on all three versions. The CDB root values
+stayed at their baselines. The 19c fixture emitted a warning when opening
+its disposable PDB. The direct reads, changes and reopen controls completed.
+The 26ai clone initially hit a datafile deletion/deadlock error. The follow-up
+found zero database references and removed two empty task-owned directories.
+The retry passed after the seed was available. The disposable PDBs were
+removed and all fixtures returned to their original stopped state.
 
 A single-instance 23.26.3.0.0 SYSDBA disposable PDB ran the following
 `OPEN_CURSORS` cases. The root stayed at 300. The PDB was dropped and the
@@ -69,7 +92,9 @@ connections using go-oracle-session v0.25.1 compatibility V2. Neither a false
 `ISDEFAULT` flag nor a successful empty read proved inheritance or the
 absence of an override.
 
+- [Oracle 19c parameter reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPEN_CURSORS.html), [optimizer index cost](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPTIMIZER_INDEX_COST_ADJ.html), and [dynamic sampling](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPTIMIZER_DYNAMIC_SAMPLING.html)
+- [Oracle 21c parameter reference](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPEN_CURSORS.html), [optimizer index cost](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPTIMIZER_INDEX_COST_ADJ.html), and [dynamic sampling](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPTIMIZER_DYNAMIC_SAMPLING.html)
 - [Oracle 26ai SYSTEM_PARAMETER2](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SYSTEM_PARAMETER2.html)
 - [Oracle 26ai SPPARAMETER](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SPPARAMETER.html)
 - [Oracle 26ai ALTER SYSTEM](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/ALTER-SYSTEM.html)
-- [Oracle 26ai OPEN_CURSORS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/OPEN_CURSORS.html)
+- [Oracle 26ai OPEN_CURSORS](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/OPEN_CURSORS.html), [optimizer index cost](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/OPTIMIZER_INDEX_COST_ADJ.html), and [dynamic sampling](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/OPTIMIZER_DYNAMIC_SAMPLING.html)
