@@ -2775,6 +2775,16 @@ type BannersSourceRow struct {
 	Full   session.Value
 }
 type BorrowedSampleIdentity struct{ Version, User, IsDBA, Container, DatabaseRole, OpenMode, Protocol string }
+type CloudServiceOptions struct{ OracleMajor int }
+type CloudServiceRequest struct {
+	Options   CloudServiceOptions
+	Reference reference.Reference
+}
+type CloudServiceResult struct {
+	Provenance DatasetProvenance
+	Rows       []CloudServiceRow
+}
+type CloudServiceRow struct{ Value session.Value }
 type ConnectedArchitectureOptions struct{ OracleMajor int }
 type ConnectedArchitectureRequest struct {
 	Options   ConnectedArchitectureOptions
@@ -3151,6 +3161,9 @@ func BannersSourceJSON(ctx context.Context, q rowset.Queryer, options BannersSou
 func BannersSourceRows(ctx context.Context, q rowset.Queryer, options BannersSourceOptions) (*sql.Rows, error)
 func BannersSourceStatement(options BannersSourceOptions) (string, []any, error)
 func BannersStatement(major int) (string, error)
+func CloudServiceJSON(ctx context.Context, q rowset.Queryer, options CloudServiceOptions, limits rowset.Limits) (json.RawMessage, error)
+func CloudServiceRows(ctx context.Context, q rowset.Queryer, options CloudServiceOptions) (*sql.Rows, error)
+func CloudServiceStatement(options CloudServiceOptions) (string, []any, error)
 func ConnectedArchitectureJSON(ctx context.Context, q rowset.Queryer, options ConnectedArchitectureOptions, limits rowset.Limits) (json.RawMessage, error)
 func ConnectedArchitectureRows(ctx context.Context, q rowset.Queryer, options ConnectedArchitectureOptions) (*sql.Rows, error)
 func ConnectedArchitectureStatement(options ConnectedArchitectureOptions) (string, []any, error)
@@ -3166,6 +3179,7 @@ func DatabaseInfoStatement(options DatabaseInfoOptions) (string, error)
 func DatabaseStatement(major int) (string, error)
 func DecodeBanners(result session.Result, major int) ([]VersionBanner, error)
 func DecodeBannersSource(result session.Result, options BannersSourceOptions) (BannersSourceResult, error)
+func DecodeCloudService(result session.Result, options CloudServiceOptions) (CloudServiceResult, error)
 func DecodeConnectedArchitecture(result session.Result, options ConnectedArchitectureOptions) (ConnectedArchitectureResult, error)
 func DecodeContainerSource(result session.Result, options ContainerSourceOptions) (ContainerSourceResult, error)
 func DecodeDatabase(result session.Result, major int) (Database, error)
@@ -3231,6 +3245,7 @@ func PDBOpenModeStatement(options PDBOpenModeOptions) (string, []any, error)
 func ReadArchitecture(ctx context.Context, reader Reader, refs ArchitectureReferences) (ArchitectureObservation, error)
 func ReadBannersSource(ctx context.Context, reader Reader, request BannersSourceRequest) (BannersSourceResult, error)
 func ReadBorrowedSampleIdentity(ctx context.Context, conn *sql.Conn) (BorrowedSampleIdentity, error)
+func ReadCloudService(ctx context.Context, reader Reader, request CloudServiceRequest) (CloudServiceResult, error)
 func ReadConnectedArchitecture(ctx context.Context, reader Reader, request ConnectedArchitectureRequest) (ConnectedArchitectureResult, error)
 func ReadContainerSource(ctx context.Context, reader Reader, request ContainerSourceRequest) (ContainerSourceResult, error)
 func ReadDatabaseIdentity(ctx context.Context, reader Reader, request DatabaseIdentityRequest) (DatabaseIdentityResult, error)
