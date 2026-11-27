@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose PDB-attributed effective system parameter rows through `Client.PDBParameters` and its JSON companion (#224).
+
 - Read borrowed-sample identity on the caller's existing Oracle connection, including the full version and raw USERENV values (#221).
 
 - Expose database-observed RAC interconnects per reporting instance and document the source boundaries for member, interconnect and SCAN evidence (#220).
