@@ -67,7 +67,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [engineeredsystem/catalog](api-reference.md#engineeredsystemcatalog) | `Alerts`, `Cells`, `Configuration`, `ConnectedCells`, `Metadata`, `VisibleCellCount` |
 | [goldengate](api-reference.md#goldengate) | `Administrators`, `ApplyCoordinators`, `Capture`, `Extracts`, `HeartbeatCatalog`, `HeartbeatLag`, `Heartbeats`, `Replicats` |
 | [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleCatalog`, `RoleMemberships` |
-| [identity](api-reference.md#identity) | `BannersSource`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
+| [identity](api-reference.md#identity) | `BannersSource`, `BorrowedSampleIdentity`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
 | [instances](api-reference.md#instances) | [`ClusterInterconnects`](rac-network-evidence.md), `Inventory`, `MemberStartup`, `Versions`, `Visibility` |
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
@@ -212,6 +212,8 @@ legacy presentation/report selection where necessary:
   properties. VersionBootstrap admits unknown zero and reads legacy VERSION,
   never full-version/RU precision. Existing property fallback, attempts and
   independently valid evidence remain unchanged.
+
+- [ReadBorrowedSampleIdentity](fact-api-compatibility.md#borrowed-sample-connection-identity-221) reads the exact version and session context for qualification on an admitted native lease.
 
 - [LogicalDatabase](logical-database-identity.md) reads the control-file DBID and name on reviewed releases from 9.2, with the CDB flag from 12.1.
 

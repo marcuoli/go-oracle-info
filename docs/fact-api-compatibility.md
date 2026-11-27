@@ -227,3 +227,27 @@ parameter and listener source choices, isolated Oracle runs, and driver evidence
 
 See the [RAC network evidence matrix](rac-network-evidence.md#release-checks)
 for the #220 selector, release boundaries and native qualification.
+
+## Borrowed-sample connection identity (#221)
+
+`identity.ReadBorrowedSampleIdentity` reads one connected-session identity from
+`V$INSTANCE`, `V$DATABASE` and `SYS_CONTEXT('USERENV', ...)` on the admitted
+connection. It requires access to both views and preserves native query errors.
+It does not bootstrap a legacy version or select a different source. The session
+SDK independently owns provider and profile qualification.
+
+| Oracle release | Source applicability | Qualification |
+| --- | --- | --- |
+| 9.2, 10.1, 10.2, 11.1, 11.2, 12.1, 12.2 | Before the `VERSION_FULL` projection documented from 18c. The reader returns Oracle's native failure if dispatched. The SDK can decline before dispatch on an unqualified provider. | Native collection and driver reuse unqualified for this reader. |
+| 18, 19, 21, 23c/23ai | `VERSION_FULL` is documented. The projection preserves session user, DBA status, container, database role, open mode and transport on the current lease. | Source and decoder fixtures only. Neither view access nor reusable cursor sampling is implied. |
+| 26ai | Same source projection. The SDK independently matches the exact admitted profile. | Native consumer parity on 23.26.1.0.0, TCP, PRIMARY READ WRITE, CDB root, SYSTEM without SYSDBA. Windows amd64 retained V2 and Linux amd64 standalone OCI client 23.26.1.0.0 with godror v0.51.0 passed. Linux V2 declined before the identity probe, as expected for this provider profile. |
+
+Oracle Database Reference and SQL Language Reference checked on 2026-11-27.
+[12.2 V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/V-INSTANCE.html) ·
+[18c V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/18/refrn/V-INSTANCE.html) ·
+[19c V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-INSTANCE.html) ·
+[21c V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/V-INSTANCE.html) ·
+[23ai V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/23/refrn/V-INSTANCE.html) ·
+[26ai V$INSTANCE](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-INSTANCE.html) ·
+[26ai V$DATABASE](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-DATABASE.html) ·
+[26ai SYS_CONTEXT](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/SYS_CONTEXT.html).

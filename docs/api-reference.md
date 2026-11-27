@@ -2772,6 +2772,7 @@ type BannersSourceRow struct {
 	Banner session.Value
 	Full   session.Value
 }
+type BorrowedSampleIdentity struct{ Version, User, IsDBA, Container, DatabaseRole, OpenMode, Protocol string }
 type ConnectedArchitectureOptions struct{ OracleMajor int }
 type ConnectedArchitectureRequest struct {
 	Options   ConnectedArchitectureOptions
@@ -3227,6 +3228,7 @@ func PDBOpenModeRows(ctx context.Context, q rowset.Queryer, options PDBOpenModeO
 func PDBOpenModeStatement(options PDBOpenModeOptions) (string, []any, error)
 func ReadArchitecture(ctx context.Context, reader Reader, refs ArchitectureReferences) (ArchitectureObservation, error)
 func ReadBannersSource(ctx context.Context, reader Reader, request BannersSourceRequest) (BannersSourceResult, error)
+func ReadBorrowedSampleIdentity(ctx context.Context, conn *sql.Conn) (BorrowedSampleIdentity, error)
 func ReadConnectedArchitecture(ctx context.Context, reader Reader, request ConnectedArchitectureRequest) (ConnectedArchitectureResult, error)
 func ReadContainerSource(ctx context.Context, reader Reader, request ContainerSourceRequest) (ContainerSourceResult, error)
 func ReadDatabaseIdentity(ctx context.Context, reader Reader, request DatabaseIdentityRequest) (DatabaseIdentityResult, error)

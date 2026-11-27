@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read borrowed-sample identity on the caller's existing Oracle connection, including the full version and raw USERENV values (#221).
+
 - Expose database-observed RAC interconnects per reporting instance and document the source boundaries for member, interconnect and SCAN evidence (#220).
 
 - Add release-aware CDB SQL patch history and per-PDB consistency evaluation while preserving the existing history reader (#218).
