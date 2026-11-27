@@ -67,7 +67,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [engineeredsystem/catalog](api-reference.md#engineeredsystemcatalog) | `Alerts`, `Cells`, `Configuration`, `ConnectedCells`, `Metadata`, `VisibleCellCount` |
 | [goldengate](api-reference.md#goldengate) | `Administrators`, `ApplyCoordinators`, `Capture`, `Extracts`, `HeartbeatCatalog`, `HeartbeatLag`, `Heartbeats`, `Replicats` |
 | [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleCatalog`, `RoleMemberships` |
-| [identity](api-reference.md#identity) | `BannersSource`, `BorrowedSampleIdentity`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
+| [identity](api-reference.md#identity) | `BannersSource`, `BorrowedSampleIdentity`, `CloudService`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
 | [instances](api-reference.md#instances) | [`ClusterInterconnects`](rac-network-evidence.md), `Inventory`, `MemberStartup`, `Versions`, `Visibility` |
 | [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
@@ -252,3 +252,27 @@ See [GoldenGate database discovery](goldengate-discovery.md) for separate proces
 SQL-only [SCAN discovery](scan-discovery.md) combines effective registration
 parameters and visible remote listener rows through `Client.Scan`,
 `Client.ScanJSON`, and `services.ReadScan`.
+
+### Current session cloud service
+
+The identity CloudService family reads only CLOUD_SERVICE from SYS_CONTEXT
+USERENV on the caller's existing session. It retains exact text and SQL NULL,
+including values the caller does not recognize. The reader issues one query.
+The caller interprets service and tier.
+
+| Oracle numeric families | Selection and qualification |
+| --- | --- |
+| 9.2, 10.1, 10.2, 11.1, 11.2, 12.1, 12.2, 18 | Unsupported before SQL execution. |
+| 19 | Uses a static DUAL projection. Oracle's public 19c SQL Reference omits this attribute. Read-only Oracle checks confirmed OLTP on an Autonomous 19.33.0.1.0 service PDB and SQL NULL on a self-managed 19.3.0.0.0 RAC PDB. |
+| 21 | Same supported selection and static tests. Native scope remains unqualified. |
+| 23, including 23c/23ai and 26ai when the observed numeric major is 23 | Same selection. The current SQL Reference documents DWCS, OLTP and JDCS. Static tests cover selection and exact values. Native scope remains unqualified. |
+| Any other numeric major | Unsupported before SQL execution. |
+
+The scope of the tested 19c calls was the executing PDB connection and its
+existing grants. Tests distinguish typed and JSON SQL NULL, native row
+ownership, complete decoding, unsupported release selection, malformed
+transport and cancellation. Other RUs, privilege sets and cloud service
+configurations remain unqualified.
+
+[Oracle 19c SQL Reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/SYS_CONTEXT.html)
+[Oracle 26ai SQL Reference](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/SYS_CONTEXT.html)

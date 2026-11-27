@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read the current Oracle session's nullable CLOUD_SERVICE context through the typed identity API (#227).
+
 - Expose PDB-attributed effective system parameter rows through `Client.PDBParameters` and its JSON companion (#224).
 
 - Read borrowed-sample identity on the caller's existing Oracle connection, including the full version and raw USERENV values (#221).
