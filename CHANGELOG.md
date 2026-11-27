@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Evaluate explicit PDB parameter overrides and qualified memory-only observations from admitted read evidence (#226).
+
 - Read the current Oracle session's nullable CLOUD_SERVICE context through the typed identity API (#227).
 
 - Expose PDB-attributed effective system parameter rows through `Client.PDBParameters` and its JSON companion (#224).

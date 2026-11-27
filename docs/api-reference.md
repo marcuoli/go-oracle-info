@@ -4586,6 +4586,32 @@ type JSONEnvelope struct {
 	Provenance Provenance      `json:"provenance"`
 	Data       json.RawMessage `json:"data"`
 }
+type PDBOverrideFinding struct {
+	Name      string            `json:"name"`
+	State     PDBOverrideState  `json:"state"`
+	Effective []Parameter       `json:"effective"`
+	Stored    []SPFileParameter `json:"stored"`
+}
+type PDBOverrideState string
+type PDBOverridesReport struct {
+	OracleVersion       string               `json:"oracle_version"`
+	ContainerID         int64                `json:"container_id"`
+	InstanceID          int64                `json:"instance_id"`
+	At                  time.Time            `json:"at"`
+	EffectiveObserved   bool                 `json:"effective_observed"`
+	StoredObserved      bool                 `json:"stored_observed"`
+	EffectiveProvenance Provenance           `json:"effective_provenance"`
+	StoredProvenance    Provenance           `json:"stored_provenance"`
+	Findings            []PDBOverrideFinding `json:"findings"`
+}
+type PDBOverridesRequest struct {
+	OracleVersion       string
+	ContainerID         int64
+	At                  time.Time
+	MaxAge              time.Duration
+	RuntimePairVerified bool
+	Member              PersistenceMember
+}
 type Parameter struct {
 	InstanceID           session.Value
 	ContainerID          *session.Value
@@ -4806,6 +4832,7 @@ func EffectiveRows(ctx context.Context, q rowset.Queryer, major int, filter Filt
 func EffectiveRowsWithOptions(ctx context.Context, q rowset.Queryer, options SourceOptions) (*sql.Rows, error)
 func EffectiveStatement(major int, filter Filter) (string, []any, error)
 func EffectiveStatementWithOptions(options SourceOptions) (string, []any, error)
+func EvaluatePDBOverrides(ctx context.Context, request PDBOverridesRequest) (PDBOverridesReport, error)
 func EvaluatePersistence(ctx context.Context, request PersistenceRequest) (PersistenceReport, error)
 func HiddenCatalogJSON(ctx context.Context, q rowset.Queryer, major int, filter HiddenCatalogFilter, limits rowset.Limits) (json.RawMessage, error)
 func HiddenCatalogJSONWithOptions(ctx context.Context, q rowset.Queryer, options HiddenCatalogOptions, limits rowset.Limits) (json.RawMessage, error)
@@ -4829,6 +4856,7 @@ func HiddenRowsWithOptions(ctx context.Context, q rowset.Queryer, options Source
 func HiddenStatement(major int, filter Filter) (string, []any, error)
 func HiddenStatementWithOptions(options SourceOptions) (string, []any, error)
 func ModifiedSystem(source SystemResult) SystemResult
+func PDBOverridesJSON(ctx context.Context, request PDBOverridesRequest, limits rowset.Limits) (json.RawMessage, error)
 func PersistenceJSON(ctx context.Context, request PersistenceRequest, limits rowset.Limits) (json.RawMessage, error)
 func ReadContainerSystem(ctx context.Context, reader Reader, request ContainerSystemRequest) (ContainerSystemResult, error)
 func ReadEffective(ctx context.Context, reader Reader, request Request) (EffectiveResult, error)
@@ -4869,6 +4897,9 @@ func (e *Error) Unwrap() error
 - `ContainerSystemLocal`
 - `ContainerSystemPDBGlobal`
 - `MaxFilterValues`
+- `PDBOverrideMemoryOnly`
+- `PDBOverridePersistent`
+- `PDBOverrideUnknown`
 - `PersistenceAdjustedValue`
 - `PersistenceAmbiguousValue`
 - `PersistenceCDBRoot`
@@ -4916,6 +4947,7 @@ func (e *Error) Unwrap() error
 - `ErrContainerSystemUnsupportedScope`
 - `ErrInvalidEvidence`
 - `ErrInvalidFilter`
+- `ErrInvalidPDBOverridesRequest`
 - `ErrInvalidPersistenceRequest`
 - `ErrInvalidRequest`
 - `ErrInvalidScalarSystemScope`
