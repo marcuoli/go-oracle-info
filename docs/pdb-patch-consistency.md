@@ -13,6 +13,8 @@ admit the visible, open PDB and qualified reporting-member coverage from
 separate evidence on the same CDB-root endpoint. A whole-database GV$INSTANCE
 row with CON_ID 0 and CURRENT_CONTAINER_ID 1 retains both observed IDs. Each
 PDB uses only its own CDB_REGISTRY_SQLPATCH rows and exact patch ID/UID history.
+The evaluator requires the modern release-aware projection. A valid 12c
+legacy history has no release fields and callers display it as unverified.
 An empty inventory, rollback without an effective release, absent release
 fields or inconclusive evidence stays unverified. A match covers release level
 within the selected reporting scope.
