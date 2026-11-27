@@ -48,7 +48,7 @@ separate from source review and fixture coverage.
 | `goldengate` | Capture/apply/administrator facts and database properties | Full fact pipeline; configured GGSCHEMA remains explicitly unavailable from admitted DB source |
 | `grants` | Direct/object/column/role grants and standalone role maintenance catalog | Full fact pipeline; raw grants do not imply effective access |
 | `identity` | Scalar/bootstrap properties and complete database/session datasets | Complete source datasets plus preserved bootstrap/property contracts |
-| `instances` | Qualified inventory, per-member versions and visibility | Full fact pipeline; visibility is not physical RAC completeness |
+| `instances` | Qualified inventory, per-member versions, visibility and [runtime interconnects](rac-network-evidence.md) | Full fact pipeline with database-visible coverage |
 | `memory` | Admitted configured-memory collection, RAC aggregation and observed SGA/PGA allocations | Complete scoped/PDB/RAC source adapters plus unchanged aggregate/property contracts |
 | `metadata` | Explicit object DDL/CLOB capture | Full fact pipeline; shared conversion plus local complete CLOB validation |
 | `networkacl` | ACL dictionary facts | Full fact pipeline; no network probes |

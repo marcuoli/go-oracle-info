@@ -32,6 +32,28 @@ func (c *Client) MemberStartupJSON(ctx context.Context, limits ...JSONLimits) (j
 	return instances.MemberStartupJSON(ctx, c.native(), instances.MemberStartupOptions{OracleVersion: version}, resolved)
 }
 
+// ClusterInterconnects transfers the actual caller-native RAC interconnect cursor.
+func (c *Client) ClusterInterconnects(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return instances.ClusterInterconnectsRows(ctx, c.native(), instances.ClusterInterconnectsOptions{OracleVersion: version})
+}
+
+// ClusterInterconnectsJSON consumes a separate complete bounded cursor.
+func (c *Client) ClusterInterconnectsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return instances.ClusterInterconnectsJSON(ctx, c.native(), instances.ClusterInterconnectsOptions{OracleVersion: version}, resolved)
+}
+
 // PasswordVersionCounts transfers the actual caller-native cursor.
 func (c *Client) PasswordVersionCounts(ctx context.Context) (*sql.Rows, error) {
 	version, err := c.observedNumericVersion(ctx)

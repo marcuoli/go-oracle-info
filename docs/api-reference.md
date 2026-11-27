@@ -113,6 +113,8 @@ func (c *Client) CDBRegistryComponents(ctx context.Context, scope containers.Sco
 func (c *Client) CDBRegistryComponentsJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) CDBSQLPatchHistory(ctx context.Context, scope containers.Scope) (*sql.Rows, error)
 func (c *Client) CDBSQLPatchHistoryJSON(ctx context.Context, scope containers.Scope, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) ClusterInterconnects(ctx context.Context) (*sql.Rows, error)
+func (c *Client) ClusterInterconnectsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) Components(ctx context.Context) (*sql.Rows, error)
 func (c *Client) ComponentsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) DataGuardArchiveDestinationStatus(ctx context.Context, filter DataGuardFilter) (*sql.Rows, error)
@@ -827,6 +829,16 @@ type SQLPatchHistoryResult struct {
 	Provenance Provenance
 	Rows       []SQLPatchAttempt
 }
+type SQLPatchReleaseAttempt struct {
+	SQLPatchAttempt
+	PatchType     *session.Value
+	TargetVersion *session.Value
+	Flags         *session.Value
+}
+type SQLPatchReleaseResult struct {
+	Provenance Provenance
+	Rows       []SQLPatchReleaseAttempt
+}
 type SavedState struct {
 	ContainerID   session.Value
 	ContainerName session.Value
@@ -868,6 +880,7 @@ func DecodeRegistryComponents(result session.Result, options RootDictionaryOptio
 func DecodeResourceSamples(result session.Result, options ResourceOptions) (ResourceSamplesResult, error)
 func DecodeResourceUsage(result session.Result, options ResourceOptions) (ResourceUsageResult, error)
 func DecodeSQLPatchHistory(result session.Result, options RootDictionaryOptions) (SQLPatchHistoryResult, error)
+func DecodeSQLPatchRelease(result session.Result, options RootDictionaryOptions) (SQLPatchReleaseResult, error)
 func DecodeSavedStates(result session.Result, options SavedStatesOptions) (SavedStatesResult, error)
 func DecodeSessionLocation(result session.Result, version string) ([]Location, error)
 func DecodeVisiblePDBs(result session.Result, version string) ([]VisiblePDB, error)
@@ -891,6 +904,7 @@ func ReadRegistryComponents(ctx context.Context, reader Reader, request Registry
 func ReadResourceSamples(ctx context.Context, reader Reader, request ResourceSamplesRequest) (ResourceSamplesResult, error)
 func ReadResourceUsage(ctx context.Context, reader Reader, request ResourceUsageRequest) (ResourceUsageResult, error)
 func ReadSQLPatchHistory(ctx context.Context, reader Reader, request SQLPatchHistoryRequest) (SQLPatchHistoryResult, error)
+func ReadSQLPatchRelease(ctx context.Context, reader Reader, request SQLPatchHistoryRequest) (SQLPatchReleaseResult, error)
 func ReadSavedStates(ctx context.Context, reader Reader, request SavedStatesRequest) (SavedStatesResult, error)
 func ReadSessionLocation(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]Location, error)
 func ReadVisiblePDBs(ctx context.Context, reader Reader, version string, ref reference.Reference) ([]VisiblePDB, error)
@@ -906,6 +920,9 @@ func ResourceUsageStatement(options ResourceOptions) (string, error)
 func SQLPatchHistoryJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
 func SQLPatchHistoryRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
 func SQLPatchHistoryStatement(options RootDictionaryOptions) (string, error)
+func SQLPatchReleaseJSON(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions, limits rowset.Limits) (json.RawMessage, error)
+func SQLPatchReleaseRows(ctx context.Context, q rowset.Queryer, options RootDictionaryOptions) (*sql.Rows, error)
+func SQLPatchReleaseStatement(options RootDictionaryOptions) (string, error)
 func SavedStatesJSON(ctx context.Context, q rowset.Queryer, options SavedStatesOptions, limits rowset.Limits) (json.RawMessage, error)
 func SavedStatesRows(ctx context.Context, q rowset.Queryer, options SavedStatesOptions) (*sql.Rows, error)
 func SavedStatesStatement(options SavedStatesOptions) (string, error)
@@ -3319,6 +3336,22 @@ func (e *ReadError) Unwrap() error
 ### Types
 
 ~~~go
+type ClusterInterconnectRow struct {
+	InstanceID                        session.Value
+	ContainerID                       *session.Value
+	Name, IPAddress, IsPublic, Source session.Value
+}
+type ClusterInterconnectsOptions struct{ OracleVersion string }
+type ClusterInterconnectsRequest struct {
+	Options   ClusterInterconnectsOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type ClusterInterconnectsResult struct {
+	State      State
+	Provenance VisibilityProvenance
+	Rows       []ClusterInterconnectRow
+}
 type Error struct {
 	Operation string
 
@@ -3433,7 +3466,11 @@ type VisibilityRow struct {
 ### Functions
 
 ~~~go
+func ClusterInterconnectsJSON(ctx context.Context, q rowset.Queryer, options ClusterInterconnectsOptions, limits rowset.Limits) (json.RawMessage, error)
+func ClusterInterconnectsRows(ctx context.Context, q rowset.Queryer, options ClusterInterconnectsOptions) (*sql.Rows, error)
+func ClusterInterconnectsStatement(options ClusterInterconnectsOptions) (string, error)
 func Decode(result session.Result, major int) (Result, error)
+func DecodeClusterInterconnects(result session.Result, options ClusterInterconnectsOptions) (ClusterInterconnectsResult, error)
 func DecodeInventory(result session.Result, options InventoryOptions) (Result, error)
 func DecodeMemberStartup(result session.Result, options MemberStartupOptions) (MemberStartupResult, error)
 func DecodeVersions(result session.Result, major int) (VersionResult, error)
@@ -3446,6 +3483,7 @@ func MemberStartupJSON(ctx context.Context, q rowset.Queryer, options MemberStar
 func MemberStartupRows(ctx context.Context, q rowset.Queryer, options MemberStartupOptions) (*sql.Rows, error)
 func MemberStartupStatement(options MemberStartupOptions) (string, error)
 func Read(ctx context.Context, reader Reader, request Request) (Result, error)
+func ReadClusterInterconnects(ctx context.Context, reader Reader, request ClusterInterconnectsRequest) (ClusterInterconnectsResult, error)
 func ReadInventory(ctx context.Context, reader Reader, request InventoryRequest) (Result, error)
 func ReadMemberStartup(ctx context.Context, reader Reader, request MemberStartupRequest) (MemberStartupResult, error)
 func ReadVersions(ctx context.Context, reader Reader, request Request) (VersionResult, error)
@@ -5008,6 +5046,17 @@ type HistoryResult struct {
 	Provenance Provenance
 	Rows       []HistoryEntry
 }
+type PDBConsistencyRequest struct {
+	At                time.Time
+	MaxAge            time.Duration
+	Versions          instances.VersionResult
+	VersionsEvidence  ConsistencyEvidence
+	CoverageVerified  bool
+	SelfManaged       bool
+	Inventory         containers.SQLPatchReleaseResult
+	InventoryEvidence ConsistencyEvidence
+	ContainerIDs      []session.Value
+}
 type Provenance struct {
 	Source          string   `json:"source"`
 	Scope           string   `json:"scope"`
@@ -5070,6 +5119,7 @@ type SQLPatchScope struct {
 func DecodeHistory(result session.Result, options HistoryOptions) (HistoryResult, error)
 func DecodeSQLPatch(result session.Result, options SQLPatchOptions) (SQLPatchResult, error)
 func EvaluateConsistency(ctx context.Context, request ConsistencyRequest) (ConsistencyReport, error)
+func EvaluatePDBConsistency(ctx context.Context, r PDBConsistencyRequest) (ConsistencyReport, error)
 func HistoryJSON(ctx context.Context, q rowset.Queryer, options HistoryOptions, limits rowset.Limits) (json.RawMessage, error)
 func HistoryRows(ctx context.Context, q rowset.Queryer, options HistoryOptions) (*sql.Rows, error)
 func HistoryStatement(options HistoryOptions) (string, error)
