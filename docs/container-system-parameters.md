@@ -46,7 +46,7 @@ Neither the row's presence nor the absence of a row establishes independent
 configuration, inheritance, or storage. A mounted standby can return an empty
 PDB selection. The API uses Oracle's documented view and does not read the
 internal `PDB_SPFILE$` table. For stored and instance-wide observations, use
-the separate [parameter contracts](system-parameters.md).
+the separate [parameter contracts](system-parameters.md). For explicit PDB settings, see [PDB override evidence](pdb-parameter-overrides.md).
 [Oracle 19c Multitenant Administrator's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html) ·
 [Oracle 26ai ALTER SYSTEM inheritance and scope](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/ALTER-SYSTEM.html) ·
 [Article](https://www.krenger.ch/blog/parameters-of-pluggable-databases/)
