@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Qualify more exact Oracle release and parameter pairs for PDB memory-only observations while preserving unknown for other pairs (#230).
+
 - Evaluate explicit PDB parameter overrides and qualified memory-only observations from admitted read evidence (#226).
 
 - Read the current Oracle session's nullable CLOUD_SERVICE context through the typed identity API (#227).

@@ -144,9 +144,7 @@ func EvaluatePDBOverrides(ctx context.Context, request PDBOverridesRequest) (PDB
 	}
 
 	startup := m.Startup
-	// This exact release has direct native qualification for the scalar
-	// integer memory/false-placeholder shape, including stored reset.
-	memoryQualified := request.OracleVersion == "23.26.3.0.0" && request.RuntimePairVerified &&
+	memoryAdmitted := request.RuntimePairVerified &&
 		startup.Kind == PersistenceSPFile && startup.Verified && !startup.SPFilePath.Null &&
 		strings.TrimSpace(startup.SPFilePath.Text) != "" && validPersistenceValue(startup.SPFilePath) &&
 		freshPDBEvidence(request, PersistenceEvidence{Complete: true, ObservedAt: startup.ObservedAt}) &&
@@ -165,7 +163,7 @@ func EvaluatePDBOverrides(ctx context.Context, request PDBOverridesRequest) (PDB
 		switch {
 		case explicitPDBClause(f.Stored):
 			f.State = PDBOverridePersistent
-		case memoryQualified && observedPDBMemoryOnly(*f, target):
+		case memoryAdmitted && qualifiedPDBMemoryPair(request.OracleVersion, name) && observedPDBMemoryOnly(*f, target):
 			f.State = PDBOverrideMemoryOnly
 		}
 		report.Findings = append(report.Findings, *f)
@@ -246,8 +244,21 @@ func explicitPDBClause(rows []SPFileParameter) bool {
 	return explicit
 }
 
+// Admit exact native qualifications only. See the PDB override evidence matrix
+// for the recorded controls, patch levels and connection scope.
+func qualifiedPDBMemoryPair(version, name string) bool {
+	switch version {
+	case "19.32.0.0.0", "21.3.0.0.0", "23.26.3.0.0":
+		switch name {
+		case "open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling":
+			return true
+		}
+	}
+	return false
+}
+
 func observedPDBMemoryOnly(f PDBOverrideFinding, target string) bool {
-	if f.Name != "open_cursors" || len(f.Effective) != 1 || len(f.Stored) != 1 {
+	if len(f.Effective) != 1 || len(f.Stored) != 1 {
 		return false
 	}
 	effective, stored := f.Effective[0], f.Stored[0]
