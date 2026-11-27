@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "exadata",
-  "as_of": "2026-11-26",
+  "as_of": "2026-11-27",
   "sources": [
     {"id": "KB153930", "title": "Exadata Database Machine and Exadata Storage Server Supported Versions", "url": "https://support.oracle.com/support/?anchorId=&documentId=KB153930&page=sptemplate&sptemplate=km-article", "old_doc_id": "888828.1", "revision": "Nov 20, 2026", "checked_utc": "2026-11-24T16:17:54.917163+00:00", "sha256": "1a207fd272663d0fec8e12724dc4068caae5f8296c4cb439b5ce9b65d3eb25c0"},
     {"id": "KB153930@4249503381785ae69570b0482efedebddb24adcb1ff6b6db3ad879cbca62f80f", "title": "Exadata Database Machine and Exadata Storage Server Supported Versions", "url": "https://support.oracle.com/support/?anchorId=&kmContentId=888828&page=sptemplate&sptemplate=km-article", "old_doc_id": "888828.1", "checked_utc": "2026-11-09T01:00:16.834Z", "revision": "Nov 4, 2026", "sha256": "8dade98bab2063544de891f128deef5d0659204ff415359462738f8c92cfd481"},
