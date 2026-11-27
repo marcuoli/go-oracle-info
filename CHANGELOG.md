@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add release-aware CDB SQL patch history and per-PDB consistency evaluation while preserving the existing history reader (#218).
+
 - Expose exact redo buffer allocation per qualified reporting instance from GV$SGA, preserving SQL NULL, source completion and raw numeric bytes (#215).
 
 - Keep CDB SQL patch history ordering outside the formatted dictionary query block to avoid the observed Oracle RAC ORA-12850 failure (#212).

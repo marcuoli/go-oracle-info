@@ -17,6 +17,10 @@ import (
 // is evidence to investigate incomplete patching, never proof that datapatch was
 // omitted or authority to run it. Raw attempts remain intact in the report.
 func EvaluateConsistency(ctx context.Context, request ConsistencyRequest) (ConsistencyReport, error) {
+	return evaluateConsistency(ctx, request, false)
+}
+
+func evaluateConsistency(ctx context.Context, request ConsistencyRequest, root bool) (ConsistencyReport, error) {
 	if err := ctx.Err(); err != nil {
 		return ConsistencyReport{}, err
 	}
@@ -35,7 +39,7 @@ func EvaluateConsistency(ctx context.Context, request ConsistencyRequest) (Consi
 			return ConsistencyReport{}, err
 		}
 		level := releaseLevel{}
-		scopeReason := scopeAdmission(request, scope)
+		scopeReason := scopeAdmission(request, scope, root)
 		if scopeReason == "" {
 			level = effectiveRelease(ctx, scope.Patches.Rows)
 		}
@@ -49,7 +53,7 @@ func EvaluateConsistency(ctx context.Context, request ConsistencyRequest) (Consi
 				reason = scopeReason
 			}
 			if reason == "" {
-				reason = memberScope(member, scope)
+				reason = memberScope(member, scope, root)
 			}
 			if reason == "" && ambiguousMember(request.Versions.Rows, mi) {
 				reason = ConsistencyAmbiguous
@@ -151,7 +155,7 @@ func memberAdmission(r ConsistencyRequest, m instances.VersionRow) ConsistencyRe
 	}
 	return ""
 }
-func scopeAdmission(r ConsistencyRequest, s SQLPatchScope) ConsistencyReason {
+func scopeAdmission(r ConsistencyRequest, s SQLPatchScope, root bool) ConsistencyReason {
 	if !s.Verified {
 		return ConsistencyUnverifiedScope
 	}
@@ -162,18 +166,25 @@ func scopeAdmission(r ConsistencyRequest, s SQLPatchScope) ConsistencyReason {
 		return reason
 	}
 	p := s.Patches.Provenance
-	if p.Source != "DBA_REGISTRY_SQLPATCH" || p.Scope != "current_container_datapatch_attempts" || p.OracleMajor != r.Versions.Provenance.OracleMajor || p.OracleMinor != 0 {
+	source, scope := "DBA_REGISTRY_SQLPATCH", "current_container_datapatch_attempts"
+	if root {
+		source, scope = "CDB_REGISTRY_SQLPATCH", "cdb_root"
+	}
+	if p.Source != source || p.Scope != scope || p.OracleMajor != r.Versions.Provenance.OracleMajor || p.OracleMinor != 0 {
 		return ConsistencySourceMismatch
 	}
 	return ""
 }
-func memberScope(m instances.VersionRow, s SQLPatchScope) ConsistencyReason {
+func memberScope(m instances.VersionRow, s SQLPatchScope, root bool) ConsistencyReason {
 	if m.CurrentContainerID == nil {
 		return ConsistencyUnverifiedScope
 	}
 	current, ok := consistencyID(*m.CurrentContainerID, 0)
 	containerID, valid := consistencyID(s.ContainerID, 0)
-	if !ok || !valid || current != containerID {
+	if !ok || !valid {
+		return ConsistencySourceMismatch
+	}
+	if root && (current != 1 || containerID < 2) || !root && current != containerID {
 		return ConsistencySourceMismatch
 	}
 	if m.ContainerID == nil {
@@ -183,10 +194,9 @@ func memberScope(m instances.VersionRow, s SQLPatchScope) ConsistencyReason {
 	if !ok {
 		return ConsistencySourceMismatch
 	}
-	container, _ := consistencyID(s.ContainerID, 0)
-	// Whole-database member rows can support an independently admitted container.
-	// A root/PDB-specific row is not silently widened to another container.
-	if id != 0 && id != container {
+	// A PDB seen from root requires a whole-database binary observation.
+	// A container-qualified member row cannot stand in for peer containers.
+	if id != 0 && (root || id != containerID) {
 		return ConsistencySourceMismatch
 	}
 	return ""
