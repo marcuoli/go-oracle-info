@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh the verified Oracle catalog snapshot dates for v0.51.0 (#234).
+
 - Qualify PDB memory-only evidence for three parameters on the observed 12.2, 18c and 23ai releases. Keep 12.1 unknown because its stored rows lack PDB attribution (#232).
 
 - Qualify more exact Oracle release and parameter pairs for PDB memory-only observations while preserving unknown for other pairs (#230).
