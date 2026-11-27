@@ -16,7 +16,7 @@ import (
 	"github.com/marcuoli/go-sqltemplate/reference"
 )
 
-// ContainerSystemSource selects one admitted scalar initialization parameter view.
+// ContainerSystemSource selects a scalar initialization parameter view and row scope.
 type ContainerSystemSource string
 
 const (
@@ -24,11 +24,15 @@ const (
 	ContainerSystemLocal ContainerSystemSource = "V$SYSTEM_PARAMETER"
 	// ContainerSystemGlobal selects GV$SYSTEM_PARAMETER across qualified visible instances.
 	ContainerSystemGlobal ContainerSystemSource = "GV$SYSTEM_PARAMETER"
+	// ContainerSystemPDBGlobal limits GV$SYSTEM_PARAMETER to visible CON_ID > 2.
+	ContainerSystemPDBGlobal ContainerSystemSource = "pdb_global"
 )
 
 var (
 	// ErrContainerSystemUnsupportedScope reports a known non-CDB connection.
 	ErrContainerSystemUnsupportedScope = errors.New("scoped system parameters require a CDB connection")
+	// ErrContainerSystemSeedScope rejects PDB-only queries in PDB$SEED.
+	ErrContainerSystemSeedScope = errors.New("PDB$SEED is outside the PDB-only parameter scope")
 	// ErrContainerSystemInaccessible marks an explicit ORA-01031 source failure.
 	ErrContainerSystemInaccessible = projection.ErrSourceInaccessible
 	// ErrContainerSystemUnavailable marks an unresolved or unavailable source.
@@ -39,7 +43,8 @@ var (
 // container ID from the caller's admitted handle. In CDB$ROOT (ID 1), an empty
 // ContainerIDs filter admits every visible row. Explicit IDs can include 0 for
 // whole-CDB data. Outside CDB$ROOT, only the known current container is admitted.
-// ID 0 as CurrentContainerID describes a non-CDB.
+// ID 0 as CurrentContainerID describes a non-CDB. ContainerSystemPDBGlobal
+// admits only attributed IDs greater than 2 and rejects the CDB seed session.
 type ContainerSystemOptions struct {
 	OracleVersion      string
 	CurrentContainerID int64
@@ -85,6 +90,7 @@ type ContainerSystemResult struct {
 type containerSystemSelection struct {
 	selection
 	evidence ContainerSystemProvenance
+	pdbOnly  bool
 }
 
 // ContainerSystemStatement selects one documented scoped scalar projection with
@@ -102,6 +108,10 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 	if options.CurrentContainerID == 0 {
 		return containerSystemSelection{}, ErrContainerSystemUnsupportedScope
 	}
+	pdbOnly := options.Source == ContainerSystemPDBGlobal
+	if pdbOnly && options.CurrentContainerID == 2 {
+		return containerSystemSelection{}, ErrContainerSystemSeedScope
+	}
 	instances := options.Filter.Instances
 	names := options.Filter.Names
 	ids := options.ContainerIDs
@@ -118,7 +128,7 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 		// V$ does not project INST_ID. SYS_CONTEXT identifies its executing
 		// member without a join that might change container visibility.
 		instance = "TO_NUMBER(SYS_CONTEXT('USERENV','INSTANCE'))"
-	case ContainerSystemGlobal:
+	case ContainerSystemGlobal, ContainerSystemPDBGlobal:
 		instance = "p.INST_ID"
 	default:
 		return containerSystemSelection{}, ErrInvalidFilter
@@ -131,12 +141,21 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 		}
 	}
 	for _, id := range ids {
-		if id < 0 || (options.CurrentContainerID != 1 && id != options.CurrentContainerID) {
+		if id < 0 || (pdbOnly && id <= 2) || (options.CurrentContainerID != 1 && id != options.CurrentContainerID) {
 			return containerSystemSelection{}, ErrInvalidFilter
 		}
 	}
 
-	provenance := source(string(options.Source), major, names, instances)
+	view := options.Source
+	if pdbOnly {
+		view = ContainerSystemGlobal
+		if options.CurrentContainerID == 1 {
+			scope = "root_visible_pdb_rows"
+		} else {
+			scope = "current_pdb_rows"
+		}
+	}
+	provenance := source(string(view), major, names, instances)
 	provenance.Scope = scope
 	schema := []rowset.Column{
 		{Name: "INST_ID", Kind: rowset.Integer}, {Name: "CON_ID", Kind: rowset.Integer},
@@ -144,6 +163,9 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 	}
 	var args []any
 	var clauses []string
+	if pdbOnly {
+		clauses = append(clauses, "p.CON_ID > 2")
+	}
 	for _, filter := range []struct {
 		expression string
 		ids        []int64
@@ -174,6 +196,7 @@ func containerSystemPlan(options ContainerSystemOptions) (containerSystemSelecti
 	text += " ORDER BY INST_ID, p.CON_ID, NLSSORT(p.NAME, 'NLS_SORT=BINARY')"
 	return containerSystemSelection{
 		selection: selection{sql: text, args: args, schema: schema, provenance: provenance},
+		pdbOnly:   pdbOnly,
 		evidence: ContainerSystemProvenance{
 			Provenance: provenance, OracleVersion: options.OracleVersion,
 			CurrentContainerID: options.CurrentContainerID, ContainerIDs: slices.Clone(ids),
@@ -223,6 +246,9 @@ func containerSystemColumns(result session.Result, p containerSystemSelection) (
 		i, _ := strconv.ParseInt(instance.Text, 10, 64)   // Validated by parameterColumns.
 		id, _ := strconv.ParseInt(container.Text, 10, 64) // SQL NULL is handled below.
 		if name.Null || name.Text == "" || (!instance.Null && i < 1) || (!container.Null && id < 0) {
+			return nil, fail
+		}
+		if p.pdbOnly && (container.Null || id <= 2) {
 			return nil, fail
 		}
 		if len(p.evidence.ContainerIDs) > 0 && (container.Null || !slices.Contains(p.evidence.ContainerIDs, id)) {

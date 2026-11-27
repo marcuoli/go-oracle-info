@@ -17,6 +17,41 @@ Oracle determines visibility through the admitted account, container state and, 
 
 `ContainerSystemStatement` and `DecodeContainerSystem` share the same projection, including filters. `ReadContainerSystem` requires an admitted bounded complete reader and stable SQL reference. `ContainerSystemRows` returns the original cursor and leaves iteration, `Err`, `Close` and stream budgets with the caller. `ContainerSystemJSON` uses a separate bounded cursor and publishes no prefix. Completed Read and JSON observations set provenance complete. Direct Decode validates the supplied rows without asserting transport completion. An explicit ORA-01031 source error is marked with `ErrContainerSystemInaccessible`. ORA-00942 is marked with `ErrContainerSystemUnavailable` because it can reflect an unresolved or inaccessible object. Other query failures retain their cause under a source-labeled `*parameters.Error`. Empty success, SQL NULL, missing projection, unsupported scope/release and failed queries remain distinct. [ORA-01031](https://docs.oracle.com/en/error-help/db/ora-01031/) · [ORA-00942](https://docs.oracle.com/en/error-help/db/ora-00942/)
 
+## PDB-only effective settings
+
+`Client.PDBParameters` and `Client.PDBParametersJSON` use
+`parameters.ContainerSystemPDBGlobal` with the version and current container
+observed on the caller's handle. The facade requires access to `V$INSTANCE`
+for release selection and `V$DATABASE` for connected-container admission.
+Use the source with `ReadContainerSystem` when the caller already owns a
+complete buffered reader and independently admitted scope.
+
+~~~go
+data, err := client.PDBParametersJSON(ctx, []int64{3},
+    oracleinfo.ParameterFilter{Names: []string{"open_cursors"}})
+~~~
+
+An empty PDB ID filter from `CDB$ROOT` returns all visible rows with
+`CON_ID > 2`. A direct PDB connection binds only its own
+container ID. The selector excludes whole-CDB rows, `CDB$ROOT` and the CDB's
+`PDB$SEED`. Visible application containers with IDs above 2 are in scope.
+Exact PDB IDs, parameter names and reporting instance IDs can narrow results.
+The selected columns and cursor contract are the same as for
+`ContainerSystemGlobal`.
+
+The linked article examines effective parameter values and their `CON_ID` in
+`V$SYSTEM_PARAMETER`. A PDB-attributed row reports the effective setting
+visible for that container. Oracle can return rows with default values too.
+Neither the row's presence nor the absence of a row establishes independent
+configuration, inheritance, or storage. A mounted standby can return an empty
+PDB selection. The API uses Oracle's documented view and does not read the
+internal `PDB_SPFILE$` table. For stored and instance-wide observations, use
+the separate [parameter contracts](system-parameters.md).
+[Oracle 19c Multitenant Administrator's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/viewing-information-about-cdbs-and-pdbs-with-sql-plus.html) ·
+[Oracle 26ai ALTER SYSTEM inheritance and scope](https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/ALTER-SYSTEM.html) ·
+[Article](https://www.krenger.ch/blog/parameters-of-pluggable-databases/)
+
+
 ## Release and qualification matrix
 
 Oracle public documentation was checked on 2026-11-21. Both projections use the same scalar columns in the admitted numeric families. Oracle describes `INST_ID` as the additional `GV$` column for qualified instances. Observed version text is independent of product branding. The current 26ai reference covers the numeric 23 release series and explicitly documents RU 23.26.4. The archived 23 documentation path currently redirects to the 26ai reference. [Oracle 12.1 RAC Performance Views](https://docs.oracle.com/database/121/RACAD/GUID-04B6632F-EC4E-4317-9BD6-D7991C429DD5.htm) · [Oracle 26ai RAC Performance Views](https://docs.oracle.com/en/database/oracle/oracle-database/26/racad/monitoring-performance/performance-views-in-oracle-rac.html) · [Oracle 26ai Database Reference RU revisions](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/changes-this-release-oracle-database-reference.html) · [Oracle 26ai RU 23.26.4](https://docs.oracle.com/en/database/oracle/oracle-database/26/nfcoa/ru23_26_4.html)
@@ -47,3 +82,28 @@ native cursor iteration, column aliases and complete bounded JSON. The
 buffered Reader path is covered by fixtures. Earlier application captures
 on 12.2, 19.32 and 23.26.1 used different statements. Other releases, MOUNT,
 other login privileges and multi-member RAC remain unqualified.
+
+## PDB-only scope qualification
+
+Oracle's public references were rechecked on 2026-11-27. Issue #224 uses the
+same global columns listed above with the PDB predicate `p.CON_ID > 2`.
+Its binary name and instance filters retain the same binds. A direct PDB
+also binds its exact current container ID. The facade uses the existing
+connected-architecture observation for scope admission.
+
+| Numeric release | Exact selection and decoding | Native SQL and driver |
+| --- | --- | --- |
+| 9.2, 10.1, 10.2, 11.1, 11.2 | Unsupported before the PDB query | Unexecuted |
+| 12.1.0.1, 12.1.0.2, 12.2.0.1, 18.4 | Reviewed columns and predicate, fixture checked | Unexecuted for the PDB-only selection |
+| 19.32.0.0.0 | Fixture checked | SYSDBA primary READ WRITE, CDB root and direct PDB |
+| 21.3, 23c/23ai numeric 23.9 | Reviewed columns and predicate, fixture checked | Unexecuted for the PDB-only selection |
+| Oracle 26ai numeric 23.26 | Fixture checked | 23.26.1.0.0 SYSDBA primary READ WRITE roots and direct PDB, plus a MOUNTED physical standby root |
+
+The native Windows amd64 Go 1.27.4 probe used go-oracle-session v0.25.1
+compatibility V2. It compared native cursor, bounded JSON and buffered results
+with independent local-view counts on each single-instance fixture. The 19c
+primary returned 25 rows from the root and the direct PDB. The 26ai primaries
+returned 47. An exact container and name filter returned one row in the open
+scopes. The 26ai mounted standby returned a complete empty selection. Ordinary
+accounts, multi-instance RAC, other RUs and consuming applications remain
+unqualified for the PDB-only selection.

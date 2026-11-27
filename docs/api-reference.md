@@ -239,6 +239,8 @@ func (c *Client) OracleHome(ctx context.Context) (identity.OracleHomeObservation
 func (c *Client) OracleHomeJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) OracleHomeRows(ctx context.Context) (*sql.Rows, error)
 func (c *Client) OracleHomeRowsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) PDBParameters(ctx context.Context, pdbIDs []int64, filter ParameterFilter) (*sql.Rows, error)
+func (c *Client) PDBParametersJSON(ctx context.Context, pdbIDs []int64, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PasswordFileInfo(ctx context.Context, options PasswordFileOptions) (*sql.Rows, error)
 func (c *Client) PasswordFileInfoJSON(ctx context.Context, options PasswordFileOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PasswordVersionCounts(ctx context.Context) (*sql.Rows, error)
@@ -4850,6 +4852,7 @@ func (e *Error) Unwrap() error
 
 - `ContainerSystemGlobal`
 - `ContainerSystemLocal`
+- `ContainerSystemPDBGlobal`
 - `MaxFilterValues`
 - `PersistenceAdjustedValue`
 - `PersistenceAmbiguousValue`
@@ -4893,6 +4896,7 @@ func (e *Error) Unwrap() error
 ### Variables
 
 - `ErrContainerSystemInaccessible`
+- `ErrContainerSystemSeedScope`
 - `ErrContainerSystemUnavailable`
 - `ErrContainerSystemUnsupportedScope`
 - `ErrInvalidEvidence`
