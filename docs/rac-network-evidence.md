@@ -58,10 +58,30 @@ does not require either column.
 | 11gR1 (11.1), 11gR2 (11.2) | Oracle references list the same core columns. | Tested in both families | Unqualified |
 | 12cR1 (12.1), 12cR2 (12.2) | Oracle references also list `CON_ID`. | Tested in both families | Unqualified |
 | 18c | Core plus `CON_ID`. | Tested | Unqualified |
-| 19c | Core plus `CON_ID`. | Tested at 19.3 and 19.33 | Pending coordinated read-only RAC evidence |
+| 19c | Core plus `CON_ID`. | Tested at 19.3 and 19.33 | See the two qualified SYSDBA root cases below |
 | 21c | Core plus `CON_ID`. | Tested | Unqualified |
 | 23ai | Core plus `CON_ID` selected by continuity. Oracle redirects the online 23 reference to 26ai. | Tested with 23.9 numeric version | Unqualified |
 | 26ai (numeric 23.26) | Core plus `CON_ID` selected from the current reference. | Tested with 23.26.1 numeric version | Unqualified |
+
+## Native checks
+
+On 2026-11-27, a read-only probe used the exact new selector through Go 1.27.4
+on Windows amd64 and released go-oracle-session v0.25.2 with go-ora V2.
+It ran as SYSDBA on a 19.3.0.0.0 RAC primary in READ WRITE and a 19.33.0.0.0
+RAC physical standby in READ ONLY WITH APPLY, both in CDB$ROOT.
+
+Each scope reported database instances 1 and 2. The owned buffered read
+returned two qualified interconnect rows, one per visible reporting member.
+An independent select through the documented GV$ synonym matched the full
+six-column row multiset on both sides, including raw address and source
+values. The existing SCAN reader independently returned four effective
+parameter observations, six remote registration rows, and a configured
+hostname candidate on each side. Values identifying network endpoints
+remain private. These checks qualify the typed buffered read and existing
+SCAN reader for the two reported scopes. The borrowed cursor and JSON
+contracts have fixture coverage. Other releases, PDBs, MOUNT, and ordinary
+accounts remain unqualified for this fact.
+
 
 Oracle sources checked on 2026-11-27:
 
