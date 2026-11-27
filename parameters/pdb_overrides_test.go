@@ -59,6 +59,16 @@ func TestPDBOverridesClassifyOnlyAdmittedEvidence(t *testing.T) {
 			r.Member.Effective.Rows[0].ContainerID = &session.Value{Text: "0"}
 			r.Member.Effective.Rows[0].IsModified.Text = "FALSE"
 		}, parameters.PDBOverrideUnknown},
+		{"12.2 unmodified PDB row after reset and reopen", func(r *parameters.PDBOverridesRequest) {
+			r.OracleVersion = "12.2.0.1.0"
+			r.Member.Effective.Provenance.OracleMajor = 12
+			r.Member.Stored.Provenance.OracleMajor = 12
+			effective := &r.Member.Effective.Rows[0]
+			effective.Name.Text = "optimizer_dynamic_sampling"
+			effective.Value.Text = "2"
+			effective.IsModified.Text = "FALSE"
+			r.Member.Stored.Rows[0].Name.Text = "optimizer_dynamic_sampling"
+		}, parameters.PDBOverrideUnknown},
 		{"empty stored read", func(r *parameters.PDBOverridesRequest) { r.Member.Stored.Rows = nil }, parameters.PDBOverrideUnknown},
 		{"incomplete stored read", func(r *parameters.PDBOverridesRequest) {
 			persistent(r, "734")
@@ -70,6 +80,13 @@ func TestPDBOverridesClassifyOnlyAdmittedEvidence(t *testing.T) {
 		{"wrong PDB stored clause", func(r *parameters.PDBOverridesRequest) {
 			persistent(r, "734")
 			r.Member.Stored.Rows[0].ContainerID = &session.Value{Text: "5"}
+		}, parameters.PDBOverrideUnknown},
+		{"unattributed 12.1 stored clause", func(r *parameters.PDBOverridesRequest) {
+			r.OracleVersion = "12.1.0.2.0"
+			r.Member.Effective.Provenance.OracleMajor = 12
+			r.Member.Stored.Provenance.OracleMajor = 12
+			persistent(r, "734")
+			r.Member.Stored.Rows[0].ContainerID = &session.Value{Text: "0"}
 		}, parameters.PDBOverrideUnknown},
 		{"stored root clause", func(r *parameters.PDBOverridesRequest) {
 			persistent(r, "734")
@@ -159,8 +176,15 @@ func TestPDBMemoryOnlyQualificationMatrix(t *testing.T) {
 		parameters []string
 		want       parameters.PDBOverrideState
 	}{
+		{"12.1.0.2.0", 12, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideUnknown},
+		{"12.2.0.1.0", 12, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"12.2.0.1", 12, []string{"open_cursors"}, parameters.PDBOverrideUnknown},
+		{"18.4.0.0.0", 18, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"18.5.0.0.0", 18, []string{"open_cursors"}, parameters.PDBOverrideUnknown},
 		{"19.32.0.0.0", 19, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
 		{"21.3.0.0.0", 21, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"23.9.0.25.07", 23, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
+		{"23.9.0.25.08", 23, []string{"optimizer_dynamic_sampling"}, parameters.PDBOverrideUnknown},
 		{"23.26.3.0.0", 23, []string{"open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling"}, parameters.PDBOverrideMemoryOnly},
 		{"19.32.0.0.0", 19, []string{"session_cached_cursors", "OPEN_CURSORS"}, parameters.PDBOverrideUnknown},
 		{"21.3.0.0.0", 21, []string{"session_cached_cursors"}, parameters.PDBOverrideUnknown},

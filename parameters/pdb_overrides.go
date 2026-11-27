@@ -248,7 +248,7 @@ func explicitPDBClause(rows []SPFileParameter) bool {
 // for the recorded controls, patch levels and connection scope.
 func qualifiedPDBMemoryPair(version, name string) bool {
 	switch version {
-	case "19.32.0.0.0", "21.3.0.0.0", "23.26.3.0.0":
+	case "12.2.0.1.0", "18.4.0.0.0", "19.32.0.0.0", "21.3.0.0.0", "23.9.0.25.07", "23.26.3.0.0":
 		switch name {
 		case "open_cursors", "optimizer_index_cost_adj", "optimizer_dynamic_sampling":
 			return true
