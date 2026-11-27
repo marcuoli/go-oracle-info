@@ -155,14 +155,14 @@ families delegate to `memory.SGAAllocated`, `memory.PGAAllocated`,
 respectively. Their original types and errors remain at the old imports.
 The [selector dispositions](implementation-coverage.md#compatibility-selector-dispositions)
 map older SQL constants and property projections to their related facts. In
-`grants`, `Readâ€¦ForRelease` retains the compatibility request. Use
-`Readâ€¦WithOptions` with `ClassifiedRequest` for the same options accepted by the
+`grants`, `Read…ForRelease` retains the compatibility request. Use
+`Read…WithOptions` with `ClassifiedRequest` for the same options accepted by the
 selector, decoder, native cursor and JSON.
 
 Separate from dictionary reads, the [legacy predefined account catalog](legacy-predefined-accounts.md) lists documented Oracle-supplied usernames by release.
 
 Existing families with multiple positional source selectors expose
-`StatementWithOptions`, `Decodeâ€¦WithOptions`, `RowsWithOptions` and
+`StatementWithOptions`, `Decode…WithOptions`, `RowsWithOptions` and
 `JSONWithOptions` forms. This covers ASM clients, encryption, Data Guard
 transport facts, configured PDB memory, invalid details and oldest statistics,
 parameter facts, redo inventories and SGA components. `ReadRACWithOptions`
