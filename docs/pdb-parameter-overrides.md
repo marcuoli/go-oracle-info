@@ -48,8 +48,11 @@ for the memory-only inference when the same evidence gates pass.
 
 | Observed Oracle version | Qualified parameters |
 | --- | --- |
+| 12.2 `12.2.0.1.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
+| 18c `18.4.0.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
 | 19c `19.32.0.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
 | 21c `21.3.0.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
+| 23ai `23.9.0.25.07` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
 | 26ai `23.26.3.0.0` | `open_cursors`, `optimizer_index_cost_adj`, `optimizer_dynamic_sampling` |
 
 All other release and parameter combinations leave the memory-only state
@@ -69,6 +72,29 @@ The 26ai clone initially hit a datafile deletion/deadlock error. The follow-up
 found zero database references and removed two empty task-owned directories.
 The retry passed after the seed was available. The disposable PDBs were
 removed and all fixtures returned to their original stopped state.
+
+The 12.1, 12.2, 18c and 23ai runs used the same native SQL*Plus controls
+in isolated, read-write, single-instance SYSDBA disposable PDBs on
+2026-11-27. All three parameters passed in 12.2, 18c and 23ai. The
+12.2 `optimizer_dynamic_sampling` baseline and post-reset reopen
+reported the PDB's own `CON_ID` and `ISMODIFIED=FALSE` with the root
+value. The memory-only phase had `ISMODIFIED=MODIFIED` and an
+unspecified stored placeholder for the same PDB.
+
+On 12.1 `12.1.0.2.0`, `GV$SPPARAMETER` returned `CON_ID=0` from the
+direct PDB for both unspecified and explicitly stored rows. This leaves
+all three parameters unqualified for memory-only inference. The first
+12.1 attempt failed on the password length limit before opening a PDB.
+The initial 12.2 PDB open failed with an asynchronous I/O error
+(`ORA-27090`). The 12c retries emitted open warnings and completed all
+scope and reopen controls. All four fixtures returned to their original
+stopped state after the disposable PDBs and files were removed.
+
+The 12c numeric values are the patch-set versions from `V$INSTANCE.VERSION`.
+That field does not distinguish individual bundle patches. The later runs
+recorded `VERSION_FULL`. Go tests exercise the evaluator using the qualified
+row shapes. These four runs provide native SQL evidence, with driver and
+application qualification recorded separately as untested.
 
 A single-instance 23.26.3.0.0 SYSDBA disposable PDB ran the following
 `OPEN_CURSORS` cases. The root stayed at 300. The PDB was dropped and the
@@ -92,6 +118,9 @@ connections using go-oracle-session v0.25.1 compatibility V2. Neither a false
 `ISDEFAULT` flag nor a successful empty read proved inheritance or the
 absence of an override.
 
+- [Oracle 12.1 SPPARAMETER](https://docs.oracle.com/database/121/REFRN/GUID-190DC64D-1EDE-4C35-B6F4-70BAAF46F0BF.htm)
+- [Oracle 12.2 ALTER SYSTEM](https://docs.oracle.com/en/database/oracle/oracle-database/12.2/sqlrf/ALTER-SYSTEM.html)
+- [Oracle 18c ALTER SYSTEM](https://docs.oracle.com/en/database/oracle/oracle-database/18/sqlrf/ALTER-SYSTEM.html)
 - [Oracle 19c parameter reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPEN_CURSORS.html), [optimizer index cost](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPTIMIZER_INDEX_COST_ADJ.html), and [dynamic sampling](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/OPTIMIZER_DYNAMIC_SAMPLING.html)
 - [Oracle 21c parameter reference](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPEN_CURSORS.html), [optimizer index cost](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPTIMIZER_INDEX_COST_ADJ.html), and [dynamic sampling](https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/OPTIMIZER_DYNAMIC_SAMPLING.html)
 - [Oracle 26ai SYSTEM_PARAMETER2](https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/V-SYSTEM_PARAMETER2.html)
