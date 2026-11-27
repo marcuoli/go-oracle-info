@@ -58,9 +58,10 @@ whole-database or current-container visibility.
 The native SQL checks were run on 2026-11-24. All fixtures were
 single-instance and returned two parameter rows and zero remote registration
 rows. Go unit fixtures exercise nonempty registration values, IP-only and mixed
-inputs, multiple network descriptors, scope, and read failures. A populated
-RAC registration view, ordinary accounts, MOUNT, other patch levels, and
-consuming applications remain unqualified.
+inputs, multiple network descriptors, scope, and read failures. Separate
+[19c RAC checks](rac-network-evidence.md#native-checks) exercised populated
+registration rows in two SYSDBA root scopes. Ordinary accounts, MOUNT and
+other patch levels remain unqualified.
 
 ## Go driver checks
 

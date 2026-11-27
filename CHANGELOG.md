@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose database-observed RAC interconnects per reporting instance and document the source boundaries for member, interconnect and SCAN evidence (#220).
+
 - Add release-aware CDB SQL patch history and per-PDB consistency evaluation while preserving the existing history reader (#218).
 
 - Expose exact redo buffer allocation per qualified reporting instance from GV$SGA, preserving SQL NULL, source completion and raw numeric bytes (#215).

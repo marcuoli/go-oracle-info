@@ -223,3 +223,7 @@ recorded as unavailable documentation, never evidence the views do not exist.
 
 See the [SCAN release matrix](scan-discovery.md#release-checks) for the #196
 parameter and listener source choices, isolated Oracle runs, and driver evidence.
+## RAC runtime interconnects
+
+See the [RAC network evidence matrix](rac-network-evidence.md#release-checks)
+for the #220 selector, release boundaries and native qualification.
