@@ -17,6 +17,15 @@ var ErrSourceUnavailable = errors.New("Oracle fact source is unavailable")
 // ClassifySourceError recognizes a single Oracle source diagnostic. A multi-cause
 // failure may also carry cancellation, cursor-close or transport evidence.
 func ClassifySourceError(err error) error {
+	if class := SourceAccessClass(err); class != nil {
+		return errors.Join(class, err)
+	}
+	return err
+}
+
+// SourceAccessClass identifies one source access diagnostic without losing the
+// distinction between a refused source and a mixed or unclassified error.
+func SourceAccessClass(err error) error {
 	current := err
 	var reported error
 	for depth := 0; current != nil && depth < 64; depth++ {
@@ -27,7 +36,7 @@ func ClassifySourceError(err error) error {
 		case interface{ Unwrap() []error }:
 			causes := wrapped.Unwrap()
 			if len(causes) != 1 {
-				return err
+				return nil
 			}
 			current = causes[0]
 			continue
@@ -40,12 +49,9 @@ func ClassifySourceError(err error) error {
 		if reported == nil {
 			reported = sourceErrorClass(current.Error())
 		}
-		if reported != nil {
-			return errors.Join(reported, err)
-		}
-		return err
+		return reported
 	}
-	return err
+	return nil
 }
 
 func sourceErrorClass(message string) error {
