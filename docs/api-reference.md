@@ -241,6 +241,8 @@ func (c *Client) OracleHomeRows(ctx context.Context) (*sql.Rows, error)
 func (c *Client) OracleHomeRowsJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PDBParameters(ctx context.Context, pdbIDs []int64, filter ParameterFilter) (*sql.Rows, error)
 func (c *Client) PDBParametersJSON(ctx context.Context, pdbIDs []int64, filter ParameterFilter, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) PGAAllocation(ctx context.Context) (*sql.Rows, error)
+func (c *Client) PGAAllocationJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PasswordFileInfo(ctx context.Context, options PasswordFileOptions) (*sql.Rows, error)
 func (c *Client) PasswordFileInfoJSON(ctx context.Context, options PasswordFileOptions, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) PasswordVersionCounts(ctx context.Context) (*sql.Rows, error)
@@ -3655,6 +3657,24 @@ type PGAAllocatedResult struct {
 	Rows       []PGAAllocatedRow
 }
 type PGAAllocatedRow struct{ GiB session.Value }
+type PGAAllocationOptions struct{ OracleVersion string }
+type PGAAllocationRequest struct {
+	Options   PGAAllocationOptions
+	Reference reference.Reference
+	Limits    rowset.Limits
+}
+type PGAAllocationResult struct {
+	Provenance DatasetProvenance
+	Rows       []PGAAllocationRow
+}
+type PGAAllocationRow struct {
+	Bytes              session.Value
+	Unit               session.Value
+	ContainerID        session.Value
+	SessionContainerID session.Value
+	InstanceID         session.Value
+	InstanceName       session.Value
+}
 type Parameter string
 type ParameterOptions struct {
 	Parameter Parameter
@@ -3760,6 +3780,7 @@ func Decode(result session.Result, parameter Parameter, o Options) (Observation,
 func DecodePDB(result session.Result, parameter Parameter, options PDBOptions) (Observation, error)
 func DecodePDBWithOptions(result session.Result, options ParameterOptions) (Observation, error)
 func DecodePGAAllocated(result session.Result, options PGAAllocatedOptions) (PGAAllocatedResult, error)
+func DecodePGAAllocation(result session.Result, options PGAAllocationOptions) (PGAAllocationResult, error)
 func DecodeParameter(result session.Result, options ParameterOptions) (Observation, error)
 func DecodeRAC(result session.Result, o Options) (RACObservation, error)
 func DecodeRedoBufferAllocation(result session.Result, options RedoBufferAllocationOptions) (RedoBufferAllocationResult, error)
@@ -3776,6 +3797,9 @@ func PDBStatementWithOptions(options ParameterOptions) (string, []any, error)
 func PGAAllocatedJSON(ctx context.Context, q rowset.Queryer, options PGAAllocatedOptions, limits rowset.Limits) (json.RawMessage, error)
 func PGAAllocatedRows(ctx context.Context, q rowset.Queryer, options PGAAllocatedOptions) (*sql.Rows, error)
 func PGAAllocatedStatement(options PGAAllocatedOptions) (string, []any, error)
+func PGAAllocationJSON(ctx context.Context, q rowset.Queryer, options PGAAllocationOptions, limits rowset.Limits) (json.RawMessage, error)
+func PGAAllocationRows(ctx context.Context, q rowset.Queryer, options PGAAllocationOptions) (*sql.Rows, error)
+func PGAAllocationStatement(options PGAAllocationOptions) (string, []any, error)
 func ParameterJSON(ctx context.Context, q rowset.Queryer, options ParameterOptions, limits rowset.Limits) (json.RawMessage, error)
 func ParameterRows(ctx context.Context, q rowset.Queryer, options ParameterOptions) (*sql.Rows, error)
 func ParameterStatement(options ParameterOptions) (string, []any, error)
@@ -3785,6 +3809,7 @@ func RACStatement(o Options) (string, error)
 func Read(ctx context.Context, reader Reader, request SourceRequest) (Observation, error)
 func ReadPDB(ctx context.Context, reader Reader, request SourceRequest) (Observation, error)
 func ReadPGAAllocated(ctx context.Context, reader Reader, request PGAAllocatedRequest) (PGAAllocatedResult, error)
+func ReadPGAAllocation(ctx context.Context, reader Reader, request PGAAllocationRequest) (PGAAllocationResult, error)
 func ReadParameter(ctx context.Context, reader Reader, request SourceRequest) (Observation, error)
 func ReadRAC(ctx context.Context, reader Reader, options Options, ref reference.Reference) (RACObservation, error)
 func ReadRACWithOptions(ctx context.Context, reader Reader, request RACRequest) (RACObservation, error)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read exact PGA allocation bytes with Oracle's unit and the executing instance and container scope (#244).
+
 - Read the standard database block size with exact bytes and an opt-in SYSTEM tablespace fallback, preserving source and masked parameter inventories (#241).
 
 - Review the Oracle catalog snapshot dates for v0.52.0 while preserving existing release and patch records (#239).

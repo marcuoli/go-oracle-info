@@ -42,3 +42,26 @@ func (c *Client) RedoBufferAllocationJSON(ctx context.Context, filter memory.Ins
 	options.OracleMajor = major
 	return memory.RedoBufferAllocationJSON(ctx, c.native(), options, resolved)
 }
+
+// PGAAllocation transfers the native cursor for one executing-instance PGA
+// observation. The caller owns validation, iteration, terminal errors and Close.
+func (c *Client) PGAAllocation(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return memory.PGAAllocationRows(ctx, c.native(), memory.PGAAllocationOptions{OracleVersion: version})
+}
+
+// PGAAllocationJSON reads and validates a separate complete bounded cursor.
+func (c *Client) PGAAllocationJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return memory.PGAAllocationJSON(ctx, c.native(), memory.PGAAllocationOptions{OracleVersion: version}, resolved)
+}
