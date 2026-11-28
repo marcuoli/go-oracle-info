@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read the Oracle-reported server hostname and instance identity of the executing session without changing the client-host or instance inventory facts (#236).
+
 - Refresh the verified Oracle catalog snapshot dates for v0.51.0 (#234).
 
 - Qualify PDB memory-only evidence for three parameters on the observed 12.2, 18c and 23ai releases. Keep 12.1 unknown because its stored rows lack PDB attribution (#232).

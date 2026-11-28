@@ -169,6 +169,30 @@ func (c *Client) SessionContextJSON(ctx context.Context, limits ...JSONLimits) (
 	return identity.SessionContextJSON(ctx, c.native(), major, resolved)
 }
 
+// SessionServerHost returns the caller-native cursor for the executing session's
+// server hostname and instance context.
+func (c *Client) SessionServerHost(ctx context.Context) (*sql.Rows, error) {
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return identity.SessionServerHostRows(ctx, c.native(), identity.SessionServerHostOptions{OracleVersion: version})
+}
+
+// SessionServerHostJSON independently consumes the executing session's server
+// hostname and instance context into bounded complete JSON.
+func (c *Client) SessionServerHostJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error) {
+	resolved, err := jsonLimits(limits)
+	if err != nil {
+		return nil, err
+	}
+	version, err := c.observedNumericVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return identity.SessionServerHostJSON(ctx, c.native(), identity.SessionServerHostOptions{OracleVersion: version}, resolved)
+}
+
 // DatabaseInfo returns raw controlfile/logging/SCN properties in a caller-owned
 // native cursor. IncludeSupplementalPL is an explicit source-capability admission.
 func (c *Client) DatabaseInfo(ctx context.Context, options DatabaseInfoOptions) (*sql.Rows, error) {
