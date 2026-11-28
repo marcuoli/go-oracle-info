@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "product": "database",
-  "as_of": "2026-11-27",
+  "as_of": "2026-11-28",
   "sources": [
     {"id": "KB106822", "title": "Primary Note for Database Quarterly Release Updates", "url": "https://support.oracle.com/support/?anchorId=&documentId=KB106822&page=sptemplate&sptemplate=km-article", "old_doc_id": "888.1", "revision": "2026-11-24", "checked_utc": "2026-11-24T16:17:54.917163+00:00", "sha256": "e5b346d8abf1f12e610b219d40f6c6e0e200f741e549eaa71a8edd9a8ddbb0fc"},
     {"id": "KB106910", "title": "Database 12.1.0.2 Proactive Patch Information", "url": "https://support.oracle.com/support/?anchorId=&documentId=KB106910&page=sptemplate&sptemplate=km-article", "old_doc_id": "2285558.1", "revision": "Nov 20, 2026", "checked_utc": "2026-11-25T08:20:13.80772-03:00", "sha256": "10460c6c1921781f656324449989a1344864fbaa9b36b8dd8923b5537e4ca0ba"},
