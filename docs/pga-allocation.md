@@ -29,7 +29,7 @@ and JSON retain the previous rounded GiB projection and release support.
 | Numeric release | Documented source / static selection | Native SDK qualification of this API |
 | --- | --- | --- |
 | 9.2, 10.1, 10.2, 11.1, 11.2 | Historical PGA statistic lacks CON_ID. Unsupported without SQL. | None. |
-| 12.1, 12.2, 18, 19, 21 | V$PGASTAT includes VALUE, UNIT and CON_ID. The same six-column selection is checked by fixtures. | Native scope listed below. |
+| 12.1, 12.2, 18, 19, 21 | V$PGASTAT includes VALUE, UNIT and CON_ID. The same six-column selection is checked by fixtures. | 19.3 and 19.33 PDB scopes below. |
 | 23c/23ai and 26ai numeric 23.26.x | Same named statistic and columns. Static coverage includes 23.26.4. | None for this API. |
 
 Oracle documentation reviewed 2026-11-28.
@@ -43,4 +43,11 @@ Oracle documentation reviewed 2026-11-28.
 
 ## Native scope
 
-Native qualification is pending.
+The exact typed SDK read and independent Oracle controls matched on Oracle
+19.3.0.0.0 in a self-managed PDB as SYSDBA and on Oracle 19.33.0.1.0 in an
+Autonomous OLTP PDB as ADMIN without SYSDBA. Both runs used the same admitted
+physical lease per endpoint, Windows Go 1.27.4 and the default pure-Go V2
+session layer. The source returned CON_ID 0 and UNIT bytes. The SDK retained
+exact byte text and matched the session's typed container and member identity.
+Both sessions closed cleanly. Root, non-CDB, MOUNT and other releases are
+documented or synthetic coverage here.
