@@ -69,7 +69,7 @@ lists both forms and preserves the exact filter, version, and reference types.
 | [grants](api-reference.md#grants) | `ColumnPrivilegeGrants`, `Direct`, `DirectColumn`, `DirectSystem`, `ObjectPrivilegeGrants`, `Role`, `RoleCatalog`, `RoleMemberships` |
 | [identity](api-reference.md#identity) | `BannersSource`, `BorrowedSampleIdentity`, `CloudService`, `ConnectedArchitecture`, `ContainerSource`, `DatabaseIdentity`, `DatabaseInfo`, `EditionSource`, `ExecutionIdentity`, `FullVersionSource`, `GlobalName`, `InstanceIdentity`, `LogicalDatabase`, `NameSource`, `OracleHome`, `PDBOpenMode`, `RoleSource`, `SessionContext`, `SessionServerHost`, `Snapshot`, `VersionBootstrap`, `VersionSource` |
 | [instances](api-reference.md#instances) | [`ClusterInterconnects`](rac-network-evidence.md), `Inventory`, `MemberStartup`, `Versions`, `Visibility` |
-| [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
+| [memory](api-reference.md#memory) | `PDB`, `PGAAllocated`, [`PGAAllocation`](pga-allocation.md), `Parameter`, `RAC`, `SGAAllocated`, `SGAComponents` |
 | [metadata](api-reference.md#metadata) | `Object` |
 | [networkacl](api-reference.md#networkacl) | `Inventory` |
 | [objects](api-reference.md#objects) | `EncryptedColumns`, `InvalidDetails`, `InvalidObjects`, `MaterializedViews`, `ObjectIdentities`, `ObjectInventory`, `ObjectStatus`, `ObjectTotals`, `OldestStatistics`, `RecycleBinCounts`, `Schema`, `SubobjectStatistics`, `Table`, `TableCount`, `TableStatistics`, `Tables`, `TablesStatistics`, `TimeZoneColumns` |
