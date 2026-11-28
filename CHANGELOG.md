@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Read the standard database block size with exact bytes and an opt-in SYSTEM tablespace fallback, preserving source and masked parameter inventories (#241).
+
 - Review the Oracle catalog snapshot dates for v0.52.0 while preserving existing release and patch records (#239).
 
 - Read the Oracle-reported server hostname and instance identity of the executing session without changing the client-host or instance inventory facts (#236).

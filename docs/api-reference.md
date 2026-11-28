@@ -295,6 +295,8 @@ func (c *Client) SessionContext(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionContextJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SessionServerHost(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionServerHostJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) StandardBlockSize(ctx context.Context) (*sql.Rows, error)
+func (c *Client) StandardBlockSizeJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) StandbyPromotionSCN(ctx context.Context) (*sql.Rows, error)
 func (c *Client) StandbyPromotionSCNJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SystemParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
@@ -1212,6 +1214,27 @@ type SessionParametersWithDefaultsRow struct {
 	Value     session.Value
 	IsDefault session.Value
 }
+type StandardBlockSizeAttempt struct {
+	Source  StandardBlockSizeSource
+	Outcome string
+}
+type StandardBlockSizeOptions struct {
+	OracleVersion string
+	Source        StandardBlockSizeSource
+}
+type StandardBlockSizeRequest struct {
+	Options                       StandardBlockSizeOptions
+	Reference                     reference.Reference
+	Limits                        rowset.Limits
+	AllowSystemTablespaceFallback bool
+}
+type StandardBlockSizeResult struct {
+	Provenance DatasetProvenance
+	Rows       []StandardBlockSizeRow
+	Attempts   []StandardBlockSizeAttempt
+}
+type StandardBlockSizeRow struct{ Bytes session.Value }
+type StandardBlockSizeSource string
 type StorageOptions struct{ OracleMajor int }
 type StorageRequest struct {
 	Options   StorageOptions
@@ -1286,6 +1309,7 @@ func DecodeSGAAllocated(result session.Result, options SGAAllocatedOptions) (SGA
 func DecodeSessionClock(result session.Result, options SessionClockOptions) (SessionClockResult, error)
 func DecodeSessionParameters(result session.Result, options SessionParametersOptions) (SessionParametersResult, error)
 func DecodeSessionParametersWithDefaults(result session.Result, options SessionParametersWithDefaultsOptions) (SessionParametersWithDefaultsResult, error)
+func DecodeStandardBlockSize(result session.Result, options StandardBlockSizeOptions) (StandardBlockSizeResult, error)
 func DecodeStorage(result session.Result, options StorageOptions) (StorageResult, error)
 func DecodeTimeZone(result session.Result, options TimeZoneOptions) (TimeZoneResult, error)
 func DecodeTimeZoneFiles(result session.Result, options TimeZoneFilesOptions) (TimeZoneFilesResult, error)
@@ -1340,6 +1364,7 @@ func ReadSGAAllocated(ctx context.Context, reader Reader, request SGAAllocatedRe
 func ReadSessionClock(ctx context.Context, reader Reader, request SessionClockRequest) (SessionClockResult, error)
 func ReadSessionParameters(ctx context.Context, reader Reader, request SessionParametersRequest) (SessionParametersResult, error)
 func ReadSessionParametersWithDefaults(ctx context.Context, reader Reader, request SessionParametersWithDefaultsRequest) (SessionParametersWithDefaultsResult, error)
+func ReadStandardBlockSize(ctx context.Context, reader Reader, request StandardBlockSizeRequest) (StandardBlockSizeResult, error)
 func ReadStorage(ctx context.Context, reader Reader, request StorageRequest) (StorageResult, error)
 func ReadTimeZone(ctx context.Context, reader Reader, request TimeZoneRequest) (TimeZoneResult, error)
 func ReadTimeZoneFiles(ctx context.Context, reader Reader, request TimeZoneFilesRequest) (TimeZoneFilesResult, error)
@@ -1355,6 +1380,9 @@ func SessionParametersStatement(options SessionParametersOptions) (string, []any
 func SessionParametersWithDefaultsJSON(ctx context.Context, q rowset.Queryer, options SessionParametersWithDefaultsOptions, limits rowset.Limits) (json.RawMessage, error)
 func SessionParametersWithDefaultsRows(ctx context.Context, q rowset.Queryer, options SessionParametersWithDefaultsOptions) (*sql.Rows, error)
 func SessionParametersWithDefaultsStatement(options SessionParametersWithDefaultsOptions) (string, []any, error)
+func StandardBlockSizeJSON(ctx context.Context, q rowset.Queryer, options StandardBlockSizeOptions, limits rowset.Limits) (json.RawMessage, error)
+func StandardBlockSizeRows(ctx context.Context, q rowset.Queryer, options StandardBlockSizeOptions) (*sql.Rows, error)
+func StandardBlockSizeStatement(options StandardBlockSizeOptions) (string, error)
 func StorageJSON(ctx context.Context, q rowset.Queryer, options StorageOptions, limits rowset.Limits) (json.RawMessage, error)
 func StorageRows(ctx context.Context, q rowset.Queryer, options StorageOptions) (*sql.Rows, error)
 func StorageStatement(options StorageOptions) (string, []any, error)
@@ -1392,6 +1420,8 @@ func (e *ReadError) Unwrap() error
 - `ParametersWithDefaultsSQL`
 - `ProductsSQL`
 - `SGAAllocatedSQL`
+- `StandardBlockSizeParameter`
+- `StandardBlockSizeSystemTablespace`
 - `StorageSQL`
 - `TablespaceEncryption`
 
