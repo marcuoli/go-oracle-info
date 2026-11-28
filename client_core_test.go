@@ -37,6 +37,7 @@ func coreDatasets(t *testing.T) []coreDataset {
 	service, _ := services.Statement(19)
 	dbinfo, _ := identity.DatabaseInfoStatement(identity.DatabaseInfoOptions{OracleMajor: 19, IncludeSupplementalPL: true})
 	observed, _ := identity.SessionContextStatement(19)
+	serverHost, _, _ := identity.SessionServerHostStatement(identity.SessionServerHostOptions{OracleVersion: "19.0"})
 	invalid, _, _ := objects.InvalidDetailsStatement(19, "Case'Owner")
 	history, _ := patches.HistoryStatement(patches.HistoryOptions{OracleMajor: 19, IncludeBundleSeries: true})
 	sqlpatch, _ := patches.SQLPatchStatement(patches.SQLPatchOptions{OracleMajor: 19})
@@ -60,6 +61,9 @@ func coreDatasets(t *testing.T) []coreDataset {
 		}},
 		{"session", "SYS_CONTEXT(USERENV)", observed, []string{"CLIENT_HOST", "OS_USER", "SESSION_USER"}, []driver.Value{"client.example", " OS User ", "SESSION_USER"}, func(c *info.Client, ctx context.Context) (*sql.Rows, error) { return c.SessionContext(ctx) }, func(c *info.Client, ctx context.Context, l info.JSONLimits) (json.RawMessage, error) {
 			return c.SessionContextJSON(ctx, l)
+		}},
+		{"server host", "SYS_CONTEXT(USERENV.SERVER_HOST)", serverHost, []string{"SERVER_HOST", "INSTANCE_NUMBER", "INSTANCE_NAME"}, []driver.Value{nil, "2", " SourceInstance "}, func(c *info.Client, ctx context.Context) (*sql.Rows, error) { return c.SessionServerHost(ctx) }, func(c *info.Client, ctx context.Context, l info.JSONLimits) (json.RawMessage, error) {
+			return c.SessionServerHostJSON(ctx, l)
 		}},
 		{"invalid", "DBA_OBJECTS", invalid, []string{"OWNER", "OBJECT_TYPE", "OBJECT_NAME", "STATUS", "CREATED", "LAST_DDL_TIME"}, []driver.Value{"Case'Owner", "PACKAGE BODY", "Mixed Name", "INVALID", "2020-01-01T01:02:03", nil}, func(c *info.Client, ctx context.Context) (*sql.Rows, error) {
 			return c.InvalidObjects(ctx, "Case'Owner")

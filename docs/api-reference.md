@@ -293,6 +293,8 @@ func (c *Client) SessionClock(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionClockJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SessionContext(ctx context.Context) (*sql.Rows, error)
 func (c *Client) SessionContextJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
+func (c *Client) SessionServerHost(ctx context.Context) (*sql.Rows, error)
+func (c *Client) SessionServerHostJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) StandbyPromotionSCN(ctx context.Context) (*sql.Rows, error)
 func (c *Client) StandbyPromotionSCNJSON(ctx context.Context, limits ...JSONLimits) (json.RawMessage, error)
 func (c *Client) SystemParameters(ctx context.Context, filter ParameterFilter) (*sql.Rows, error)
@@ -3091,6 +3093,20 @@ type SessionContextResult struct {
 	Provenance Provenance
 	Rows       []SessionContext
 }
+type SessionServerHostOptions struct{ OracleVersion string }
+type SessionServerHostRequest struct {
+	Options   SessionServerHostOptions
+	Reference reference.Reference
+}
+type SessionServerHostResult struct {
+	Provenance DatasetProvenance
+	Rows       []SessionServerHostRow
+}
+type SessionServerHostRow struct {
+	ServerHost     session.Value
+	InstanceNumber session.Value
+	InstanceName   session.Value
+}
 type SnapshotOptions struct{ OracleMajor int }
 type SnapshotRequest struct {
 	Options   SnapshotOptions
@@ -3203,6 +3219,7 @@ func DecodePDBOpenMode(result session.Result, options PDBOpenModeOptions) (PDBOp
 func DecodeRole(result session.Result) (Text, error)
 func DecodeRoleSource(result session.Result, options RoleSourceOptions) (RoleSourceResult, error)
 func DecodeSessionContext(result session.Result, major int) (SessionContextResult, error)
+func DecodeSessionServerHost(result session.Result, options SessionServerHostOptions) (SessionServerHostResult, error)
 func DecodeSnapshot(result session.Result, options SnapshotOptions) (SnapshotResult, error)
 func DecodeVersion(result session.Result) (Text, error)
 func DecodeVersionBootstrap(result session.Result, options VersionBootstrapOptions) (VersionBootstrapResult, error)
@@ -3262,6 +3279,7 @@ func ReadOracleHome(ctx context.Context, reader Reader, request OracleHomeReques
 func ReadPDBOpenMode(ctx context.Context, reader Reader, request PDBOpenModeRequest) (PDBOpenModeResult, error)
 func ReadRoleSource(ctx context.Context, reader Reader, request RoleSourceRequest) (RoleSourceResult, error)
 func ReadSessionContext(ctx context.Context, reader Reader, request SessionContextRequest) (SessionContextResult, error)
+func ReadSessionServerHost(ctx context.Context, reader Reader, request SessionServerHostRequest) (SessionServerHostResult, error)
 func ReadSnapshot(ctx context.Context, reader Reader, request SnapshotRequest) (SnapshotResult, error)
 func ReadVersion(ctx context.Context, reader Reader, refs VersionReferences) (VersionObservation, error)
 func ReadVersionBootstrap(ctx context.Context, reader Reader, request VersionBootstrapRequest) (VersionBootstrapResult, error)
@@ -3273,6 +3291,9 @@ func RoleStatement() string
 func SessionContextJSON(ctx context.Context, q rowset.Queryer, major int, limits rowset.Limits) (json.RawMessage, error)
 func SessionContextRows(ctx context.Context, q rowset.Queryer, major int) (*sql.Rows, error)
 func SessionContextStatement(major int) (string, error)
+func SessionServerHostJSON(ctx context.Context, q rowset.Queryer, options SessionServerHostOptions, limits rowset.Limits) (json.RawMessage, error)
+func SessionServerHostRows(ctx context.Context, q rowset.Queryer, options SessionServerHostOptions) (*sql.Rows, error)
+func SessionServerHostStatement(options SessionServerHostOptions) (string, []any, error)
 func SnapshotJSON(ctx context.Context, q rowset.Queryer, options SnapshotOptions, limits rowset.Limits) (json.RawMessage, error)
 func SnapshotRows(ctx context.Context, q rowset.Queryer, options SnapshotOptions) (*sql.Rows, error)
 func SnapshotStatement(options SnapshotOptions) (string, []any, error)
