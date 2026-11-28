@@ -25,7 +25,7 @@ tablespaces may have different block sizes. Use the existing storage.Tablespaces
 | Oracle release | Documented application of the fact and static selection | Native qualification |
 | --- | --- | --- |
 | 9.2, 10.1, 10.2, 11.1, 11.2 | V$PARAMETER.VALUE and current dictionary SYSTEM.BLOCK_SIZE. | Pending for the new typed fact. |
-| 12.1, 12.2, 18, 19, 21 | Same aliases and current-container dictionary. DB_BLOCK_SIZE is fixed and not PDB-modifiable. | Bounded native source and prerequisite validation on 19c. |
+| 12.1, 12.2, 18, 19, 21 | Same aliases and current-container dictionary. DB_BLOCK_SIZE is fixed and not PDB-modifiable. | Typed native checks passed on the 19.3 and 19.33 PDB scopes below. |
 | 23c/23ai and 26ai, numeric 23 | Same source contract. Numeric 26 and version labels are rejected. | Pending for the new typed fact. |
 
 Callers admit connected database/container privileges and state. The
@@ -40,6 +40,10 @@ Oracle references checked 2026-11-28.
 - [Oracle Database 19c Reference, DBA_TABLESPACES](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DBA_TABLESPACES.html)
 - [Oracle Database 26ai Concepts, Tablespace Block Size](https://docs.oracle.com/en/database/oracle/oracle-database/26/cncpt/logical-storage-structures.html)
 
-On the 19.33.0.1.0 OLTP PDB as ADMIN without SYSDBA, Oracle exposed 8192
-bytes from both narrow reads and the existing typed tablespaces inventory.
-The broader effective parameter inventories preserved their NULL values.
+Exact typed reads independently returned 8192 bytes from each source on the
+19.3.0.0.0 self-managed PDB as SYSDBA and the 19.33.0.1.0 OLTP Autonomous PDB as
+ADMIN without SYSDBA. The released Windows pure-Go V2 session layer was used.
+Each primary succeeded directly. Fixture tests cover fallback selection,
+refusal and cancellation. The same Autonomous session preserved masked SQL
+NULL values in its broader effective parameter inventories. Other accounts,
+instances, states and releases have no exact native coverage in this run.
